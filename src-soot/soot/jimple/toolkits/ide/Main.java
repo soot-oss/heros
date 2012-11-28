@@ -1,10 +1,10 @@
-package de.bodden.ide;
+package soot.jimple.toolkits.ide;
 
 import java.util.Map;
 
-import de.bodden.ide.problems.IFDSLocalInfoFlow;
+import de.bodden.ide.IFDSTabulationProblem;
+import de.bodden.ide.InterproceduralCFG;
 import de.bodden.ide.solver.IFDSSolver;
-import de.bodden.ide.template.JimpleBasedInterproceduralCFG;
 
 import soot.Local;
 import soot.PackManager;
@@ -13,6 +13,8 @@ import soot.SceneTransformer;
 import soot.SootMethod;
 import soot.Transform;
 import soot.Unit;
+import soot.jimple.toolkits.ide.exampleproblems.IFDSLocalInfoFlow;
+import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 
 public class Main {
 

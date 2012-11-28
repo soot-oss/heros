@@ -1,10 +1,6 @@
 package de.bodden.ide.solver;
 
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -20,11 +16,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import soot.PatchingChain;
-import soot.SootMethod;
-import soot.Unit;
-import soot.toolkits.scalar.Pair;
 
 import com.google.common.base.Predicate;
 import com.google.common.cache.CacheBuilder;
@@ -57,9 +48,9 @@ import de.bodden.ide.edgefunc.EdgeIdentity;
  * is to produce, as much as possible, reproducible benchmarking results. We have found
  * that the iteration order can matter a lot in terms of speed.
  *
- * @param <N> The type of nodes in the interprocedural control-flow graph. Typically {@link Unit}.
+ * @param <N> The type of nodes in the interprocedural control-flow graph. 
  * @param <D> The type of data-flow facts to be computed by the tabulation problem.
- * @param <M> The type of objects used to represent methods. Typically {@link SootMethod}.
+ * @param <M> The type of objects used to represent methods.
  * @param <V> The type of values to be computed along flow edges.
  * @param <I> The type of inter-procedural control-flow graph being used.
  */
@@ -68,8 +59,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	public static CacheBuilder<Object, Object> DEFAULT_CACHE_BUILDER = CacheBuilder.newBuilder().concurrencyLevel(Runtime.getRuntime().availableProcessors()).initialCapacity(10000).softValues();
 	
 	private static final boolean DEBUG = false;
-	
-	private static final boolean DUMP_RESULTS = false;
 	
 	//executor for dispatching individual compute jobs (may be multi-threaded)
 	@DontSynchronize("only used by single thread")
@@ -233,9 +222,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		if(DEBUG) 
 			printStats();
 		
-		if(DUMP_RESULTS)
-			dumpResults();
-		
 		executor.shutdown();
 	}
 
@@ -387,7 +373,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	private void setVal(N nHashN, D nHashD,V l){ 
 		val.put(nHashN, nHashD,l);
 		if(DEBUG)
-			System.err.println("VALUE: "+((SootMethod)icfg.getMethodOf(nHashN)).getSignature()+" "+nHashN+" "+nHashD+ " " + l);
+			System.err.println("VALUE: "+icfg.getMethodOf(nHashN)+" "+nHashN+" "+nHashD+ " " + l);
 	}
 
 	
@@ -637,33 +623,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				return val!=zeroValue;
 			}
 		});
-	}
-
-	public void dumpResults() {
-		try {
-			PrintWriter out = new PrintWriter(new FileOutputStream("ideSolverDump"+System.currentTimeMillis()+".csv"));
-			List<String> res = new ArrayList<String>();
-			for(Cell<N, D, V> entry: val.cellSet()) {
-				SootMethod methodOf = (SootMethod) icfg.getMethodOf(entry.getRowKey());
-				PatchingChain<Unit> units = methodOf.getActiveBody().getUnits();
-				int i=0;
-				for (Unit unit : units) {
-					if(unit==entry.getRowKey())
-						break;
-					i++;
-				}
-				
-				res.add(methodOf+";"+entry.getRowKey()+"@"+i+";"+entry.getColumnKey()+";"+entry.getValue());
-			}
-			Collections.sort(res);
-			for (String string : res) {
-				out.println(string);
-			}
-			out.flush();
-			out.close();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
 	}
 
 	public void printStats() {

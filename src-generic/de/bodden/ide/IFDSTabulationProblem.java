@@ -3,7 +3,6 @@ package de.bodden.ide;
 import java.util.Set;
 
 import de.bodden.ide.solver.IFDSSolver;
-import de.bodden.ide.template.JimpleBasedInterproceduralCFG;
 
 
 /**
@@ -28,7 +27,6 @@ public interface IFDSTabulationProblem<N,D,M, I extends InterproceduralCFG<N,M>>
 	
 	/**
 	 * Returns the interprocedural control-flow graph which this problem is computed over.
-	 * Typically this will be a {@link JimpleBasedInterproceduralCFG}.
 	 * 
 	 * <b>NOTE:</b> this method could be called many times. Implementations of this
 	 * interface should therefore cache the return value! 

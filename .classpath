@@ -3,7 +3,8 @@
 	<classpathentry combineaccessrules="false" exported="true" kind="src" path="/soot"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
-	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="src-generic"/>
+	<classpathentry kind="src" path="src-soot"/>
 	<classpathentry exported="true" kind="lib" path="guava-13.0.jar"/>
 	<classpathentry kind="lib" path="soot-trunk.jar" sourcepath="/soot"/>
 	<classpathentry kind="output" path="bin"/>

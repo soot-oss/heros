@@ -1,4 +1,4 @@
-package de.bodden.ide.problems;
+package soot.jimple.toolkits.ide.exampleproblems;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,7 +11,6 @@ import de.bodden.ide.FlowFunctions;
 import de.bodden.ide.InterproceduralCFG;
 import de.bodden.ide.flowfunc.Identity;
 import de.bodden.ide.flowfunc.KillAll;
-import de.bodden.ide.template.DefaultIFDSTabulationProblem;
 
 import soot.Local;
 import soot.PointsToAnalysis;
@@ -33,10 +32,11 @@ import soot.jimple.NewExpr;
 import soot.jimple.Ref;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
+import soot.jimple.toolkits.ide.DefaultJimpleIFDSTabulationProblem;
 import soot.toolkits.scalar.Pair;
 
 @SuppressWarnings("serial")
-public class IFDSPossibleTypes extends DefaultIFDSTabulationProblem<Pair<Value,Type>,InterproceduralCFG<Unit, SootMethod>> {
+public class IFDSPossibleTypes extends DefaultJimpleIFDSTabulationProblem<Pair<Value,Type>,InterproceduralCFG<Unit, SootMethod>> {
 
 	public IFDSPossibleTypes(InterproceduralCFG<Unit,SootMethod> icfg) {
 		super(icfg);

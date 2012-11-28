@@ -1,4 +1,4 @@
-package de.bodden.ide.problems;
+package soot.jimple.toolkits.ide.exampleproblems;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,7 +13,6 @@ import de.bodden.ide.flowfunc.Identity;
 import de.bodden.ide.flowfunc.Kill;
 import de.bodden.ide.flowfunc.KillAll;
 import de.bodden.ide.flowfunc.Transfer;
-import de.bodden.ide.template.DefaultIFDSTabulationProblem;
 
 import soot.Local;
 import soot.NullType;
@@ -29,8 +28,9 @@ import soot.jimple.ParameterRef;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.internal.JimpleLocal;
+import soot.jimple.toolkits.ide.DefaultJimpleIFDSTabulationProblem;
 
-public class IFDSLocalInfoFlow extends DefaultIFDSTabulationProblem<Local,InterproceduralCFG<Unit, SootMethod>> {
+public class IFDSLocalInfoFlow extends DefaultJimpleIFDSTabulationProblem<Local,InterproceduralCFG<Unit, SootMethod>> {
 
 	public IFDSLocalInfoFlow(InterproceduralCFG<Unit,SootMethod> icfg) {
 		super(icfg);		

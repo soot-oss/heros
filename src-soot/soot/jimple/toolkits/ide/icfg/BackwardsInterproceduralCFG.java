@@ -1,4 +1,4 @@
-package de.bodden.ide.template;
+package soot.jimple.toolkits.ide.icfg;
 
 import soot.Body;
 import soot.Unit;

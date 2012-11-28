@@ -1,4 +1,4 @@
-package de.bodden.ide.template;
+package soot.jimple.toolkits.ide.icfg;
 
 import java.util.ArrayList;
 import java.util.HashMap;

@@ -1,7 +1,5 @@
 package de.bodden.ide;
 
-import de.bodden.ide.template.JimpleBasedInterproceduralCFG;
-
 /**
  * Classes implementing this interface provide a factory for a 
  * range of flow functions used to compute which D-type values
@@ -45,9 +43,7 @@ public interface FlowFunctions<N, D, M> {
 
 	/**
 	 * Returns the flow function that computes the flow for a an exit from a
-	 * method. An exit can be a return or an exceptional exit. The
-	 * {@link JimpleBasedInterproceduralCFG} defines an exit simply as a statement
-	 * without successors in the intraprocedural control-flow graph.
+	 * method. An exit can be a return or an exceptional exit.
 	 * 
 	 * @param callSite
 	 *            One of all the call sites in the program that called the
