@@ -31,11 +31,57 @@
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
-        <h1>IFDS-IDE</h1>
+        <h1>Heros IFDS/IDE Solver</h1>
 
-<p>IFDS/IDE Solver for Soot</p>
+<p>Heros is a generic implementation of an IFDS/IDE Solver that can be plugged into existing, Java-based program analysis frameworks. A reference connector exists for the <a href="http://www.sable.mcgill.ca/soot/">Soot</a> framework.</p>
 
-<p>Released under LGPL - see LICENSE.txt</p>
+<p>Heros...</p>
+
+<ul>
+<li>supports solving both IFDS and IDE problems,</li>
+<li>is multi-threaded and thus highly scalable,</li>
+<li>provides a simple programming interface, and</li>
+<li>is fully generic, i.e., can be used to formulate program analysis problems for different programming languages.</li>
+</ul><h2>Who are the developers of Heros?</h2>
+
+<p>Heros was developed and is maintained by <a href="http://bodden.de/">Eric Bodden</a>.</p>
+
+<h2>Why is Heros called Heros?</h2>
+
+<p>The name contains (in a different order) the first characters of the last names Reps, Horwitz and Sagiv, the original inventors of the IFDS/IDE frameworks. Heros is pronounced like the Greek word, not like heroes in English.</p>
+
+<h2>What is IFDS/IDE in the first place?</h2>
+
+<p><a href="http://dx.doi.org/10.1145/199448.199462">IFDS</a> is a general framework for solving inter-procedural, finite, distributive subset problems in a flow-sensitive, fully context-sensitive manner. From a user's perspective, IFDS allows static program analysis in a template-driven manner. Users simply define flow functions for an analysis problem but don't need to worry about solving the analysis problem. The latter is automatically taken care of by the solver, in this case by Heros.
+<a href="http://dx.doi.org/10.1016/0304-3975(96)00072-2">IDE</a> is an extension of IFDS that allows more expressive computations. Heros implements an IDE solver and supports IFDS problems as special cases of IDE.</p>
+
+<h2>What are the unique features of Heros over other IFDS/IDE solvers?</h2>
+
+<p>To the best of our knowledge there exist at least two other similar solvers implemented in Java. <a href="http://wala.sf.net/">Wala</a> implements a solver that supports IFDS but not IDE. The solver is highly scalable but in our eyes requires more verbose definitions of client analyses. Heros is fully multi-threaded, while Wala's solver is not. There also exists a Scala-based solver by <a href="http://dx.doi.org/10.1007/978-3-642-11970-5_8">Nomair A. Naeem, Ondrej Lhotak, and Jonathan Rodriguez</a>. This implementation does support IDE, and there exists a multi-threaded version of it, but as of yet the implementation is not publicly available.</p>
+
+<h2>Why did you create Heros?</h2>
+
+<p>One reason is that we found that no existing IFDS/IDE solver satisfied all our needs. The solver in Wala was available but only supported IFDs. Moreover we desired a more simple client interface. The solver by Naeem, Lhotak and Rodriguez was written in Scala. Further we wanted a solver that could be used with multiple programming languages.</p>
+
+<p>The second, and probably better reason is that we found that IFDS/IDE is really useful and that probably there should be a solver that the community can build on, extend and improve over the years. But this requires clean code and documentation. When designing Heros we took special care to provide just that.</p>
+
+<h2>What is this all about support for multiple programming languages?</h2>
+
+<p>Solving an IFDS/IDE analysis problem basically requires three things:</p>
+
+<ol>
+<li>An IFDS/IDE solver.</li>
+<li>An implementation of an inter-procedural control-flow graph (ICFG).</li>
+<li>The definition of an IFDS/IDE analysis problem in the form of flow functions.</li>
+</ol><p>The solver in heros is fully generic. It can be combined with any form of ICFG. Through Java's generic type variables, Heros abstracts from any concrete types such as statements and methods. To connect Heros to a program-analysis framework for a particular language, all one needs to do is to implement a special version of the ICFG. We provide a (reference implementation)<a href="soot/blob/master/src/soot/jimple/toolkits/ide/icfg/JimpleBasedInterproceduralCFG.java">8</a> for Soot. Also the IFDS/IDE analysis problems need to be defined with respect to the actual programming language's constructs and semantics. They are not generic. The entire solver, however, can be reused as is. We are currently working on connecting Heros to a C/C++ compiler.</p>
+
+<h2>How can I contribute to Heros?</h2>
+
+<p>Contributions are more than welcome! It is easiest to fork the project on Github. Then make your modifications on the fork and send us a pull request. This will allow us easy re-integration.</p>
+
+<h2>Under what License can I use Heros?</h2>
+
+<p>Heros is released under LGPL - see <a href="heros/blob/master/LICENSE.txt">LICENSE.txt</a> for details.</p>
       </section>
     </div>
 
