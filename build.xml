@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="heros" default="jar">
+    <property file="ant.settings"/>
+    <target name="settings">
+        <fail
+            message="Please copy ant.settings.template to ant.settings, and set the variables in it."
+            unless="guava.jar"
+        />
+    </target>
+	
+	<target name="jar" depends="compile">
+    	<jar destfile="./heros-${heros.version}.jar" manifest="META-INF/MANIFEST.MF">
+            <manifest>
+               <attribute name="Implementation-Version" value="${heros.version}"/> 
+            </manifest>
+            <fileset dir="bin"/>
+        </jar>
+    </target>
+
+	<target name="compile">
+    	<mkdir dir="bin"/>
+        <javac
+            destdir="bin"
+            debug="true"
+	    includeantruntime="true"
+            deprecation="on"
+        	source="1.5"
+        	target="1.5"
+        	fork="true"
+        	memorymaximumsize="512m"
+        >
+        	<classpath>
+        		<pathelement location="${guava.jar}"/>
+        	</classpath>
+            <src path="src"/>
+        </javac>
+	</target>
+
+</project>
