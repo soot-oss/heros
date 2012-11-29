@@ -15,6 +15,7 @@
                <attribute name="Implementation-Version" value="${heros.version}"/> 
             </manifest>
             <fileset dir="bin"/>
+            <zipfileset src="${guava.jar}"/>
         </jar>
     </target>
 
