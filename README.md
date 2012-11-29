@@ -39,7 +39,11 @@ Solving an IFDS/IDE analysis problem basically requires three things:
 2. An implementation of an inter-procedural control-flow graph (ICFG).
 3. The definition of an IFDS/IDE analysis problem in the form of flow functions.
 
-The solver in heros is fully generic. It can be combined with any form of ICFG. Through Java's generic type variables, Heros abstracts from any concrete types such as statements and methods. To connect Heros to a program-analysis framework for a particular language, all one needs to do is to implement a special version of the ICFG. We provide a reference implementation for Soot. Also the IFDS/IDE analysis problems need to be defined with respect to the actual programming language's constructs and semantics. They are not generic. The entire solver, however, can be reused as is. We are currently working on connecting Heros to a C/C++ compiler.
+The solver in heros is fully generic. It can be combined with any form of ICFG. Through Java's generic type variables, Heros abstracts from any concrete types such as statements and methods. To connect Heros to a program-analysis framework for a particular language, all one needs to do is to implement a special version of the ICFG. We provide a (reference implementation)[8] for Soot. Also the IFDS/IDE analysis problems need to be defined with respect to the actual programming language's constructs and semantics. They are not generic. The entire solver, however, can be reused as is. We are currently working on connecting Heros to a C/C++ compiler.
+
+How can I contribute to Heros?
+------------------------------
+Contributions are more than welcome! It is easiest to fork the project on Github. Then make your modifications on the fork and send us a pull request. This will allow us easy re-integration.
 
 Under what License can I use Heros?
 -----------------------------------
@@ -52,3 +56,4 @@ Heros is released under LGPL - see [LICENSE.txt][7] for details.
 [5]: http://wala.sf.net/
 [6]: http://dx.doi.org/10.1007/978-3-642-11970-5_8
 [7]: heros/blob/master/LICENSE.txt
+[8]: soot/blob/master/src/soot/jimple/toolkits/ide/icfg/JimpleBasedInterproceduralCFG.java
