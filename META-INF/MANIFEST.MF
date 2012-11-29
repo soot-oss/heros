@@ -1,7 +1,7 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: soot-ifds
-Bundle-SymbolicName: soot-ifds
+Bundle-SymbolicName: heros
 Bundle-Version: 1.0.0.qualifier
 Bundle-ClassPath: soot-ifds.jar,
  guava-13.0.jar,
@@ -18,8 +18,8 @@ Export-Package: com.google.common.annotations,
  com.google.common.net,
  com.google.common.primitives,
  com.google.common.util.concurrent,
- de.bodden.ide,
- de.bodden.ide.edgefunc,
- de.bodden.ide.flowfunc,
- de.bodden.ide.solver,
- de.bodden.ide.template
+ heros,
+ heros.edgefunc,
+ heros.flowfunc,
+ heros.solver,
+ heros.template
