@@ -1,6 +1,6 @@
 Heros IFDS/IDE Solver
 =====================
-Heros is a generic implementation of an IFDS/IDE Solver that can be plugged into existing, Java-based program analysis frameworks. A reference connector exists for the [Soot](http://www.sable.mcgill.ca/soot/) framework.
+Heros is a generic implementation of an IFDS/IDE Solver that can be plugged into existing, Java-based program analysis frameworks. A reference connector exists for the [Soot][1] framework.
 
 Heros...
 * supports solving both IFDS and IDE problems,
@@ -10,7 +10,7 @@ Heros...
 
 Who are the developers of Heros?
 --------------------------------
-Heros was developed and is maintained by [Eric Bodden](http://bodden.de/).
+Heros was developed and is maintained by [Eric Bodden][2].
 
 Why is Heros called Heros?
 --------------------------
@@ -18,12 +18,12 @@ The name contains (in a different order) the first characters of the last names 
 
 What is IFDS/IDE in the first place?
 ------------------------------------
-[IFDS](http://dx.doi.org/10.1145/199448.199462) is a general framework for solving inter-procedural, finite, distributive subset problems in a flow-sensitive, fully context-sensitive manner. From a user's perspective, IFDS allows static program analysis in a template-driven manner. Users simply define flow functions for an analysis problem but don't need to worry about solving the analysis problem. The latter is automatically taken care of by the solver, in this case by Heros.
-[IDE]("http://dx.doi.org/10.1016/0304-3975(96)00072-2") is an extension of IFDS that allows more expressive computations. Heros implements an IDE solver and supports IFDS problems as special cases of IDE.
+[IFDS][3] is a general framework for solving inter-procedural, finite, distributive subset problems in a flow-sensitive, fully context-sensitive manner. From a user's perspective, IFDS allows static program analysis in a template-driven manner. Users simply define flow functions for an analysis problem but don't need to worry about solving the analysis problem. The latter is automatically taken care of by the solver, in this case by Heros.
+[IDE][4] is an extension of IFDS that allows more expressive computations. Heros implements an IDE solver and supports IFDS problems as special cases of IDE.
 
 What are the unique features of Heros over other IFDS/IDE solvers?
 ------------------------------------------------------------------
-To the best of our knowledge there exist at least two other similar solvers implemented in Java. [Wala](http://wala.sf.net/) implements a solver that supports IFDS but not IDE. The solver is highly scalable but in our eyes requires more verbose definitions of client analyses. Heros is fully multi-threaded, while Wala's solver is not. There also exists a Scala-based solver by [Nomair A. Naeem, Ondrej Lhotak, and Jonathan Rodriguez](http://dx.doi.org/10.1007/978-3-642-11970-5_8). This implementation does support IDE, and there exists a multi-threaded version of it, but as of yet the implementation is not publicly available.
+To the best of our knowledge there exist at least two other similar solvers implemented in Java. [Wala][5] implements a solver that supports IFDS but not IDE. The solver is highly scalable but in our eyes requires more verbose definitions of client analyses. Heros is fully multi-threaded, while Wala's solver is not. There also exists a Scala-based solver by [Nomair A. Naeem, Ondrej Lhotak, and Jonathan Rodriguez][6]. This implementation does support IDE, and there exists a multi-threaded version of it, but as of yet the implementation is not publicly available.
 
 Why did you create Heros?
 -------------------------
@@ -42,4 +42,12 @@ The solver in heros is fully generic. It can be combined with any form of ICFG. 
 
 Under what License can I use Heros?
 -----------------------------------
-Heros is released under LGPL - see [LICENSE.txt](heros/blob/master/LICENSE.txt) for details.
+Heros is released under LGPL - see [LICENSE.txt][7] for details.
+
+[1]: http://www.sable.mcgill.ca/soot/
+[2]: http://bodden.de/
+[3]: http://dx.doi.org/10.1145/199448.199462
+[4]: http://dx.doi.org/10.1016/0304-3975(96)00072-2
+[5]: http://wala.sf.net/
+[6]: http://dx.doi.org/10.1007/978-3-642-11970-5_8
+[7]: heros/blob/master/LICENSE.txt
