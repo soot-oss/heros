@@ -19,7 +19,7 @@ The name contains (in a different order) the first characters of the last names 
 What is IFDS/IDE in the first place?
 ------------------------------------
 [IFDS](http://dx.doi.org/10.1145/199448.199462) is a general framework for solving inter-procedural, finite, distributive subset problems in a flow-sensitive, fully context-sensitive manner. From a user's perspective, IFDS allows static program analysis in a template-driven manner. Users simply define flow functions for an analysis problem but don't need to worry about solving the analysis problem. The latter is automatically taken care of by the solver, in this case by Heros.
-[IDE](http://dx.doi.org/10.1016/0304-3975(96)00072-2) is an extension of IFDS that allows more expressive computations. Heros implements an IDE solver and supports IFDS problems as special cases of IDE.
+[IDE]("http://dx.doi.org/10.1016/0304-3975(96)00072-2") is an extension of IFDS that allows more expressive computations. Heros implements an IDE solver and supports IFDS problems as special cases of IDE.
 
 What are the unique features of Heros over other IFDS/IDE solvers?
 ------------------------------------------------------------------
@@ -42,4 +42,4 @@ The solver in heros is fully generic. It can be combined with any form of ICFG. 
 
 Under what License can I use Heros?
 -----------------------------------
-Heros is released under LGPL - see [LICENSE.txt](LICENSE.txt) for details.
+Heros is released under LGPL - see [LICENSE.txt](heros/blob/master/LICENSE.txt) for details.
