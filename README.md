@@ -55,5 +55,5 @@ Heros is released under LGPL - see [LICENSE.txt][7] for details.
 [4]: http://dx.doi.org/10.1016/0304-3975(96)00072-2
 [5]: http://wala.sf.net/
 [6]: http://dx.doi.org/10.1007/978-3-642-11970-5_8
-[7]: heros/blob/master/LICENSE.txt
-[8]: soot/blob/master/src/soot/jimple/toolkits/ide/icfg/JimpleBasedInterproceduralCFG.java
+[7]: https://github.com/Sable/heros/blob/master/LICENSE.txt
+[8]: https://github.com/Sable/soot/blob/master/src/soot/jimple/toolkits/ide/icfg/JimpleBasedInterproceduralCFG.java
