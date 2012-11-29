@@ -58,62 +58,62 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	
 	public static CacheBuilder<Object, Object> DEFAULT_CACHE_BUILDER = CacheBuilder.newBuilder().concurrencyLevel(Runtime.getRuntime().availableProcessors()).initialCapacity(10000).softValues();
 	
-	private static final boolean DEBUG = false;
+	protected static final boolean DEBUG = false;
 	
 	//executor for dispatching individual compute jobs (may be multi-threaded)
 	@DontSynchronize("only used by single thread")
-	private ExecutorService executor;
+	protected ExecutorService executor;
 	
 	@DontSynchronize("only used by single thread")
-	private int numThreads;
+	protected int numThreads;
 	
 	//the number of currently running tasks
-	private final AtomicInteger numTasks = new AtomicInteger();
+	protected final AtomicInteger numTasks = new AtomicInteger();
 
 	@SynchronizedBy("consistent lock on field")
 	//We are using a LinkedHashSet here to enforce FIFO semantics, which leads to a breath-first construction
 	//of the exploded super graph. As we observed in experiments, this can speed up the construction.
-	private final Collection<PathEdge<N,D,M>> pathWorklist = new LinkedHashSet<PathEdge<N,D,M>>();
+	protected final Collection<PathEdge<N,D,M>> pathWorklist = new LinkedHashSet<PathEdge<N,D,M>>();
 	
 	@SynchronizedBy("thread safe data structure, consistent locking when used")
-	private final JumpFunctions<N,D,V> jumpFn;
+	protected final JumpFunctions<N,D,V> jumpFn;
 	
 	@SynchronizedBy("thread safe data structure, consistent locking when used")
-	private final SummaryFunctions<N,D,V> summaryFunctions = new SummaryFunctions<N,D,V>();
+	protected final SummaryFunctions<N,D,V> summaryFunctions = new SummaryFunctions<N,D,V>();
 
 	@SynchronizedBy("thread safe data structure, only modified internally")
-	private final I icfg;
+	protected final I icfg;
 	
 	//stores summaries that were queried before they were computed
 	//see CC 2010 paper by Naeem, Lhotak and Rodriguez
 	@SynchronizedBy("consistent lock on 'incoming'")
-	private final Table<N,D,Table<N,D,EdgeFunction<V>>> endSummary = HashBasedTable.create();
+	protected final Table<N,D,Table<N,D,EdgeFunction<V>>> endSummary = HashBasedTable.create();
 
 	//edges going along calls
 	//see CC 2010 paper by Naeem, Lhotak and Rodriguez
 	@SynchronizedBy("consistent lock on field")
-	private final Table<N,D,Map<N,Set<D>>> incoming = HashBasedTable.create();
+	protected final Table<N,D,Map<N,Set<D>>> incoming = HashBasedTable.create();
 	
 	@DontSynchronize("stateless")
-	private final FlowFunctions<N, D, M> flowFunctions;
+	protected final FlowFunctions<N, D, M> flowFunctions;
 
 	@DontSynchronize("stateless")
-	private final EdgeFunctions<N,D,M,V> edgeFunctions;
+	protected final EdgeFunctions<N,D,M,V> edgeFunctions;
 
 	@DontSynchronize("only used by single thread")
-	private final Set<N> initialSeeds;
+	protected final Set<N> initialSeeds;
 
 	@DontSynchronize("stateless")
-	private final JoinLattice<V> valueLattice;
+	protected final JoinLattice<V> valueLattice;
 	
 	@DontSynchronize("stateless")
-	private final EdgeFunction<V> allTop;
+	protected final EdgeFunction<V> allTop;
 	
 	@DontSynchronize("only used by single thread - phase II not parallelized (yet)")
-	private final List<Pair<N,D>> nodeWorklist = new LinkedList<Pair<N,D>>();
+	protected final List<Pair<N,D>> nodeWorklist = new LinkedList<Pair<N,D>>();
 
 	@DontSynchronize("only used by single thread - phase II not parallelized (yet)")
-	private final Table<N,D,V> val = HashBasedTable.create();	
+	protected final Table<N,D,V> val = HashBasedTable.create();	
 	
 	@DontSynchronize("benign races")
 	public long flowFunctionApplicationCount;
@@ -131,13 +131,13 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	public long durationFlowFunctionApplication;
 
 	@DontSynchronize("stateless")
-	private final D zeroValue;
+	protected final D zeroValue;
 	
 	@DontSynchronize("readOnly")
-	private final FlowFunctionCache<N,D,M> ffCache; 
+	protected final FlowFunctionCache<N,D,M> ffCache; 
 
 	@DontSynchronize("readOnly")
-	private final EdgeFunctionCache<N,D,M,V> efCache;
+	protected final EdgeFunctionCache<N,D,M,V> efCache;
 
 	/**
 	 * Creates a solver for the given problem, which caches flow functions and edge functions.
