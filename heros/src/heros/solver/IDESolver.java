@@ -23,6 +23,7 @@ import heros.InterproceduralCFG;
 import heros.JoinLattice;
 import heros.SynchronizedBy;
 import heros.ZeroedFlowFunctions;
+import heros.debugsupport.NewEdgeListener;
 import heros.edgefunc.EdgeIdentity;
 
 import java.util.Collection;
@@ -150,12 +151,15 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	@DontSynchronize("readOnly")
 	protected final EdgeFunctionCache<N,D,M,V> efCache;
 
+	@DontSynchronize("readOnly")
+	protected final NewEdgeListener<M,D,N,V> debugListener;
+
 	/**
 	 * Creates a solver for the given problem, which caches flow functions and edge functions.
 	 * The solver must then be started by calling {@link #solve()}.
 	 */
 	public IDESolver(IDETabulationProblem<N,D,M,V,I> tabulationProblem) {
-		this(tabulationProblem, DEFAULT_CACHE_BUILDER, DEFAULT_CACHE_BUILDER);
+		this(tabulationProblem, DEFAULT_CACHE_BUILDER, DEFAULT_CACHE_BUILDER, null);
 	}
 	
 	/**
@@ -164,12 +168,18 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * @param flowFunctionCacheBuilder A valid {@link CacheBuilder} or <code>null</code> if no caching is to be used for flow functions.
 	 * @param edgeFunctionCacheBuilder A valid {@link CacheBuilder} or <code>null</code> if no caching is to be used for edge functions.
 	 */
-	public IDESolver(IDETabulationProblem<N,D,M,V,I> tabulationProblem, @SuppressWarnings("rawtypes") CacheBuilder flowFunctionCacheBuilder, @SuppressWarnings("rawtypes") CacheBuilder edgeFunctionCacheBuilder) {
+	public IDESolver(
+										  IDETabulationProblem<N,D,M,V,I> tabulationProblem,
+			@SuppressWarnings("rawtypes") CacheBuilder flowFunctionCacheBuilder,
+			@SuppressWarnings("rawtypes") CacheBuilder edgeFunctionCacheBuilder,
+			                              NewEdgeListener<M,D,N,V> debugListener
+     ) {
 		if(DEBUG) {
 			flowFunctionCacheBuilder = flowFunctionCacheBuilder.recordStats();
 			edgeFunctionCacheBuilder = edgeFunctionCacheBuilder.recordStats();
 		}
 		this.zeroValue = tabulationProblem.zeroValue();
+		this.debugListener = debugListener;
 		this.icfg = tabulationProblem.interproceduralCFG();
 		FlowFunctions<N, D, M> flowFunctions = new ZeroedFlowFunctions<N,D,M>(tabulationProblem.flowFunctions(), tabulationProblem.zeroValue());
 		EdgeFunctions<N, D, M, V> edgeFunctions = tabulationProblem.edgeFunctions();
@@ -559,6 +569,10 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			PathEdge<N,D,M> edge = new PathEdge<N,D,M>(sourceVal, target, targetVal);
 			synchronized (pathWorklist) {
 				pathWorklist.add(edge);
+			}
+			
+			if(debugListener!=null) {
+				debugListener.newJumpFunction(icfg.getMethodOf(target),sourceVal, target, targetVal, f);
 			}
 
 			if(DEBUG) {
