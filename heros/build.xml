@@ -8,7 +8,12 @@
             unless="guava.jar"
         />
     </target>
-	
+
+	<target name="copy-to-ui-project" depends="jar">
+		<copy file="./heros-${heros.version}.jar" tofile="${debugui.project}/heros.jar"/>
+	</target>
+
+		
 	<target name="jar" depends="compile">
     	<jar destfile="./heros-${heros.version}.jar" manifest="META-INF/MANIFEST.MF">
             <manifest>

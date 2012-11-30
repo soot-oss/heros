@@ -1,3 +1,5 @@
 heros.version=trunk
 
+debugui.project=../heros-debugui
+
 guava.jar=guava-13.0.jar
