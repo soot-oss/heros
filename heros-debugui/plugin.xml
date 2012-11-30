@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?eclipse version="3.4"?>
 <plugin>
-   <extension
+<!--   <extension
          point="org.eclipse.ui.popupMenus">
       <objectContribution
             adaptable="false"
@@ -50,5 +50,70 @@
             name="Redraw Context Menu Labels">
       </command>
    </extension>
+-->
 
+<extension
+      point="org.eclipse.debug.core.launchModes">
+   <launchMode
+         label="Heros"
+         launchAsLabel="Heros"
+         mode="heros">
+   </launchMode>
+</extension>
+<extension
+      point="org.eclipse.debug.core.launchDelegates">
+   <launchDelegate
+         delegate="heros.debugui.HerosDebugLaunchDelegate"
+         id="heros.launchDelegate.java"
+         modes="heros"
+         name="Analyze Java Appliction with Heros"
+         type="org.eclipse.jdt.launching.localJavaApplication">
+   </launchDelegate>
+</extension>
+<extension
+      point="org.eclipse.debug.ui.launchGroups">
+   <launchGroup
+         bannerImage=""
+         image=""
+         id="heros.launchGroups.analyze"
+         label="Analyze"
+         mode="heros"
+         title="TITLE: Analyze">
+   </launchGroup>
+</extension>
+<extension
+      point="org.eclipse.debug.ui.launchConfigurationTabGroups">
+   <launchConfigurationTabGroup
+         class="heros.debugui.HerosLocalJavaApplicationTabGroup"
+         id="heros.launchConfigurationTabGroups.java"
+         type="org.eclipse.jdt.launching.localJavaApplication">
+      <launchMode
+            mode="heros">
+      </launchMode>
+   </launchConfigurationTabGroup>
+</extension>
+ 
+<extension
+      point="org.eclipse.ui.actionSets">
+   <actionSet
+         id="de.bodden.tamiflex.actionSet"
+         label="Heros"
+         visible="true">
+      <action
+            label="Analyze History"
+            style="pulldown"
+            class="heros.debugui.action.AnalyzeMenuAction"
+            menubarPath="org.eclipse.ui.run/runGroup"            
+            id="heros.actions.analyzeMenu">
+      </action>
+      <action
+            class="heros.debugui.action.AnalyzeAction"
+            icon=""
+            id="heros.actions.analyze"
+            label="Analyze..."
+            menubarPath="org.eclipse.ui.run/runGroup"
+            tooltip="Analyze">
+      </action>
+    </actionSet>
+</extension>
 </plugin>
