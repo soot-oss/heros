@@ -13,6 +13,7 @@ import java.net.SocketTimeoutException;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.debug.core.ILaunchConfiguration;
+import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 
 public class ServerSocketManager {
 	
@@ -46,7 +47,8 @@ public class ServerSocketManager {
 						Socket socket = serverSocket.accept();
 						InputStream is = socket.getInputStream();
 						ObjectInputStream ois = new ObjectInputStream(is);
-						EdgeDrawing edgeDrawing = new EdgeDrawing();
+						String projectName = configuration.getAttribute(IJavaLaunchConfigurationConstants.ATTR_PROJECT_NAME, "");
+						EdgeDrawing edgeDrawing = new EdgeDrawing(projectName);
 						while(true) {
 							SerializableEdgeData obj = (SerializableEdgeData) ois.readObject();
 							edgeDrawing.drawEdge(obj);
@@ -58,6 +60,8 @@ public class ServerSocketManager {
 					} catch (IOException e) {
 						e.printStackTrace();
 					} catch (ClassNotFoundException e) {
+						e.printStackTrace();
+					} catch (CoreException e) {
 						e.printStackTrace();
 					}
 				}
