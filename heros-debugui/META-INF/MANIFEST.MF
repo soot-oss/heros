@@ -13,7 +13,8 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.ui.ide,
  org.eclipse.jdt.debug.ui;bundle-version="3.6.1",
  org.eclipse.debug.ui;bundle-version="3.7.101",
- org.eclipse.jdt.launching;bundle-version="3.6.1"
+ org.eclipse.jdt.launching;bundle-version="3.6.1",
+ org.eclipse.jdt.core
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Import-Package: org.eclipse.debug.ui,

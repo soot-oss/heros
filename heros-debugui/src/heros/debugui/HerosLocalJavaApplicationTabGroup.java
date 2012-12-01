@@ -15,6 +15,7 @@ public class HerosLocalJavaApplicationTabGroup extends LocalJavaApplicationTabGr
 	@Override
 	public void createTabs(ILaunchConfigurationDialog dialog, String mode) {
 		ILaunchConfigurationTab[] tabs = new ILaunchConfigurationTab[] {
+				new AnalysisDriverTab(),
 				new JavaMainTab(),
 				new JavaJRETab(),
 				new JavaClasspathTab(),
@@ -23,6 +24,8 @@ public class HerosLocalJavaApplicationTabGroup extends LocalJavaApplicationTabGr
 			};
 			setTabs(tabs);
 	}
+	
+	
 
 }
 
