@@ -14,13 +14,13 @@ import java.net.SocketTimeoutException;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.debug.core.ILaunchConfiguration;
 
-public class LaunchUtil {
+public class ServerSocketManager {
 	
 	public static final String ENV_VAR_NAME = "HEROS_DEBUG_PORT";
 
 	public static String[] openSocketAndUpdateEnvironment(
 			ILaunchConfiguration configuration, String[] environment) throws CoreException {
-		String hostNameAndPort = LaunchUtil.openSocket(configuration);
+		String hostNameAndPort = ServerSocketManager.openSocket(configuration);
 		if(environment==null) environment = new String[0];
 		String[] newEnv = new String[environment.length+1];
 		System.arraycopy(environment, 0, newEnv, 1, environment.length);
