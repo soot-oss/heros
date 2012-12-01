@@ -50,15 +50,21 @@ public class HerosDebugLaunchDelegate extends JavaLaunchDelegate {
 		return analysisMainClass;
 	}
 	
+	@Override
+	public String[] getClasspath(ILaunchConfiguration configuration)
+			throws CoreException {
+		return analysisProjectClassPathAsStringArray();
+	}
 	
-	public URL[] projectClassPath() {
+	
+	protected URL[] classPathOfProject(IJavaProject project) {
 		IWorkspace workspace = ResourcesPlugin.getWorkspace();
 		IClasspathEntry[] cp;
 		try {
-			cp = analysisProject.getResolvedClasspath(true);
+			cp = project.getResolvedClasspath(true);
 			Set<URL> urls = new HashSet<URL>();
 			String uriString = workspace.getRoot().getFile(
-					analysisProject.getOutputLocation()).getLocationURI().toString()
+					project.getOutputLocation()).getLocationURI().toString()
 					+ "/";
 			urls.add(new URI(uriString).toURL());
 			for (IClasspathEntry entry : cp) {
@@ -81,14 +87,27 @@ public class HerosDebugLaunchDelegate extends JavaLaunchDelegate {
 		}
 	}
 	
-	public String projectClassPathAsString() {		
-		StringBuffer cp = new StringBuffer();
-		for (URL url : projectClassPath()) {
-			cp.append(url.getPath());
-			cp.append(File.pathSeparator);
+	protected String[] analysisProjectClassPathAsStringArray() {		
+		URL[] cp = classPathOfProject(analysisProject);
+		String[] res = new String[cp.length];
+		for (int i = 0; i < res.length; i++) {
+			URL entry = cp[i];
+			res[i] = entry.getPath() + File.pathSeparator;
 		}
-		
-		return cp.toString();
+		return res;
+	}
+	
+	protected String classPathOfAnalyzedProjectAsString(ILaunchConfiguration config) {
+		StringBuffer cp = new StringBuffer();
+		try {
+			for (URL url : classPathOfProject(getJavaProject(config))) {
+				cp.append(url.getPath());
+				cp.append(File.pathSeparator);
+			}
+			return cp.toString();
+		} catch (CoreException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 }
