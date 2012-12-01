@@ -55,8 +55,8 @@
 <extension
       point="org.eclipse.debug.core.launchModes">
    <launchMode
-         label="Heros"
-         launchAsLabel="Heros"
+         label="Analyze"
+         launchAsLabel="Heros Analysis"
          mode="heros">
    </launchMode>
 </extension>
