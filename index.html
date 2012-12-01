@@ -73,7 +73,7 @@
 <li>An IFDS/IDE solver.</li>
 <li>An implementation of an inter-procedural control-flow graph (ICFG).</li>
 <li>The definition of an IFDS/IDE analysis problem in the form of flow functions.</li>
-</ol><p>The solver in heros is fully generic. It can be combined with any form of ICFG. Through Java's generic type variables, Heros abstracts from any concrete types such as statements and methods. To connect Heros to a program-analysis framework for a particular language, all one needs to do is to implement a special version of the ICFG. We provide a (reference implementation)<a href="soot/blob/master/src/soot/jimple/toolkits/ide/icfg/JimpleBasedInterproceduralCFG.java">8</a> for Soot. Also the IFDS/IDE analysis problems need to be defined with respect to the actual programming language's constructs and semantics. They are not generic. The entire solver, however, can be reused as is. We are currently working on connecting Heros to a C/C++ compiler.</p>
+</ol><p>The solver in heros is fully generic. It can be combined with any form of ICFG. Through Java's generic type variables, Heros abstracts from any concrete types such as statements and methods. To connect Heros to a program-analysis framework for a particular language, all one needs to do is to implement a special version of the ICFG. We provide a (reference implementation)<a href="https://github.com/Sable/soot/blob/master/src/soot/jimple/toolkits/ide/icfg/JimpleBasedInterproceduralCFG.java">8</a> for Soot. Also the IFDS/IDE analysis problems need to be defined with respect to the actual programming language's constructs and semantics. They are not generic. The entire solver, however, can be reused as is. We are currently working on connecting Heros to a C/C++ compiler.</p>
 
 <h2>How can I contribute to Heros?</h2>
 
@@ -81,7 +81,7 @@
 
 <h2>Under what License can I use Heros?</h2>
 
-<p>Heros is released under LGPL - see <a href="heros/blob/master/LICENSE.txt">LICENSE.txt</a> for details.</p>
+<p>Heros is released under LGPL - see <a href="https://github.com/Sable/heros/blob/master/LICENSE.txt">LICENSE.txt</a> for details.</p>
       </section>
     </div>
 
