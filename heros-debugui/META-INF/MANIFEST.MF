@@ -21,7 +21,6 @@ Import-Package: org.eclipse.debug.ui,
  org.eclipse.jdt.internal.core,
  org.eclipse.jdt.ui,
  org.eclipse.ui.ide
-Export-Package: de.ishuo.sourcepainter,
- heros.debugui
+Export-Package: heros.debugui
 Bundle-ClassPath: heros.jar,
  .
