@@ -3,7 +3,7 @@ Bundle-ManifestVersion: 2
 Bundle-Name: SourcePainter
 Bundle-SymbolicName: heros-debugui;singleton:=true
 Bundle-Version: 1.0
-Bundle-Activator: de.ishuo.sourcepainter.Activator
+Bundle-Activator: heros.debugui.Activator
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime,
  org.eclipse.core.resources,
