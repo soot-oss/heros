@@ -1,6 +1,6 @@
 package heros.debugui.launching;
 
-import heros.debugsupport.JumpFunctionData;
+import heros.debugsupport.SerializableEdgeData;
 import heros.debugui.EdgeDrawing;
 
 import java.io.EOFException;
@@ -37,7 +37,6 @@ public class ServerSocketManager {
 
 			new Thread("SocketListener") {
 
-				@SuppressWarnings({ "rawtypes", "unchecked" })
 				@Override
 				public void run() {
 					try {
@@ -49,8 +48,8 @@ public class ServerSocketManager {
 						ObjectInputStream ois = new ObjectInputStream(is);
 						EdgeDrawing edgeDrawing = new EdgeDrawing();
 						while(true) {
-							JumpFunctionData obj = (JumpFunctionData) ois.readObject();
-							edgeDrawing.newJumpFunction(obj.method, obj.sourceVal, obj.target, obj.targetVal, obj.f);
+							SerializableEdgeData obj = (SerializableEdgeData) ois.readObject();
+							edgeDrawing.drawEdge(obj);
 						}
 					} catch(SocketTimeoutException e) {
 						//ignore; just terminate thread

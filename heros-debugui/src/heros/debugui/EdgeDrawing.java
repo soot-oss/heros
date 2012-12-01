@@ -1,13 +1,12 @@
 package heros.debugui;
 
-import heros.EdgeFunction;
-import heros.debugsupport.NewEdgeListener;
+import heros.debugsupport.SerializableEdgeData;
 
-public class EdgeDrawing<M, D, N, V> implements NewEdgeListener<M, D, N, V> {
+public class EdgeDrawing {
 
-	@Override
-	public void newJumpFunction(M method, D sourceData, N target, D targetData, EdgeFunction<V> f) {
-		System.err.println(method);
+	public void drawEdge(SerializableEdgeData edge) {
+		System.err.println(edge.className);
 	}
+	
 
 }
