@@ -60,7 +60,7 @@ public class HerosDebugLaunchDelegate extends JavaLaunchDelegate {
 	
 	@Override
 	public String[] getEnvironment(ILaunchConfiguration configuration) throws CoreException {
-		return LaunchUtil.openSocketAndUpdateEnvironment(configuration, super.getEnvironment(configuration));
+		return ServerSocketManager.openSocketAndUpdateEnvironment(configuration, super.getEnvironment(configuration));
 	}
 	
 	protected URL[] classPathOfProject(IJavaProject project) {
