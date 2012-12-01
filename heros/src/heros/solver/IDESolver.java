@@ -24,6 +24,7 @@ import heros.JoinLattice;
 import heros.SynchronizedBy;
 import heros.ZeroedFlowFunctions;
 import heros.debugsupport.NewEdgeListener;
+import heros.debugsupport.SocketManager;
 import heros.edgefunc.EdgeIdentity;
 
 import java.util.Collection;
@@ -159,9 +160,23 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * The solver must then be started by calling {@link #solve()}.
 	 */
 	public IDESolver(IDETabulationProblem<N,D,M,V,I> tabulationProblem) {
-		this(tabulationProblem, DEFAULT_CACHE_BUILDER, DEFAULT_CACHE_BUILDER, null);
+		this(tabulationProblem, DEFAULT_CACHE_BUILDER, DEFAULT_CACHE_BUILDER, IDESolver.<M,D,N,V>checkDebugEnabled());
 	}
 	
+	/**
+	 * This method checks whether the debug UI is enabled. This is indicated
+	 * by a set value for the environment variable HEROS_DEBUG_PORT. If set,
+	 * the solver will try to connect to the port given by this variable.
+	 * If successful, this method returns an appropriate {@link NewEdgeListener}.
+	 * In all other cases this method returns null. 
+	 */
+	private static <M, D, N, V> NewEdgeListener<M, D, N, V> checkDebugEnabled() {
+		if(System.getenv("HEROS_DEBUG_PORT")!=null)
+			return SocketManager.tryGetRemoteEdgeListener();
+		else
+			return null;
+	}
+
 	/**
 	 * Creates a solver for the given problem, constructing caches with the given {@link CacheBuilder}. The solver must then be started by calling
 	 * {@link #solve()}.
