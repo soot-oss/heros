@@ -42,7 +42,7 @@ public class HerosDebugLaunchDelegate extends JavaLaunchDelegate {
 	}
 	
 	public String getProgramArguments(ILaunchConfiguration configuration) throws CoreException {
-		String originalMainClass = getMainTypeName(configuration);
+		String originalMainClass = super.getMainTypeName(configuration);
 		String cp = classPathOfAnalyzedProjectAsString(configuration);
 		return "-cp " + cp + " " + originalMainClass;
 	}
