@@ -674,7 +674,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		if(System.getenv("HEROS_DEBUG_PORT")==null) return null;
 		ObjectOutputStream oos = SocketManager.tryConnectToDebugger();
 		if(oos==null) return null;
-		return createEdgeListener(); 
+		return createEdgeListener(oos); 
 	}
 
 	/**
@@ -684,8 +684,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * node types and can therefore inform the debugger accordingly.
 	 * The default method returns <code>null</code>, indicating that no debug
 	 * information is sent.
+	 * @param oos the outputstream to serialize to
 	 */
-	protected NewEdgeSerializer<M, D, N, V> createEdgeListener() {
+	protected NewEdgeSerializer<M, D, N, V> createEdgeListener(ObjectOutputStream oos) {
 		return null;
 	}
 	
