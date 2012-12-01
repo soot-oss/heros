@@ -23,7 +23,7 @@ import heros.InterproceduralCFG;
 import heros.JoinLattice;
 import heros.SynchronizedBy;
 import heros.ZeroedFlowFunctions;
-import heros.debugsupport.NewEdgeListener;
+import heros.debugsupport.NewEdgeSerializer;
 import heros.debugsupport.SocketManager;
 import heros.edgefunc.EdgeIdentity;
 
@@ -154,7 +154,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	protected final EdgeFunctionCache<N,D,M,V> efCache;
 
 	@DontSynchronize("readOnly")
-	protected final NewEdgeListener<M,D,N,V> debugListener;
+	protected final NewEdgeSerializer<M,D,N,V> debugListener;
 
 	/**
 	 * Creates a solver for the given problem, which caches flow functions and edge functions.
@@ -667,10 +667,10 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * This method checks whether the debug UI is enabled. This is indicated
 	 * by a set value for the environment variable HEROS_DEBUG_PORT. If set,
 	 * the solver will try to connect to the port given by this variable.
-	 * If successful, this method returns an appropriate {@link NewEdgeListener}.
+	 * If successful, this method returns an appropriate {@link NewEdgeSerializer}.
 	 * In all other cases this method returns null. 
 	 */
-	protected NewEdgeListener<M,D,N,V> connectDebugListener() {
+	protected NewEdgeSerializer<M,D,N,V> connectDebugListener() {
 		if(System.getenv("HEROS_DEBUG_PORT")==null) return null;
 		ObjectOutputStream oos = SocketManager.tryConnectToDebugger();
 		if(oos==null) return null;
@@ -678,14 +678,14 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	}
 
 	/**
-	 * Returns the {@link NewEdgeListener} that will be notified about new
+	 * Returns the {@link NewEdgeSerializer} that will be notified about new
 	 * edges when debug support is enabled. Clients can override this method
-	 * to instantiate a {@link NewEdgeListener} that knows about method and
+	 * to instantiate a {@link NewEdgeSerializer} that knows about method and
 	 * node types and can therefore inform the debugger accordingly.
 	 * The default method returns <code>null</code>, indicating that no debug
 	 * information is sent.
 	 */
-	protected NewEdgeListener<M, D, N, V> createEdgeListener() {
+	protected NewEdgeSerializer<M, D, N, V> createEdgeListener() {
 		return null;
 	}
 	
