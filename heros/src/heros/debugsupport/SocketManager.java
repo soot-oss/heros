@@ -1,38 +1,12 @@
 package heros.debugsupport;
 
-import heros.EdgeFunction;
-
-import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
 public class SocketManager {
 	
-	private static final class NewEdgeSerializer<M, D, N, V> implements NewEdgeListener<M, D, N, V> {
-		private final ObjectOutputStream oos;
-
-		public NewEdgeSerializer(ObjectOutputStream oos) {
-			this.oos = oos;
-		}
-
-		@Override
-		public void newJumpFunction(M method, D sourceVal, N target, D targetVal, EdgeFunction<V> f) {
-			try {
-				oos.writeObject(new JumpFunctionData<M, D, N, V>(method, sourceVal, target, targetVal, f));
-			} catch (IOException e) {
-				e.printStackTrace();
-			}		
-		}
-	}
-
-	public static <M, D, N, V> NewEdgeListener<M, D, N, V> tryGetRemoteEdgeListener() {
-		ObjectOutputStream oos = tryConnectToDebugger();
-		if(oos==null) return null;		
-		return new NewEdgeSerializer<M, D, N, V>(oos);
-	}
-	
-	private static ObjectOutputStream tryConnectToDebugger() {
+	public static ObjectOutputStream tryConnectToDebugger() {
 		String hostAndPort = System.getenv("HEROS_DEBUG_PORT");
 		if(hostAndPort!=null && !hostAndPort.isEmpty()) {
 			//online mode, open Socket

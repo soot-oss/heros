@@ -27,6 +27,7 @@ import heros.debugsupport.NewEdgeListener;
 import heros.debugsupport.SocketManager;
 import heros.edgefunc.EdgeIdentity;
 
+import java.io.ObjectOutputStream;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -160,21 +161,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * The solver must then be started by calling {@link #solve()}.
 	 */
 	public IDESolver(IDETabulationProblem<N,D,M,V,I> tabulationProblem) {
-		this(tabulationProblem, DEFAULT_CACHE_BUILDER, DEFAULT_CACHE_BUILDER, IDESolver.<M,D,N,V>checkDebugEnabled());
-	}
-	
-	/**
-	 * This method checks whether the debug UI is enabled. This is indicated
-	 * by a set value for the environment variable HEROS_DEBUG_PORT. If set,
-	 * the solver will try to connect to the port given by this variable.
-	 * If successful, this method returns an appropriate {@link NewEdgeListener}.
-	 * In all other cases this method returns null. 
-	 */
-	private static <M, D, N, V> NewEdgeListener<M, D, N, V> checkDebugEnabled() {
-		if(System.getenv("HEROS_DEBUG_PORT")!=null)
-			return SocketManager.tryGetRemoteEdgeListener();
-		else
-			return null;
+		this(tabulationProblem, DEFAULT_CACHE_BUILDER, DEFAULT_CACHE_BUILDER);
 	}
 
 	/**
@@ -186,15 +173,14 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	public IDESolver(
 										  IDETabulationProblem<N,D,M,V,I> tabulationProblem,
 			@SuppressWarnings("rawtypes") CacheBuilder flowFunctionCacheBuilder,
-			@SuppressWarnings("rawtypes") CacheBuilder edgeFunctionCacheBuilder,
-			                              NewEdgeListener<M,D,N,V> debugListener
+			@SuppressWarnings("rawtypes") CacheBuilder edgeFunctionCacheBuilder
      ) {
+		this.debugListener = connectDebugListener();
 		if(DEBUG) {
 			flowFunctionCacheBuilder = flowFunctionCacheBuilder.recordStats();
 			edgeFunctionCacheBuilder = edgeFunctionCacheBuilder.recordStats();
 		}
 		this.zeroValue = tabulationProblem.zeroValue();
-		this.debugListener = debugListener;
 		this.icfg = tabulationProblem.interproceduralCFG();
 		FlowFunctions<N, D, M> flowFunctions = new ZeroedFlowFunctions<N,D,M>(tabulationProblem.flowFunctions(), tabulationProblem.zeroValue());
 		EdgeFunctions<N, D, M, V> edgeFunctions = tabulationProblem.edgeFunctions();
@@ -674,6 +660,33 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		} else {
 			System.err.println("No statistics were collected, as DEBUG is disabled.");
 		}
+	}
+	
+	
+	/**
+	 * This method checks whether the debug UI is enabled. This is indicated
+	 * by a set value for the environment variable HEROS_DEBUG_PORT. If set,
+	 * the solver will try to connect to the port given by this variable.
+	 * If successful, this method returns an appropriate {@link NewEdgeListener}.
+	 * In all other cases this method returns null. 
+	 */
+	protected NewEdgeListener<M,D,N,V> connectDebugListener() {
+		if(System.getenv("HEROS_DEBUG_PORT")==null) return null;
+		ObjectOutputStream oos = SocketManager.tryConnectToDebugger();
+		if(oos==null) return null;
+		return makeEdgeListener(); 
+	}
+
+	/**
+	 * Returns the {@link NewEdgeListener} that will be notified about new
+	 * edges when debug support is enabled. Clients can override this method
+	 * to instantiate a {@link NewEdgeListener} that knows about method and
+	 * node types and can therefore inform the debugger accordingly.
+	 * The default method returns <code>null</code>, indicating that no debug
+	 * information is sent.
+	 */
+	protected NewEdgeListener<M, D, N, V> makeEdgeListener() {
+		return null;
 	}
 	
 	private class PathEdgeProcessingTask implements Runnable {
