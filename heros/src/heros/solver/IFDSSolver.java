@@ -42,9 +42,9 @@ import java.util.Set;
  */
 public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESolver<N,D,M,IFDSSolver.BinaryDomain,I> {
 
-	static enum BinaryDomain { TOP,BOTTOM } 
+	public static enum BinaryDomain { TOP,BOTTOM } 
 	
-	private final static EdgeFunction<BinaryDomain> ALL_BOTTOM = new AllBottom<BinaryDomain>(BOTTOM);
+	public final static EdgeFunction<BinaryDomain> ALL_BOTTOM = new AllBottom<BinaryDomain>(BOTTOM);
 	
 	/**
 	 * Creates a solver for the given problem. The solver must then be started by calling
