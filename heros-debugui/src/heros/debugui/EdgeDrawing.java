@@ -56,9 +56,7 @@ public class EdgeDrawing {
 
 			private void moveToLine(final int line, ITextEditor editor) {
 				IDocument document = editor.getDocumentProvider().getDocument(editor.getEditorInput());
-				System.err.println("!1");
 				if (document != null) {
-					System.err.println("!2");
 					IRegion lineInfo = null;
 					try {
 						// line count internaly starts with 0, and not
@@ -71,9 +69,7 @@ public class EdgeDrawing {
 						// exist in document,
 						// we guess this...
 					}
-					System.err.println("!3 "+line);
 					if (lineInfo != null) {
-						System.err.println("!4");
 						editor.selectAndReveal(lineInfo.getOffset(),
 								lineInfo.getLength());
 					}
