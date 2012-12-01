@@ -1,4 +1,5 @@
-package heros.debugui;
+package heros.debugui.launching;
+
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;

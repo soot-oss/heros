@@ -63,7 +63,7 @@
 <extension
       point="org.eclipse.debug.core.launchDelegates">
    <launchDelegate
-         delegate="heros.debugui.HerosDebugLaunchDelegate"
+         delegate="heros.debugui.launching.HerosDebugLaunchDelegate"
          id="heros.launchDelegate.java"
          modes="heros"
          name="Analyze Java Appliction with Heros"

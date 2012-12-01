@@ -1,5 +1,8 @@
 package heros.debugui;
 
+import static heros.debugui.launching.HerosLaunchConstants.MAIN_CLASS_ID;
+import static heros.debugui.launching.HerosLaunchConstants.PROJ_NAME_ID;
+
 import java.lang.reflect.InvocationTargetException;
 
 import org.eclipse.core.runtime.CoreException;
@@ -33,9 +36,6 @@ import org.eclipse.swt.widgets.Group;
 @SuppressWarnings("restriction")
 public class AnalysisDriverTab extends JavaMainTab {
 	
-	private final String PROJ_NAME_ID = Activator.PLUGIN_ID + "ANALYSIS_PROJECT";
-	private final String MAIN_CLASS_ID = Activator.PLUGIN_ID + "ANALYSIS_MAIN_CLASS";
-
 	@Override
 	public void createControl(Composite parent) {
 		Composite comp = SWTFactory.createComposite(parent, parent.getFont(), 1, 1, GridData.FILL_BOTH);
