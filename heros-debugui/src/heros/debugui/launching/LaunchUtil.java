@@ -1,7 +1,12 @@
 package heros.debugui.launching;
 
+import heros.debugsupport.JumpFunctionData;
+import heros.debugui.EdgeDrawing;
+
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -32,6 +37,7 @@ public class LaunchUtil {
 
 			new Thread("SocketListener") {
 
+				@SuppressWarnings({ "rawtypes", "unchecked" })
 				@Override
 				public void run() {
 					try {
@@ -40,12 +46,21 @@ public class LaunchUtil {
 						serverSocket.setSoTimeout(10000);
 						Socket socket = serverSocket.accept();
 						InputStream is = socket.getInputStream();
-						System.err.println("socket opened");
+						ObjectInputStream ois = new ObjectInputStream(is);
+						EdgeDrawing edgeDrawing = new EdgeDrawing();
+						while(true) {
+							JumpFunctionData obj = (JumpFunctionData) ois.readObject();
+							edgeDrawing.newJumpFunction(obj.method, obj.sourceVal, obj.target, obj.targetVal, obj.f);
+						}
 					} catch(SocketTimeoutException e) {
+						//ignore; just terminate thread
+					} catch(EOFException e) {
 						//ignore; just terminate thread
 					} catch (IOException e) {
 						e.printStackTrace();
-					}					
+					} catch (ClassNotFoundException e) {
+						e.printStackTrace();
+					}
 				}
 			}.start();
 			//allow other thread to get to the point where we
