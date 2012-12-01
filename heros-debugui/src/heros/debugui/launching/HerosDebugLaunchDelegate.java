@@ -5,8 +5,8 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IWorkspace;
@@ -42,7 +42,9 @@ public class HerosDebugLaunchDelegate extends JavaLaunchDelegate {
 	}
 	
 	public String getProgramArguments(ILaunchConfiguration configuration) throws CoreException {
-		return super.getProgramArguments(configuration);
+		String originalMainClass = getMainTypeName(configuration);
+		String cp = classPathOfAnalyzedProjectAsString(configuration);
+		return "-cp " + cp + " " + originalMainClass;
 	}
 	
 	@Override
@@ -56,13 +58,17 @@ public class HerosDebugLaunchDelegate extends JavaLaunchDelegate {
 		return analysisProjectClassPathAsStringArray();
 	}
 	
+	@Override
+	public String[] getEnvironment(ILaunchConfiguration configuration) throws CoreException {
+		return LaunchUtil.openSocketAndUpdateEnvironment(configuration, super.getEnvironment(configuration));
+	}
 	
 	protected URL[] classPathOfProject(IJavaProject project) {
 		IWorkspace workspace = ResourcesPlugin.getWorkspace();
 		IClasspathEntry[] cp;
 		try {
 			cp = project.getResolvedClasspath(true);
-			Set<URL> urls = new HashSet<URL>();
+			List<URL> urls = new ArrayList<URL>();
 			String uriString = workspace.getRoot().getFile(
 					project.getOutputLocation()).getLocationURI().toString()
 					+ "/";
