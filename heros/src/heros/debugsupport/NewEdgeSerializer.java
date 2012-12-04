@@ -13,7 +13,7 @@ public abstract class NewEdgeSerializer<M,D,N,V> {
 		this.oos = oos;
 	}
 
-	public void newJumpFunction(M method, D sourceVal, N target, D targetVal, EdgeFunction<V> f) {
+	public final void newJumpFunction(M method, D sourceVal, N target, D targetVal, EdgeFunction<V> f) {
 		SerializableEdgeData data = serializeJumpFunction(method, sourceVal, target, targetVal, f);
 		try {
 			oos.writeObject(data);
@@ -23,5 +23,12 @@ public abstract class NewEdgeSerializer<M,D,N,V> {
 	}
 	
 	public abstract SerializableEdgeData serializeJumpFunction(M method, D sourceVal, N target, D targetVal, EdgeFunction<V> f);
+	
+	public final void closeConnection() {
+		try {
+			oos.close();
+		} catch (IOException e) {
+		}
+	}
 
 }

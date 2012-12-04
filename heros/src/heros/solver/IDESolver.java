@@ -245,6 +245,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			printStats();
 		
 		executor.shutdown();
+		
+		if(debugListener!=null)
+			debugListener.closeConnection();
 	}
 
 	/**
