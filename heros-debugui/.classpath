@@ -3,6 +3,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
 	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
 	<classpathentry excluding="de/ishuo/sourcepainter/|de/ishuo/sourcepainter/handler/" kind="src" path="src"/>
-	<classpathentry kind="lib" path="heros.jar"/>
+	<classpathentry kind="lib" path="heros.jar" sourcepath="/heros"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
