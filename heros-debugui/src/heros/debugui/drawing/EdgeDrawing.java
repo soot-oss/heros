@@ -1,4 +1,4 @@
-package heros.debugui;
+package heros.debugui.drawing;
 
 import heros.debugsupport.SerializableEdgeData;
 
@@ -33,11 +33,24 @@ public class EdgeDrawing {
 	}
 
 	public void openEditorAndDrawEdge(final SerializableEdgeData edge) {
+		drawEdge(edge);
 		openEditorAndJumpToLine(edge);
 	}
 
+	private void drawEdge(SerializableEdgeData edge) {
+		IPath path;
+		try {
+			path = javaProject.findType(edge.className).getPath();
+			IFile file = (IFile) ResourcesPlugin.getWorkspace().getRoot().findMember(path);
+			String osString = file.getLocation().toOSString();
+			SourcePainterRegistry.registerArrow(osString, edge.startLine, 2, edge.endLine, 4);
+		} catch (JavaModelException e) {
+			e.printStackTrace();
+		}
+	}
+
 	private void openEditorAndJumpToLine(final SerializableEdgeData edge) {
-		Display.getDefault().asyncExec(new Runnable() {			
+		Display.getDefault().syncExec(new Runnable() {			
 			@Override
 			public void run() {
 				try {

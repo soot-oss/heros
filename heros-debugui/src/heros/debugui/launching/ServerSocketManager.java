@@ -1,7 +1,7 @@
 package heros.debugui.launching;
 
 import heros.debugsupport.SerializableEdgeData;
-import heros.debugui.EdgeDrawing;
+import heros.debugui.drawing.EdgeDrawing;
 
 import java.io.EOFException;
 import java.io.IOException;
