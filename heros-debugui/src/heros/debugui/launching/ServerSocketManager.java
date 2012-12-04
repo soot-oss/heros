@@ -51,7 +51,7 @@ public class ServerSocketManager {
 						EdgeDrawing edgeDrawing = new EdgeDrawing(projectName);
 						while(true) {
 							SerializableEdgeData obj = (SerializableEdgeData) ois.readObject();
-							edgeDrawing.drawEdge(obj);
+							edgeDrawing.openEditorAndDrawEdge(obj);
 						}
 					} catch(SocketTimeoutException e) {
 						//ignore; just terminate thread

@@ -32,7 +32,11 @@ public class EdgeDrawing {
 		}
 	}
 
-	public void drawEdge(final SerializableEdgeData edge) {
+	public void openEditorAndDrawEdge(final SerializableEdgeData edge) {
+		openEditorAndJumpToLine(edge);
+	}
+
+	private void openEditorAndJumpToLine(final SerializableEdgeData edge) {
 		Display.getDefault().asyncExec(new Runnable() {			
 			@Override
 			public void run() {
