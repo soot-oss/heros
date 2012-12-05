@@ -2,14 +2,11 @@ package heros.debugui.launching;
 
 import java.io.File;
 import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -64,15 +61,10 @@ public class HerosDebugLaunchDelegate extends JavaLaunchDelegate {
 	}
 	
 	protected URL[] classPathOfProject(IJavaProject project) {
-		IWorkspace workspace = ResourcesPlugin.getWorkspace();
 		IClasspathEntry[] cp;
 		try {
 			cp = project.getResolvedClasspath(true);
 			List<URL> urls = new ArrayList<URL>();
-			String uriString = workspace.getRoot().getFile(
-					project.getOutputLocation()).getLocationURI().toString()
-					+ "/";
-			urls.add(new URI(uriString).toURL());
 			for (IClasspathEntry entry : cp) {
 				File file = entry.getPath().toFile();
 				URL url = file.toURI().toURL();
@@ -85,9 +77,6 @@ public class HerosDebugLaunchDelegate extends JavaLaunchDelegate {
 			e.printStackTrace();
 			return new URL[0];
 		} catch (MalformedURLException e) {
-			e.printStackTrace();
-			return new URL[0];
-		} catch (URISyntaxException e) {
 			e.printStackTrace();
 			return new URL[0];
 		}
