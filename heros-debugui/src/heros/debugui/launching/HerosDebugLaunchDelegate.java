@@ -2,11 +2,15 @@ package heros.debugui.launching;
 
 import java.io.File;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -17,6 +21,7 @@ import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.launching.JavaLaunchDelegate;
+import org.eclipse.ui.actions.WorkspaceAction;
 
 public class HerosDebugLaunchDelegate extends JavaLaunchDelegate {
 
@@ -60,14 +65,26 @@ public class HerosDebugLaunchDelegate extends JavaLaunchDelegate {
 		return ServerSocketManager.openSocketAndUpdateEnvironment(configuration, super.getEnvironment(configuration));
 	}
 	
-	protected URL[] classPathOfProject(IJavaProject project) {
+	protected URL[] classPathOfProject(IJavaProject project, boolean includeOutputFolder) {
 		IClasspathEntry[] cp;
 		try {
 			cp = project.getResolvedClasspath(true);
 			List<URL> urls = new ArrayList<URL>();
+			IWorkspace workspace = ResourcesPlugin.getWorkspace();
+			if(includeOutputFolder) {
+				String uriString = workspace.getRoot().getFile(
+						project.getOutputLocation()).getLocationURI().toString()
+						+ "/";
+				urls.add(new URI(uriString).toURL());
+			}
 			for (IClasspathEntry entry : cp) {
-				File file = entry.getPath().toFile();
-				URL url = file.toURI().toURL();
+				IResource member = workspace.getRoot().findMember(entry.getPath());
+				String file;
+				if(member!=null)
+					file = member.getLocation().toOSString();
+				else
+					file = entry.getPath().toOSString();
+				URL url = new File(file).toURI().toURL();
 				urls.add(url);
 			}
 			URL[] array = new URL[urls.size()];
@@ -79,11 +96,14 @@ public class HerosDebugLaunchDelegate extends JavaLaunchDelegate {
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 			return new URL[0];
+		} catch (URISyntaxException e) {
+			e.printStackTrace();
+			return new URL[0];
 		}
 	}
 	
 	protected String[] analysisProjectClassPathAsStringArray() {		
-		URL[] cp = classPathOfProject(analysisProject);
+		URL[] cp = classPathOfProject(analysisProject,true);
 		String[] res = new String[cp.length];
 		for (int i = 0; i < res.length; i++) {
 			URL entry = cp[i];
@@ -95,7 +115,7 @@ public class HerosDebugLaunchDelegate extends JavaLaunchDelegate {
 	protected String classPathOfAnalyzedProjectAsString(ILaunchConfiguration config) {
 		StringBuffer cp = new StringBuffer();
 		try {
-			for (URL url : classPathOfProject(getJavaProject(config))) {
+			for (URL url : classPathOfProject(getJavaProject(config),false)) {
 				cp.append(url.getPath());
 				cp.append(File.pathSeparator);
 			}
