@@ -20,6 +20,14 @@ public class SerializableEdgeData implements Serializable {
 		this.endLine = endLine;
 		this.endColumn = endColumn;
 		this.label = label;
-	} 
+	}
+
+	@Override
+	public String toString() {
+		return "SerializableEdgeData [className=" + className + ", startLine="
+				+ startLine + ", startColumn=" + startColumn + ", endLine="
+				+ endLine + ", endColumn=" + endColumn + ", label=" + label
+				+ "]";
+	} 	
 	
 }
