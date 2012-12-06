@@ -123,11 +123,11 @@ public class EditorPaintListener implements PaintListener {
 		if (arrows != null) {
 			for (SPArrow arrow : arrows) {
 	
-				// Draw arrow
-				int line1 = arrow.startL;
-				int column1 = arrow.startC;
-				int line2 = arrow.endL;
-				int column2 = arrow.endC;
+				// lines and columns are 0-based in eclipse
+				int line1 = arrow.startL-1;
+				int column1 = arrow.startC-1;
+				int line2 = arrow.endL-1;
+				int column2 = arrow.endC-1;
 	
 				if (line1 == line2 && column1 == column2) {
 					System.err.println("Cannot draw arrow to self");
@@ -139,8 +139,8 @@ public class EditorPaintListener implements PaintListener {
 				int isRightwards = (column2 - column1 >= 0) ? 1 : -1;
 	
 				// Get start and end points of the arrow
-				int startOffset = getOffset(line1, column1);
-				int endOffset = getOffset(line2, column2);
+				int startOffset = getOffset(line1, column1, true);
+				int endOffset = getOffset(line2, column2, true);
 	
 				// Remove invalid arrows
 				if (startOffset < 0 || endOffset < 0) {
@@ -255,19 +255,31 @@ public class EditorPaintListener implements PaintListener {
 	 * @param line line
 	 * @param column column
 	 */
-	private int getOffset(int line, int column)
+	private int getOffset(int line, int column, boolean leftMostCharacter)
 	{
 		if (line >= textWidget.getLineCount()) return -1;
 
 		int offset = textWidget.getOffsetAtLine(line);
+		
+		if(leftMostCharacter) {
+			String lineText = textWidget.getLine(line);
+			for(int i=0;i<lineText.length();i++) {
+				char c = lineText.charAt(i);
+				if(c!=' ' && c!='\t') {
+					column = i-1;
+					break;
+				}
+			}
+		}			
 		
 		offset += column;
 
 		if (line == textWidget.getLineCount() - 1) {
 			if (offset >= textWidget.getCharCount())
 				offset = -1; 
-		} else if (offset >= textWidget.getOffsetAtLine(line + 1)) 
-			offset = -1;
+		}
+//		else if (offset >= textWidget.getOffsetAtLine(line + 1)) 
+//			offset = -1;
 
 		return offset;
 	}
