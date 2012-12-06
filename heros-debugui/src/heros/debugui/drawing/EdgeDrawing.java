@@ -43,7 +43,7 @@ public class EdgeDrawing {
 			path = javaProject.findType(edge.className).getPath();
 			IFile file = (IFile) ResourcesPlugin.getWorkspace().getRoot().findMember(path);
 			String osString = file.getLocation().toOSString();
-			SourcePainterRegistry.registerArrow(osString, edge.startLine, 0, edge.endLine, 2);
+			SourcePainterRegistry.registerArrow(osString, edge.startLine, edge.startColumn, edge.endLine, edge.endColumn);
 		} catch (JavaModelException e) {
 			e.printStackTrace();
 		}
