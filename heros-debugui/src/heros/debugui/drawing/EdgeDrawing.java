@@ -50,7 +50,7 @@ public class EdgeDrawing {
 	}
 
 	private void openEditorAndJumpToLine(final SerializableEdgeData edge) {
-		Display.getDefault().syncExec(new Runnable() {			
+		Display.getDefault().asyncExec(new Runnable() {			
 			@Override
 			public void run() {
 				try {
