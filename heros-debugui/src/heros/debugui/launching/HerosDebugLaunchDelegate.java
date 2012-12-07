@@ -21,7 +21,6 @@ import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.launching.JavaLaunchDelegate;
-import org.eclipse.ui.actions.WorkspaceAction;
 
 public class HerosDebugLaunchDelegate extends JavaLaunchDelegate {
 
