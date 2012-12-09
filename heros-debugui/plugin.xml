@@ -114,6 +114,16 @@
             menubarPath="org.eclipse.ui.run/runGroup"
             tooltip="Analyze">
       </action>
-    </actionSet>
+         <action
+               id="heros.debugui.AnalyzeHistoryDropDownAction"
+               toolbarPath="debug.ext"
+               hoverIcon=""
+               class="heros.debugui.action.AnalyzeToolbarAction"
+               disabledIcon=""
+               icon=""
+               label="Analyze"
+               style="pulldown">
+         </action>
+     </actionSet>
 </extension>
 </plugin>
