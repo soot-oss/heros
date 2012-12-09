@@ -15,12 +15,6 @@ import org.eclipse.swt.graphics.Path;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorPart;
-import org.eclipse.ui.IEditorReference;
-import org.eclipse.ui.IPartListener2;
-import org.eclipse.ui.IWorkbenchPage;
-import org.eclipse.ui.IWorkbenchPartReference;
-import org.eclipse.ui.IWorkbenchWindow;
-import org.eclipse.ui.PlatformUI;
 
 @SuppressWarnings("restriction")
 public class EditorPaintListener implements PaintListener {
@@ -28,76 +22,15 @@ public class EditorPaintListener implements PaintListener {
 	protected final StyledText textWidget;
 	protected final IJavaElement viewPartInput;
 
-	public EditorPaintListener(JavaEditor javaEditor) {
+	public static void register(IEditorPart editor) {
+		JavaEditor javaEditor = (JavaEditor) editor;
+		StyledText textWidget = javaEditor.getViewer().getTextWidget();
+		textWidget.addPaintListener(new EditorPaintListener(javaEditor));
+	}
+	
+	private EditorPaintListener(JavaEditor javaEditor) {
 		textWidget = javaEditor.getViewer().getTextWidget();
 		viewPartInput = (IJavaElement) javaEditor.getViewPartInput();
-	}
-
-	public static void register() {
-		IWorkbenchPage page = null;
-		IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-		if (window != null) {
-			page = window.getActivePage();
-		}
-		if (page == null) {
-			// Look for a window and get the page off it!
-			IWorkbenchWindow[] windows = PlatformUI.getWorkbench().getWorkbenchWindows();
-			for (int i = 0; i < windows.length; i++) {
-				if (windows[i] != null) {
-					window = windows[i];
-					page = windows[i].getActivePage();
-					if (page != null)
-						break;
-				}
-			}
-		}
-		if(page!=null) {
-			page.addPartListener(new IPartListener2(){
-
-				@Override
-				public void partActivated(IWorkbenchPartReference partRef) {
-				}
-
-				@Override
-				public void partBroughtToTop(IWorkbenchPartReference partRef) {
-				}
-
-				@Override
-				public void partClosed(IWorkbenchPartReference partRef) {
-				}
-
-				@Override
-				public void partDeactivated(IWorkbenchPartReference partRef) {
-				}
-
-				@Override
-				public void partOpened(IWorkbenchPartReference partRef) {
-					if(partRef instanceof IEditorReference) {
-						IEditorReference editorReference = (IEditorReference) partRef;
-						IEditorPart editor = editorReference.getEditor(false);
-						if(editor instanceof JavaEditor) {
-							JavaEditor javaEditor = (JavaEditor) editor;
-							StyledText textWidget = javaEditor.getViewer().getTextWidget();
-							textWidget.addPaintListener(new EditorPaintListener(javaEditor));
-						}
-					}
-				}
-
-				@Override
-				public void partHidden(IWorkbenchPartReference partRef) {
-				}
-
-				@Override
-				public void partVisible(IWorkbenchPartReference partRef) {
-				}
-
-				@Override
-				public void partInputChanged(IWorkbenchPartReference partRef) {
-				}
-				
-			});
-		}
-		//TODO unregister listener anywhere?
 	}
 
 	@Override
