@@ -274,9 +274,8 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	/**
 	 * Lines 13-20 of the algorithm; processing a call site in the caller's context.
 	 * 
-	 * For each possible callee, registers incoming call edges and updates the callee's summary
-	 * functions for each already-queried endSummary.
-	 * Also propagates call-to-return flows and summarized flows intra-procedurally. 
+	 * For each possible callee, registers incoming call edges.
+	 * Also propagates call-to-return flows and summarized callee flows within the caller. 
 	 * 
 	 * @param edge an edge whose target node resembles a method call
 	 */
@@ -284,6 +283,8 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		final D d1 = edge.factAtSource();
 		final N n = edge.getTarget(); // a call node; line 14...
 		final D d2 = edge.factAtTarget();
+		EdgeFunction<V> f = jumpFunction(edge);
+		List<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
 		
 		//for each possible callee
 		Set<M> callees = icfg.getCalleesOfCallAt(n);
@@ -329,8 +330,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 								EdgeFunction<V> f4 = edgeFunctions.getCallEdgeFunction(n, d2, sCalledProcN, d3);
 								EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(n, sCalledProcN, eP, d4, retSiteN, d5);
 								EdgeFunction<V> fPrime = f4.composeWith(fCalleeSummary).composeWith(f5);							
-								EdgeFunction<V> f = jumpFunction(edge);
-								List<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
 								for (N returnSiteN : returnSiteNs) {
 									propagate(d1, returnSiteN, d3, f.composeWith(fPrime));
 								}
@@ -342,8 +341,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		}
 		//line 17-19 of Naeem/Lhotak/Rodriguez		
 		//process intra-procedural flows along call-to-return flow functions
-		EdgeFunction<V> f = jumpFunction(edge);
-		List<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
 		for (N returnSiteN : returnSiteNs) {
 			FlowFunction<D> callToReturnFlowFunction = flowFunctions.getCallToReturnFlowFunction(n, returnSiteN);
 			flowFunctionConstructionCount++;
@@ -356,6 +353,12 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 
 	/**
 	 * Lines 21-32 of the algorithm.	
+	 * 
+	 * Stores callee-side summaries.
+	 * Also, at the side of the caller, propagates intra-procedural flows to return sites
+	 * using those newly computed summaries.
+	 * 
+	 * @param edge an edge whose target node resembles a method exits
 	 */
 	private void processExit(PathEdge<N,D,M> edge) {
 		final N n = edge.getTarget(); // an exit node; line 21...
