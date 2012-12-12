@@ -99,6 +99,11 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 				return new AllTop<BinaryDomain>(TOP);
 			}
 			
+			@Override
+			public boolean followReturnsPastSeeds() {
+				return ifdsProblem.followReturnsPastSeeds();
+			}
+			
 			class IFDSEdgeFunctions implements EdgeFunctions<N,D,M,BinaryDomain> {
 		
 				public EdgeFunction<BinaryDomain> getNormalEdgeFunction(N src,D srcNode,N tgt,D tgtNode) {

@@ -57,5 +57,10 @@ public abstract class DefaultIFDSTabulationProblem<N,D,M, I extends Interprocedu
 		}
 		return zeroValue;
 	}
+	
+	@Override
+	public boolean followReturnsPastSeeds() {
+		return false;
+	}
 
 }

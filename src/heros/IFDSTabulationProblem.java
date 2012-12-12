@@ -60,4 +60,11 @@ public interface IFDSTabulationProblem<N,D,M, I extends InterproceduralCFG<N,M>>
 	 * interface should therefore cache the return value! 
 	 */
 	D zeroValue();
+	
+	/**
+	 * If true, the analysis will compute a partially unbalanced analysis problem in which
+	 * function returns are followed also further up the call stack than where the initial seeds
+	 * started.
+	 */
+	boolean followReturnsPastSeeds();
 }

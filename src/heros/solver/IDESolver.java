@@ -147,6 +147,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	@DontSynchronize("readOnly")
 	protected final EdgeFunctionCache<N,D,M,V> efCache;
 
+	@DontSynchronize("readOnly")
+	protected final boolean followReturnsPastSeeds;
+
 	/**
 	 * Creates a solver for the given problem, which caches flow functions and edge functions.
 	 * The solver must then be started by calling {@link #solve()}.
@@ -188,6 +191,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		this.valueLattice = tabulationProblem.joinLattice();
 		this.allTop = tabulationProblem.allTopFunction();
 		this.jumpFn = new JumpFunctions<N,D,V>(allTop);
+		this.followReturnsPastSeeds = tabulationProblem.followReturnsPastSeeds();
 	}
 
 	/**
@@ -414,14 +418,16 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			}
 
 			//handling for unbalanced problems where we return out of a method whose call was never processed
-			for(N c: icfg.getCallersOf(methodThatNeedsSummary)) {
-				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
-					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
-					flowFunctionConstructionCount++;
-					Set<D> targets = retFunction.computeTargets(d2);
-					for(D d5: targets) {
-						EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
-						propagate(d2, retSiteC, d5, f.composeWith(f5));
+			if(followReturnsPastSeeds) {
+				for(N c: icfg.getCallersOf(methodThatNeedsSummary)) {
+					for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
+						FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
+						flowFunctionConstructionCount++;
+						Set<D> targets = retFunction.computeTargets(d2);
+						for(D d5: targets) {
+							EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
+							propagate(d2, retSiteC, d5, f.composeWith(f5));
+						}
 					}
 				}
 			}
