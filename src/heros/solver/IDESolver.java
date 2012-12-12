@@ -275,120 +275,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	}
 	
 	/**
-	 * Computes the final values for edge functions.
-	 */
-	private void computeValues() {	
-		//Phase II(i)
-		for(N startPoint: initialSeeds) {
-			setVal(startPoint, zeroValue, valueLattice.bottomElement());
-			Pair<N, D> superGraphNode = new Pair<N,D>(startPoint, zeroValue); 
-			nodeWorklist.add(superGraphNode);
-		}
-		while(true) {
-			synchronized (nodeWorklist) {
-				if(!nodeWorklist.isEmpty()) {
-					//pop job
-					Pair<N,D> nAndD = nodeWorklist.remove(0);	
-					numTasks.getAndIncrement();
-					
-					//dispatch processing of job (potentially in a different thread)
-					executor.execute(new ValuePropagationTask(nAndD));
-				} else if(numTasks.intValue()==0) {
-					//node worklist is empty; no running tasks, we are done
-					break;
-				} else {
-					//the node worklist is empty but we still have running tasks
-					//wait until woken up, then try again
-					try {
-						nodeWorklist.wait();
-					} catch (InterruptedException e) {
-						throw new RuntimeException(e);
-					}
-				}
-			}
-		}
-		//Phase II(ii)
-		//we create an array of all nodes and then dispatch fractions of this array to multiple threads
-		Set<N> allNonCallStartNodes = icfg.allNonCallStartNodes();
-		@SuppressWarnings("unchecked")
-		N[] nonCallStartNodesArray = (N[]) new Object[allNonCallStartNodes.size()];
-		int i=0;
-		for (N n : allNonCallStartNodes) {
-			nonCallStartNodesArray[i] = n;
-			i++;
-		}		
-		for(int t=0;t<numThreads; t++) {
-			executor.execute(new ValueComputationTask(nonCallStartNodesArray, t));
-		}
-		//wait until done
-		executor.shutdown();
-		try {
-			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
-		} catch (InterruptedException e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	private void propagateValueAtStart(Pair<N, D> nAndD, N n) {
-		D d = nAndD.getO2();		
-		M p = icfg.getMethodOf(n);
-		for(N c: icfg.getCallsFromWithin(p)) {					
-			Set<Entry<D, EdgeFunction<V>>> entries; 
-			synchronized (jumpFn) {
-				entries = jumpFn.forwardLookup(d,c).entrySet();
-				for(Map.Entry<D,EdgeFunction<V>> dPAndFP: entries) {
-					D dPrime = dPAndFP.getKey();
-					EdgeFunction<V> fPrime = dPAndFP.getValue();
-					N sP = n;
-					propagateValue(c,dPrime,fPrime.computeTarget(val(sP,d)));
-					flowFunctionApplicationCount++;
-				}
-			}
-		}
-	}
-	
-	private void propagateValueAtCall(Pair<N, D> nAndD, N n) {
-		D d = nAndD.getO2();
-		for(M q: icfg.getCalleesOfCallAt(n)) {
-			FlowFunction<D> callFlowFunction = flowFunctions.getCallFlowFunction(n, q);
-			flowFunctionConstructionCount++;
-			for(D dPrime: callFlowFunction.computeTargets(d)) {
-				EdgeFunction<V> edgeFn = edgeFunctions.getCallEdgeFunction(n, d, q, dPrime);
-				for(N startPoint: icfg.getStartPointsOf(q)) {
-					propagateValue(startPoint,dPrime, edgeFn.computeTarget(val(n,d)));
-					flowFunctionApplicationCount++;
-				}
-			}
-		}
-	}
-	
-	private void propagateValue(N nHashN, D nHashD, V v) {
-		synchronized (val) {
-			V valNHash = val(nHashN, nHashD);
-			V vPrime = valueLattice.join(valNHash,v);
-			if(!vPrime.equals(valNHash)) {
-				setVal(nHashN, nHashD, vPrime);
-				synchronized (nodeWorklist) {
-					nodeWorklist.add(new Pair<N,D>(nHashN,nHashD));
-				}
-			}
-		}
-	}
-
-	private V val(N nHashN, D nHashD){ 
-		V l = val.get(nHashN, nHashD);
-		if(l==null) return valueLattice.topElement(); //implicitly initialized to top; see line [1] of Fig. 7 in SRH96 paper
-		else return l;
-	}
-	
-	private void setVal(N nHashN, D nHashD,V l){ 
-		val.put(nHashN, nHashD,l);
-		if(DEBUG)
-			System.err.println("VALUE: "+icfg.getMethodOf(nHashN)+" "+nHashN+" "+nHashD+ " " + l);
-	}
-
-	
-	/**
 	 * Lines 13-20 of the algorithm; processing a call site in the caller's context
 	 * @param edge an edge whose target node resembles a method call
 	 */
@@ -457,14 +343,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				if(f3==null) f3 = allTop; //SummaryFn initialized to all-top, see line [4] in SRH96 paper
 				propagate(d1, returnSiteN, d3, f.composeWith(f3));
 			}
-		}
-	}
-
-	private EdgeFunction<V> jumpFunction(PathEdge<N, D, M> edge) {
-		synchronized (jumpFn) {
-			EdgeFunction<V> function = jumpFn.forwardLookup(edge.factAtSource(), edge.getTarget()).get(edge.factAtTarget());
-			if(function==null) return allTop; //JumpFn initialized to all-top, see line [2] in SRH96 paper
-			return function;
 		}
 	}
 
@@ -580,6 +458,127 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		}
 	}
 	
+	/**
+	 * Computes the final values for edge functions.
+	 */
+	private void computeValues() {	
+		//Phase II(i)
+		for(N startPoint: initialSeeds) {
+			setVal(startPoint, zeroValue, valueLattice.bottomElement());
+			Pair<N, D> superGraphNode = new Pair<N,D>(startPoint, zeroValue); 
+			nodeWorklist.add(superGraphNode);
+		}
+		while(true) {
+			synchronized (nodeWorklist) {
+				if(!nodeWorklist.isEmpty()) {
+					//pop job
+					Pair<N,D> nAndD = nodeWorklist.remove(0);	
+					numTasks.getAndIncrement();
+					
+					//dispatch processing of job (potentially in a different thread)
+					executor.execute(new ValuePropagationTask(nAndD));
+				} else if(numTasks.intValue()==0) {
+					//node worklist is empty; no running tasks, we are done
+					break;
+				} else {
+					//the node worklist is empty but we still have running tasks
+					//wait until woken up, then try again
+					try {
+						nodeWorklist.wait();
+					} catch (InterruptedException e) {
+						throw new RuntimeException(e);
+					}
+				}
+			}
+		}
+		//Phase II(ii)
+		//we create an array of all nodes and then dispatch fractions of this array to multiple threads
+		Set<N> allNonCallStartNodes = icfg.allNonCallStartNodes();
+		@SuppressWarnings("unchecked")
+		N[] nonCallStartNodesArray = (N[]) new Object[allNonCallStartNodes.size()];
+		int i=0;
+		for (N n : allNonCallStartNodes) {
+			nonCallStartNodesArray[i] = n;
+			i++;
+		}		
+		for(int t=0;t<numThreads; t++) {
+			executor.execute(new ValueComputationTask(nonCallStartNodesArray, t));
+		}
+		//wait until done
+		executor.shutdown();
+		try {
+			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private void propagateValueAtStart(Pair<N, D> nAndD, N n) {
+		D d = nAndD.getO2();		
+		M p = icfg.getMethodOf(n);
+		for(N c: icfg.getCallsFromWithin(p)) {					
+			Set<Entry<D, EdgeFunction<V>>> entries; 
+			synchronized (jumpFn) {
+				entries = jumpFn.forwardLookup(d,c).entrySet();
+				for(Map.Entry<D,EdgeFunction<V>> dPAndFP: entries) {
+					D dPrime = dPAndFP.getKey();
+					EdgeFunction<V> fPrime = dPAndFP.getValue();
+					N sP = n;
+					propagateValue(c,dPrime,fPrime.computeTarget(val(sP,d)));
+					flowFunctionApplicationCount++;
+				}
+			}
+		}
+	}
+	
+	private void propagateValueAtCall(Pair<N, D> nAndD, N n) {
+		D d = nAndD.getO2();
+		for(M q: icfg.getCalleesOfCallAt(n)) {
+			FlowFunction<D> callFlowFunction = flowFunctions.getCallFlowFunction(n, q);
+			flowFunctionConstructionCount++;
+			for(D dPrime: callFlowFunction.computeTargets(d)) {
+				EdgeFunction<V> edgeFn = edgeFunctions.getCallEdgeFunction(n, d, q, dPrime);
+				for(N startPoint: icfg.getStartPointsOf(q)) {
+					propagateValue(startPoint,dPrime, edgeFn.computeTarget(val(n,d)));
+					flowFunctionApplicationCount++;
+				}
+			}
+		}
+	}
+	
+	private void propagateValue(N nHashN, D nHashD, V v) {
+		synchronized (val) {
+			V valNHash = val(nHashN, nHashD);
+			V vPrime = valueLattice.join(valNHash,v);
+			if(!vPrime.equals(valNHash)) {
+				setVal(nHashN, nHashD, vPrime);
+				synchronized (nodeWorklist) {
+					nodeWorklist.add(new Pair<N,D>(nHashN,nHashD));
+				}
+			}
+		}
+	}
+
+	private V val(N nHashN, D nHashD){ 
+		V l = val.get(nHashN, nHashD);
+		if(l==null) return valueLattice.topElement(); //implicitly initialized to top; see line [1] of Fig. 7 in SRH96 paper
+		else return l;
+	}
+	
+	private void setVal(N nHashN, D nHashD,V l){ 
+		val.put(nHashN, nHashD,l);
+		if(DEBUG)
+			System.err.println("VALUE: "+icfg.getMethodOf(nHashN)+" "+nHashN+" "+nHashD+ " " + l);
+	}
+
+	private EdgeFunction<V> jumpFunction(PathEdge<N, D, M> edge) {
+		synchronized (jumpFn) {
+			EdgeFunction<V> function = jumpFn.forwardLookup(edge.factAtSource(), edge.getTarget()).get(edge.factAtTarget());
+			if(function==null) return allTop; //JumpFn initialized to all-top, see line [2] in SRH96 paper
+			return function;
+		}
+	}
+
 	private Set<Cell<N, D, EdgeFunction<V>>> endSummary(N sP, D d3) {
 		Table<N, D, EdgeFunction<V>> map = endSummary.get(sP, d3);
 		if(map==null) return Collections.emptySet();
