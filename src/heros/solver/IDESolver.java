@@ -275,7 +275,12 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	}
 	
 	/**
-	 * Lines 13-20 of the algorithm; processing a call site in the caller's context
+	 * Lines 13-20 of the algorithm; processing a call site in the caller's context.
+	 * 
+	 * For each possible callee, registers incoming call edges and updates the callee's summary
+	 * functions for each already-queried endSummary.
+	 * Also propagates call-to-return flows and summarized flows intra-procedurally. 
+	 * 
 	 * @param edge an edge whose target node resembles a method call
 	 */
 	private void processCall(PathEdge<N,D,M> edge) {
@@ -283,15 +288,23 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		final N n = edge.getTarget(); // a call node; line 14...
 		final D d2 = edge.factAtTarget();
 		
+		//for each possible callee
 		Set<M> callees = icfg.getCalleesOfCallAt(n);
 		for(M sCalledProcN: callees) { //still line 14
+			
+			//compute the call-flow function
 			FlowFunction<D> function = flowFunctions.getCallFlowFunction(n, sCalledProcN);
 			flowFunctionConstructionCount++;
 			Set<D> res = function.computeTargets(d2);
-			for(N sP: icfg.getStartPointsOf(sCalledProcN)) {			
+			
+			//for each callee's start point(s)
+			for(N sP: icfg.getStartPointsOf(sCalledProcN)) {					
+				//for each result node of the call-flow function
 				for(D d3: res) {
+					//create initial self-loop
 					propagate(d3, sP, d3, EdgeIdentity.<V>v()); //line 15
 	
+					//register the fact that <sp,d3> has an incoming edge from <n,d2>
 					Set<Cell<N, D, EdgeFunction<V>>> endSumm;
 					synchronized (incoming) {
 						//line 15.1 of Naeem/Lhotak/Rodriguez
@@ -301,14 +314,21 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 					}
 					
 					//still line 15.2 of Naeem/Lhotak/Rodriguez
+					//for each already-queried exit value <eP,d4> reachable from <sP,d3>,
+					//re-process that value, updating sCalledProcN's summary function,
+					//because we have observed a potentially new incoming edge into <sP,d3>
 					for(Cell<N, D, EdgeFunction<V>> entry: endSumm) {
 						N eP = entry.getRowKey();
 						D d4 = entry.getColumnKey();
 						EdgeFunction<V> fCalleeSummary = entry.getValue();
+						//for each return site
 						for(N retSiteN: icfg.getReturnSitesOfCallAt(n)) {
+							//compute return-flow function
 							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
 							flowFunctionConstructionCount++;
+							//for each target value of the function
 							for(D d5: retFunction.computeTargets(d4)) {
+								//update the caller-side summary function
 								EdgeFunction<V> f4 = edgeFunctions.getCallEdgeFunction(n, d2, sCalledProcN, d3);
 								EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(n, sCalledProcN, eP, d4, retSiteN, d5);
 								synchronized (summaryFunctions) {
@@ -325,7 +345,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				}		
 			}
 		}
-		//line 17-19 of Naeem/Lhotak/Rodriguez
+		//line 17-19 of Naeem/Lhotak/Rodriguez		
+		//process intra-procedural flows along call-to-return flow functions
+		//and along summary functions
 		EdgeFunction<V> f = jumpFunction(edge);
 		List<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
 		for (N returnSiteN : returnSiteNs) {
@@ -357,9 +379,11 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		final D d1 = edge.factAtSource();
 		final D d2 = edge.factAtTarget();
 		
+		//for each of the method's start points
 		for(N sP: icfg.getStartPointsOf(methodThatNeedsSummary)) {
 			//line 21.1 of Naeem/Lhotak/Rodriguez
 			
+			//register end-summary
 			Set<Entry<N, Set<D>>> inc;
 			synchronized (incoming) {
 				addEndSummary(sP, d1, n, d2, f);
@@ -367,32 +391,44 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				inc = new HashSet<Map.Entry<N,Set<D>>>(incoming(d1, sP));
 			}
 			
+			//for each incoming call edge already processed
+			//(see processCall(..))
 			for (Entry<N,Set<D>> entry: inc) {
 				//line 22
 				N c = entry.getKey();
+				//for each return site
 				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
+					//compute return-flow function
 					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
 					flowFunctionConstructionCount++;
 					Set<D> targets = retFunction.computeTargets(d2);
+					//for each incoming-call value
 					for(D d4: entry.getValue()) {
+						//for each target value at the return site
 						//line 23
 						for(D d5: targets) {
+							//update callee-side summary functions
 							EdgeFunction<V> f4 = edgeFunctions.getCallEdgeFunction(c, d4, icfg.getMethodOf(n), d1);
 							EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
 							EdgeFunction<V> fPrime;
+							boolean updatedSummary = false;
 							synchronized (summaryFunctions) {
 								EdgeFunction<V> summaryFunction = summaryFunctions.summariesFor(c,d4,retSiteC).get(d5);			
 								if(summaryFunction==null) summaryFunction = allTop; //SummaryFn initialized to all-top, see line [4] in SRH96 paper
 								fPrime = f4.composeWith(f).composeWith(f5).joinWith(summaryFunction);
 								if(!fPrime.equalTo(summaryFunction)) {
 									summaryFunctions.insertFunction(c,d4,retSiteC,d5,fPrime);
+									updatedSummary = true;
 								}
 							}
-							for(Map.Entry<D,EdgeFunction<V>> valAndFunc: jumpFn.reverseLookup(c,d4).entrySet()) {
-								EdgeFunction<V> f3 = valAndFunc.getValue();
-								if(!f3.equalTo(allTop)); {
-									D d3 = valAndFunc.getKey();
-									propagate(d3, retSiteC, d5, f3.composeWith(fPrime));
+							//propagate caller-side intra-procedural flows according to updated summary functions
+							if(updatedSummary) {
+								for(Map.Entry<D,EdgeFunction<V>> valAndFunc: jumpFn.reverseLookup(c,d4).entrySet()) {
+									EdgeFunction<V> f3 = valAndFunc.getValue();
+									if(!f3.equalTo(allTop)); {
+										D d3 = valAndFunc.getKey();
+										propagate(d3, retSiteC, d5, f3.composeWith(fPrime));
+									}
 								}
 							}
 						}
@@ -404,6 +440,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	
 	/**
 	 * Lines 33-37 of the algorithm.
+	 * Simply propagate normal, intra-procedural flows.
 	 * @param edge
 	 */
 	private void processNormalFlow(PathEdge<N,D,M> edge) {
