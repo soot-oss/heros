@@ -628,7 +628,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			summaries = HashBasedTable.create();
 			endSummary.put(sP, d1, summaries);
 		}
-		summaries.put(eP,d2,f);
+		EdgeFunction<V> oldSummary = summaries.get(eP,d2);
+		if(oldSummary==null) oldSummary=allTop; //initialized to all-top
+		summaries.put(eP,d2,f.joinWith(oldSummary));
 	}	
 	
 	private Set<Entry<N, Set<D>>> incoming(D d1, N sP) {
