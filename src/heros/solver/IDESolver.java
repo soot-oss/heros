@@ -89,9 +89,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	@SynchronizedBy("thread safe data structure, consistent locking when used")
 	protected final JumpFunctions<N,D,V> jumpFn;
 	
-	@SynchronizedBy("thread safe data structure, consistent locking when used")
-	protected final SummaryFunctions<N,D,V> summaryFunctions = new SummaryFunctions<N,D,V>();
-
 	@SynchronizedBy("thread safe data structure, only modified internally")
 	protected final I icfg;
 	
@@ -315,7 +312,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 					
 					//still line 15.2 of Naeem/Lhotak/Rodriguez
 					//for each already-queried exit value <eP,d4> reachable from <sP,d3>,
-					//re-process that value, updating sCalledProcN's summary function,
+					//create new caller-side jump functions to the return sites
 					//because we have observed a potentially new incoming edge into <sP,d3>
 					for(Cell<N, D, EdgeFunction<V>> entry: endSumm) {
 						N eP = entry.getRowKey();
@@ -331,13 +328,11 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 								//update the caller-side summary function
 								EdgeFunction<V> f4 = edgeFunctions.getCallEdgeFunction(n, d2, sCalledProcN, d3);
 								EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(n, sCalledProcN, eP, d4, retSiteN, d5);
-								synchronized (summaryFunctions) {
-									EdgeFunction<V> summaryFunction = summaryFunctions.summariesFor(n, d2, retSiteN).get(d5);			
-									if(summaryFunction==null) summaryFunction = allTop; //SummaryFn initialized to all-top, see line [4] in SRH96 paper
-									EdgeFunction<V> fPrime = f4.composeWith(fCalleeSummary).composeWith(f5).joinWith(summaryFunction);
-									if(!fPrime.equalTo(summaryFunction)) {
-										summaryFunctions.insertFunction(n,d2,retSiteN,d5,fPrime);
-									}	
+								EdgeFunction<V> fPrime = f4.composeWith(fCalleeSummary).composeWith(f5);							
+								EdgeFunction<V> f = jumpFunction(edge);
+								List<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
+								for (N returnSiteN : returnSiteNs) {
+									propagate(d1, returnSiteN, d3, f.composeWith(fPrime));
 								}
 							}
 						}
@@ -347,7 +342,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		}
 		//line 17-19 of Naeem/Lhotak/Rodriguez		
 		//process intra-procedural flows along call-to-return flow functions
-		//and along summary functions
 		EdgeFunction<V> f = jumpFunction(edge);
 		List<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
 		for (N returnSiteN : returnSiteNs) {
@@ -356,14 +350,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			for(D d3: callToReturnFlowFunction.computeTargets(d2)) {
 				EdgeFunction<V> edgeFnE = edgeFunctions.getCallToReturnEdgeFunction(n, d2, returnSiteN, d3);
 				propagate(d1, returnSiteN, d3, f.composeWith(edgeFnE));
-			}
-
-			Map<D,EdgeFunction<V>> d3sAndF3s = summaryFunctions.summariesFor(n, d2, returnSiteN);
-			for (Map.Entry<D,EdgeFunction<V>> d3AndF3 : d3sAndF3s.entrySet()) {
-				D d3 = d3AndF3.getKey();
-				EdgeFunction<V> f3 = d3AndF3.getValue();
-				if(f3==null) f3 = allTop; //SummaryFn initialized to all-top, see line [4] in SRH96 paper
-				propagate(d1, returnSiteN, d3, f.composeWith(f3));
 			}
 		}
 	}
@@ -407,28 +393,16 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 						//for each target value at the return site
 						//line 23
 						for(D d5: targets) {
-							//update callee-side summary functions
+							//compute composed function
 							EdgeFunction<V> f4 = edgeFunctions.getCallEdgeFunction(c, d4, icfg.getMethodOf(n), d1);
 							EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
-							EdgeFunction<V> fPrime;
-							boolean updatedSummary = false;
-							synchronized (summaryFunctions) {
-								EdgeFunction<V> summaryFunction = summaryFunctions.summariesFor(c,d4,retSiteC).get(d5);			
-								if(summaryFunction==null) summaryFunction = allTop; //SummaryFn initialized to all-top, see line [4] in SRH96 paper
-								fPrime = f4.composeWith(f).composeWith(f5).joinWith(summaryFunction);
-								if(!fPrime.equalTo(summaryFunction)) {
-									summaryFunctions.insertFunction(c,d4,retSiteC,d5,fPrime);
-									updatedSummary = true;
-								}
-							}
-							//propagate caller-side intra-procedural flows according to updated summary functions
-							if(updatedSummary) {
-								for(Map.Entry<D,EdgeFunction<V>> valAndFunc: jumpFn.reverseLookup(c,d4).entrySet()) {
-									EdgeFunction<V> f3 = valAndFunc.getValue();
-									if(!f3.equalTo(allTop)); {
-										D d3 = valAndFunc.getKey();
-										propagate(d3, retSiteC, d5, f3.composeWith(fPrime));
-									}
+							EdgeFunction<V> fPrime = f4.composeWith(f).composeWith(f5);
+							//for each jump function coming into the call, propagate to return site using the composed function
+							for(Map.Entry<D,EdgeFunction<V>> valAndFunc: jumpFn.reverseLookup(c,d4).entrySet()) {
+								EdgeFunction<V> f3 = valAndFunc.getValue();
+								if(!f3.equalTo(allTop)); {
+									D d3 = valAndFunc.getKey();
+									propagate(d3, retSiteC, d5, f3.composeWith(fPrime));
 								}
 							}
 						}
