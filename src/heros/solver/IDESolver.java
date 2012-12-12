@@ -412,6 +412,19 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 					}
 				}
 			}
+
+			//handling for unbalanced problems where we return out of a method whose call was never processed
+			for(N c: icfg.getCallersOf(methodThatNeedsSummary)) {
+				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
+					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
+					flowFunctionConstructionCount++;
+					Set<D> targets = retFunction.computeTargets(d2);
+					for(D d5: targets) {
+						EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
+						propagate(d2, retSiteC, d5, f.composeWith(f5));
+					}
+				}
+			}
 		}
 	}
 	
