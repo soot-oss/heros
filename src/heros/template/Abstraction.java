@@ -23,13 +23,13 @@ import java.util.Set;
  */
 public abstract class Abstraction<N,D,M> {
 	
-	abstract Set<D> normalFlowTargets(D source, N curr, N succ);
+	public abstract Set<D> normalFlowTargets(D source, N curr, N succ);
 	
-	abstract Set<D> callFlowTargets(D source, N callStmt, M destinationMethod);
+	public abstract Set<D> callFlowTargets(D source, N callStmt, M destinationMethod);
 	
-	abstract Set<D> returnFlowTargets(D source, N callSite, M calleeMethod, N exitStmt, N returnSite);
+	public abstract Set<D> returnFlowTargets(D source, N callSite, M calleeMethod, N exitStmt, N returnSite);
 	
-	abstract Set<D> callToReturnFlowTargets(D source, N callSite, N returnSite);
+	public abstract Set<D> callToReturnFlowTargets(D source, N callSite, N returnSite);
 
 	public FlowFunction<D> normalFlowFunction(final N curr, final N succ) {
 		return new FlowFunction<D>() {
