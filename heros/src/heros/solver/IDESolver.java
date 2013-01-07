@@ -225,29 +225,30 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			this.executor = Executors.newFixedThreadPool(numThreads);
 			this.numThreads = numThreads;
 		}
-		
-		for(N startPoint: initialSeeds) {
-			propagate(zeroValue, startPoint, zeroValue, allTop);
-			pathWorklist.add(new PathEdge<N,D,M>(zeroValue, startPoint, zeroValue));
-			jumpFn.addFunction(zeroValue, startPoint, zeroValue, EdgeIdentity.<V>v());
+
+		try{
+			for(N startPoint: initialSeeds) {
+				propagate(zeroValue, startPoint, zeroValue, allTop);
+				pathWorklist.add(new PathEdge<N,D,M>(zeroValue, startPoint, zeroValue));
+				jumpFn.addFunction(zeroValue, startPoint, zeroValue, EdgeIdentity.<V>v());
+			}
+			{
+				final long before = System.currentTimeMillis();
+				forwardComputeJumpFunctionsSLRPs();		
+				durationFlowFunctionConstruction = System.currentTimeMillis() - before;
+			}
+			{
+				final long before = System.currentTimeMillis();
+				computeValues();
+				durationFlowFunctionApplication = System.currentTimeMillis() - before;
+			}
+			if(DEBUG) 
+				printStats();
+		} finally {			
+			executor.shutdown();		
+			if(debugListener!=null)
+				debugListener.closeConnection();
 		}
-		{
-			final long before = System.currentTimeMillis();
-			forwardComputeJumpFunctionsSLRPs();		
-			durationFlowFunctionConstruction = System.currentTimeMillis() - before;
-		}
-		{
-			final long before = System.currentTimeMillis();
-			computeValues();
-			durationFlowFunctionApplication = System.currentTimeMillis() - before;
-		}
-		if(DEBUG) 
-			printStats();
-		
-		executor.shutdown();
-		
-		if(debugListener!=null)
-			debugListener.closeConnection();
 	}
 
 	/**
