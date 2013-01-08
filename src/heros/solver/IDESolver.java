@@ -546,16 +546,19 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	
 	private void propagate(D sourceVal, N target, D targetVal, EdgeFunction<V> f) {
 		EdgeFunction<V> jumpFnE;
+		EdgeFunction<V> fPrime;
+		boolean newFunction;
 		synchronized (jumpFn) {
 			jumpFnE = jumpFn.reverseLookup(target, targetVal).get(sourceVal);
-		}
-		if(jumpFnE==null) jumpFnE = allTop; //JumpFn is initialized to all-top (see line [2] in SRH96 paper)
-		EdgeFunction<V> fPrime = jumpFnE.joinWith(f);
-		if(!fPrime.equalTo(jumpFnE)) {
-			synchronized (jumpFn) {
+			if(jumpFnE==null) jumpFnE = allTop; //JumpFn is initialized to all-top (see line [2] in SRH96 paper)
+			fPrime = jumpFnE.joinWith(f);
+			newFunction = !fPrime.equalTo(jumpFnE);
+			if(newFunction) {
 				jumpFn.addFunction(sourceVal, target, targetVal, fPrime);
 			}
-			
+		}
+
+		if(newFunction) {
 			PathEdge<N,D,M> edge = new PathEdge<N,D,M>(sourceVal, target, targetVal);
 			synchronized (pathWorklist) {
 				pathWorklist.add(edge);
