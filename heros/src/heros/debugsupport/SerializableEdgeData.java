@@ -16,14 +16,18 @@ public class SerializableEdgeData implements Serializable {
 
 	public static final long serialVersionUID = -6749133467770764139L;
 	
+	public static enum EdgeKind { JUMP_FUNCTION, EDGE_FUNCTION };
+		
 	public final String className;
 	public final int startLine;
 	public final int startColumn;
 	public final int endLine;
 	public final int endColumn;
 	public final String label;
+	public final EdgeKind kind;
 
-	public SerializableEdgeData(String className, int startLine, int startColumn, int endLine, int endColumn, String label) {
+	public SerializableEdgeData(EdgeKind kind, String className, int startLine, int startColumn, int endLine, int endColumn, String label) {
+		this.kind = kind;
 		this.className = className;
 		this.startLine = startLine;
 		this.startColumn = startColumn;

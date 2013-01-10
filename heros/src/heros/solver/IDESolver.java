@@ -25,6 +25,7 @@ import heros.SynchronizedBy;
 import heros.ZeroedFlowFunctions;
 import heros.debugsupport.NewEdgeSerializer;
 import heros.debugsupport.SocketManager;
+import heros.debugsupport.TracingFlowFunctions;
 import heros.edgefunc.EdgeIdentity;
 
 import java.io.ObjectOutputStream;
@@ -189,6 +190,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			flowFunctions = ffCache;
 		} else {
 			ffCache = null;
+		}
+		if(debugListener!=null) {
+			flowFunctions = new TracingFlowFunctions<N,D,M,I>(flowFunctions,this);
 		}
 		if(edgeFunctionCacheBuilder!=null) {
 			efCache = new EdgeFunctionCache<N,D,M,V>(edgeFunctions, edgeFunctionCacheBuilder);
@@ -776,5 +780,12 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			}
 		}
 	}
+	
+	public I getICFG() {
+		return icfg;
+	}
 
+	public NewEdgeSerializer<M, D, N, V> getDebugListener() {
+		return debugListener;
+	}
 }

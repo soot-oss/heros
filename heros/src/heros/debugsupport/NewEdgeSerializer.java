@@ -23,6 +23,15 @@ public abstract class NewEdgeSerializer<M,D,N,V> {
 		this.oos = oos;
 	}
 
+	public synchronized final void newFlow(M sourceMethod, N source, D sourceVal, N target, D targetVal) {
+		SerializableEdgeData data = serializeEdgeFunction(sourceMethod, source, sourceVal, target, targetVal);
+		try {
+			oos.writeObject(data);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	public synchronized final void newJumpFunction(M method, D sourceVal, N target, D targetVal, EdgeFunction<V> f) {
 		SerializableEdgeData data = serializeJumpFunction(method, sourceVal, target, targetVal, f);
 		try {
@@ -32,8 +41,10 @@ public abstract class NewEdgeSerializer<M,D,N,V> {
 		}
 	}
 	
+	public abstract SerializableEdgeData serializeEdgeFunction(M sourceMethod, N source, D sourceVal, N target, D targetVal);
+
 	public abstract SerializableEdgeData serializeJumpFunction(M method, D sourceVal, N target, D targetVal, EdgeFunction<V> f);
-	
+
 	public synchronized final void closeConnection() {
 		try {
 			oos.close();
