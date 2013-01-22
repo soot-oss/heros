@@ -51,6 +51,14 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 	 * {@link #solve()}.
 	 */
 	public IFDSSolver(final IFDSTabulationProblem<N,D,M,I> ifdsProblem) {
+		this(ifdsProblem, true);
+	}
+	
+	/**
+	 * Creates a solver for the given problem. The solver must then be started by calling
+	 * {@link #solve()}.
+	 */
+	public IFDSSolver(final IFDSTabulationProblem<N,D,M,I> ifdsProblem, boolean autoZero) {
 		super(new IDETabulationProblem<N,D,M,BinaryDomain,I>() {
 
 			public FlowFunctions<N,D,M> flowFunctions() {
@@ -127,7 +135,7 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 				}
 			}
 
-			});
+			}, autoZero);
 	}
 	
 	/**
