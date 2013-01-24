@@ -69,7 +69,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	
 	public static CacheBuilder<Object, Object> DEFAULT_CACHE_BUILDER = CacheBuilder.newBuilder().concurrencyLevel(Runtime.getRuntime().availableProcessors()).initialCapacity(10000).softValues();
 	
-	public static final boolean DEBUG = System.getenv("HEROS_DEBUG")!=null;
+	public static final boolean DEBUG = !System.getProperty("HEROS_DEBUG", "false").equals("false");
 	
 	//executor for dispatching individual compute jobs (may be multi-threaded)
 	@DontSynchronize("only used by single thread")
