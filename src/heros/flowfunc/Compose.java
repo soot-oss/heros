@@ -50,6 +50,7 @@ public class Compose<D> implements FlowFunction<D> {
 				list.add(f);
 			}
 		}
+		if(list.size()==1) return list.get(0);
 		return new Compose(list.toArray(new FlowFunction[list.size()]));
 	}
 	
