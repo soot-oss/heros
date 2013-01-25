@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2012 Eric Bodden.
+ * Copyright (c) 2013 Tata Consultancy Services & École Polytechnique de Montréal
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the GNU Lesser Public License v2.1
  * which accompanies this distribution, and is available at
@@ -7,6 +8,7 @@
  * 
  * Contributors:
  *     Eric Bodden - initial API and implementation
+ *     Marc-André Laverdière-Papineau - Fixed race condition
  ******************************************************************************/
 package heros.solver;
 
@@ -25,21 +27,18 @@ import heros.SynchronizedBy;
 import heros.ZeroedFlowFunctions;
 import heros.edgefunc.EdgeIdentity;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.base.Predicate;
 import com.google.common.cache.CacheBuilder;
@@ -73,18 +72,13 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	
 	//executor for dispatching individual compute jobs (may be multi-threaded)
 	@DontSynchronize("only used by single thread")
-	protected ExecutorService executor;
+	protected ThreadPoolExecutor executor;
 	
 	@DontSynchronize("only used by single thread")
 	protected int numThreads;
 	
 	//the number of currently running tasks
-	protected final AtomicInteger numTasks = new AtomicInteger();
-
-	@SynchronizedBy("consistent lock on field")
-	//We are using a LinkedHashSet here to enforce FIFO semantics, which leads to a breath-first construction
-	//of the exploded super graph. As we observed in experiments, this can speed up the construction.
-	protected final Collection<PathEdge<N,D,M>> pathWorklist = new LinkedHashSet<PathEdge<N,D,M>>();
+	protected final AtomicLong numTasks = new AtomicLong();
 	
 	@SynchronizedBy("thread safe data structure, consistent locking when used")
 	protected final JumpFunctions<N,D,V> jumpFn;
@@ -116,9 +110,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	
 	@DontSynchronize("stateless")
 	protected final EdgeFunction<V> allTop;
-	
-	@DontSynchronize("only used by single thread - phase II not parallelized (yet)")
-	protected final List<Pair<N,D>> nodeWorklist = new LinkedList<Pair<N,D>>();
 
 	@DontSynchronize("only used by single thread - phase II not parallelized (yet)")
 	protected final Table<N,D,V> val = HashBasedTable.create();	
@@ -218,22 +209,31 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * @param numThreads The number of threads to use.
 	 */
 	public void solve(int numThreads) {
-		if(numThreads<2) {
-			this.executor = Executors.newSingleThreadExecutor();
-			this.numThreads = 1;
-		} else {
-			this.executor = Executors.newFixedThreadPool(numThreads);
-			this.numThreads = numThreads;
-		}
+		this.numThreads = numThreads < 2? 1: numThreads;
+		this.executor = new ThreadPoolExecutor(1, numThreads, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 		
 		for(N startPoint: initialSeeds) {
 			propagate(zeroValue, startPoint, zeroValue, allTop);
-			pathWorklist.add(new PathEdge<N,D,M>(zeroValue, startPoint, zeroValue));
+			scheduleEdgeProcessing(new PathEdge<N,D,M>(zeroValue, startPoint, zeroValue));
 			jumpFn.addFunction(zeroValue, startPoint, zeroValue, EdgeIdentity.<V>v());
 		}
 		{
+		  /**
+		   * Forward-tabulates the same-level realizable paths and associated functions.
+		   * Note that this is a little different from the original IFDS formulations because
+		   * we can have statements that are, for instance, both "normal" and "exit" statements.
+		   * This is for instance the case on a "throw" statement that may on the one hand
+		   * lead to a catch block but on the other hand exit the method depending
+		   * on the exception being thrown.
+		   */
 			final long before = System.currentTimeMillis();
-			forwardComputeJumpFunctionsSLRPs();		
+			do { //Wait until we are done the processing
+        try {
+          Thread.sleep(200);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+			}	while (!executor.getQueue().isEmpty() || numTasks.longValue() > executor.getCompletedTaskCount());
 			durationFlowFunctionConstruction = System.currentTimeMillis() - before;
 		}
 		{
@@ -247,43 +247,24 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		executor.shutdown();
 	}
 
-	/**
-	 * Forward-tabulates the same-level realizable paths and associated functions.
-	 * Note that this is a little different from the original IFDS formulations because
-	 * we can have statements that are, for instance, both "normal" and "exit" statements.
-	 * This is for instance the case on a "throw" statement that may on the one hand
-	 * lead to a catch block but on the other hand exit the method depending
-	 * on the exception being thrown.
-	 */
-	private void forwardComputeJumpFunctionsSLRPs() {
-		while(true) {
-			
-			synchronized (pathWorklist) {
-				if(!pathWorklist.isEmpty()) {
-					//pop edge
-					Iterator<PathEdge<N,D,M>> iter = pathWorklist.iterator();
-					PathEdge<N,D,M> edge = iter.next();
-					iter.remove();
-					numTasks.getAndIncrement();
-
-					//dispatch processing of edge (potentially in a different thread)
-					executor.execute(new PathEdgeProcessingTask(edge));
-					propagationCount++;
-				} else if(numTasks.intValue()==0){
-					//path worklist is empty; no running tasks, we are done
-					return;
-				} else {
-					//the path worklist is empty but we still have running tasks
-					//wait until woken up, then try again
-					try {
-						pathWorklist.wait();
-					} catch (InterruptedException e) {
-						throw new RuntimeException(e);
-					}
-				}
-			}
-		}
-	}
+  /**
+   * Dispatch the processing of a given edge. It may be executed in a different thread.
+   * @param edge the edge to process
+   */
+  private void scheduleEdgeProcessing(PathEdge<N,D,M> edge){
+    numTasks.getAndIncrement();
+    executor.execute(new PathEdgeProcessingTask(edge));
+    propagationCount++;
+  }
+	
+  /**
+   * Dispatch the processing of a given value. It may be executed in a different thread.
+   * @param vpt
+   */
+  private void scheduleValueProcessing(ValuePropagationTask vpt){
+    numTasks.getAndIncrement();
+    executor.execute(vpt);
+  }
 	
 	/**
 	 * Lines 13-20 of the algorithm; processing a call site in the caller's context.
@@ -487,9 +468,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 
 		if(newFunction) {
 			PathEdge<N,D,M> edge = new PathEdge<N,D,M>(sourceVal, target, targetVal);
-			synchronized (pathWorklist) {
-				pathWorklist.add(edge);
-			}
+	    scheduleEdgeProcessing(edge);
 
 			if(DEBUG) {
 				if(targetVal!=zeroValue) {			
@@ -518,31 +497,17 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		for(N startPoint: initialSeeds) {
 			setVal(startPoint, zeroValue, valueLattice.bottomElement());
 			Pair<N, D> superGraphNode = new Pair<N,D>(startPoint, zeroValue); 
-			nodeWorklist.add(superGraphNode);
+			scheduleValueProcessing(new ValuePropagationTask(superGraphNode));
 		}
-		while(true) {
-			synchronized (nodeWorklist) {
-				if(!nodeWorklist.isEmpty()) {
-					//pop job
-					Pair<N,D> nAndD = nodeWorklist.remove(0);	
-					numTasks.getAndIncrement();
-					
-					//dispatch processing of job (potentially in a different thread)
-					executor.execute(new ValuePropagationTask(nAndD));
-				} else if(numTasks.intValue()==0) {
-					//node worklist is empty; no running tasks, we are done
-					break;
-				} else {
-					//the node worklist is empty but we still have running tasks
-					//wait until woken up, then try again
-					try {
-						nodeWorklist.wait();
-					} catch (InterruptedException e) {
-						throw new RuntimeException(e);
-					}
-				}
-			}
-		}
+		
+    do { //Wait until we are done the processing
+      try {
+        Thread.sleep(200);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    } while (!executor.getQueue().isEmpty() || numTasks.longValue() > executor.getCompletedTaskCount());
+		
 		//Phase II(ii)
 		//we create an array of all nodes and then dispatch fractions of this array to multiple threads
 		Set<N> allNonCallStartNodes = icfg.allNonCallStartNodes();
@@ -552,7 +517,8 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		for (N n : allNonCallStartNodes) {
 			nonCallStartNodesArray[i] = n;
 			i++;
-		}		
+		}
+		//No need to keep track of the number of tasks scheduled here, since we call shutdown
 		for(int t=0;t<numThreads; t++) {
 			executor.execute(new ValueComputationTask(nonCallStartNodesArray, t));
 		}
@@ -604,9 +570,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			V vPrime = valueLattice.join(valNHash,v);
 			if(!vPrime.equals(valNHash)) {
 				setVal(nHashN, nHashD, vPrime);
-				synchronized (nodeWorklist) {
-					nodeWorklist.add(new Pair<N,D>(nHashN,nHashD));
-				}
+	      scheduleValueProcessing(new ValuePropagationTask(new Pair<N,D>(nHashN,nHashD)));
 			}
 		}
 	}
@@ -721,12 +685,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 					processNormalFlow(edge);
 				}
 			}
-			synchronized (pathWorklist) {
-				numTasks.getAndDecrement();
-				//potentially wake up waiting broker thread
-				//(see forwardComputeJumpFunctionsSLRPs())
-				pathWorklist.notify();
-			}
 		}
 	}
 	
@@ -744,12 +702,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			}
 			if(icfg.isCallStmt(n)) {
 				propagateValueAtCall(nAndD, n);
-			}
-			synchronized (nodeWorklist) {
-				numTasks.getAndDecrement();
-				//potentially wake up waiting broker thread
-				//(see forwardComputeJumpFunctionsSLRPs())
-				nodeWorklist.notify();
 			}
 		}
 	}
