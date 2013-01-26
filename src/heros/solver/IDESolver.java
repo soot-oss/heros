@@ -1,6 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2012 Eric Bodden.
- * Copyright (c) 2013 Tata Consultancy Services & École Polytechnique de Montréal
+ * Copyright (c) 2013 Tata Consultancy Services & Ecole Polytechnique de Montreal
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the GNU Lesser Public License v2.1
  * which accompanies this distribution, and is available at
@@ -8,7 +8,7 @@
  * 
  * Contributors:
  *     Eric Bodden - initial API and implementation
- *     Marc-André Laverdière-Papineau - Fixed race condition
+ *     Marc-Andre Laverdiere-Papineau - Fixed race condition
  ******************************************************************************/
 package heros.solver;
 
@@ -209,8 +209,8 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * @param numThreads The number of threads to use.
 	 */
 	public void solve(int numThreads) {
-		this.numThreads = numThreads < 2? 1: numThreads;
-		this.executor = new ThreadPoolExecutor(1, numThreads, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+		this.numThreads = Math.max(1,numThreads);
+		this.executor = new ThreadPoolExecutor(1, this.numThreads, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 		
 		for(N startPoint: initialSeeds) {
 			propagate(zeroValue, startPoint, zeroValue, allTop);
@@ -228,12 +228,12 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		   */
 			final long before = System.currentTimeMillis();
 			do { //Wait until we are done the processing
-        try {
-          Thread.sleep(200);
-        } catch (InterruptedException e) {
-          throw new RuntimeException(e);
-        }
-			}	while (!executor.getQueue().isEmpty() || numTasks.longValue() > executor.getCompletedTaskCount());
+		        try {
+		          Thread.sleep(200);
+		        } catch (InterruptedException e) {
+		          throw new RuntimeException(e);
+		        }
+			} while (!executor.getQueue().isEmpty() || numTasks.longValue() > executor.getCompletedTaskCount());
 			durationFlowFunctionConstruction = System.currentTimeMillis() - before;
 		}
 		{
@@ -468,7 +468,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 
 		if(newFunction) {
 			PathEdge<N,D,M> edge = new PathEdge<N,D,M>(sourceVal, target, targetVal);
-	    scheduleEdgeProcessing(edge);
+			scheduleEdgeProcessing(edge);
 
 			if(DEBUG) {
 				if(targetVal!=zeroValue) {			
@@ -500,13 +500,13 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			scheduleValueProcessing(new ValuePropagationTask(superGraphNode));
 		}
 		
-    do { //Wait until we are done the processing
-      try {
-        Thread.sleep(200);
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-    } while (!executor.getQueue().isEmpty() || numTasks.longValue() > executor.getCompletedTaskCount());
+	    do { //Wait until we are done the processing
+	      try {
+	        Thread.sleep(200);
+	      } catch (InterruptedException e) {
+	        throw new RuntimeException(e);
+	      }
+	    } while (!executor.getQueue().isEmpty() || numTasks.longValue() > executor.getCompletedTaskCount());
 		
 		//Phase II(ii)
 		//we create an array of all nodes and then dispatch fractions of this array to multiple threads
@@ -570,7 +570,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			V vPrime = valueLattice.join(valNHash,v);
 			if(!vPrime.equals(valNHash)) {
 				setVal(nHashN, nHashD, vPrime);
-	      scheduleValueProcessing(new ValuePropagationTask(new Pair<N,D>(nHashN,nHashD)));
+				scheduleValueProcessing(new ValuePropagationTask(new Pair<N,D>(nHashN,nHashD)));
 			}
 		}
 	}
