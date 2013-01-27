@@ -38,6 +38,7 @@ import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.base.Predicate;
 import com.google.common.cache.CacheBuilder;
@@ -75,6 +76,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	
 	@DontSynchronize("only used by single thread")
 	protected int numThreads;
+	
+	//the number of currently running tasks
+	protected final AtomicLong numTasks = new AtomicLong();
 	
 	@SynchronizedBy("thread safe data structure, consistent locking when used")
 	protected final JumpFunctions<N,D,V> jumpFn;
@@ -136,9 +140,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 
 	@DontSynchronize("readOnly")
 	protected final boolean followReturnsPastSeeds;
-	
-	@SynchronizedBy("thread safe data structure")
-	protected final CountLatch numRunningTasks = new CountLatch(0);
 
 	/**
 	 * Creates a solver for the given problem, which caches flow functions and edge functions.
@@ -226,12 +227,13 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		   * on the exception being thrown.
 		   */
 			final long before = System.currentTimeMillis();
-			//await termination of tasks
-			try {
-				numRunningTasks.awaitZero();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+			do { //Wait until we are done the processing
+		        try {
+		          Thread.sleep(200);
+		        } catch (InterruptedException e) {
+		          throw new RuntimeException(e);
+		        }
+			} while (!executor.getQueue().isEmpty() || numTasks.longValue() > executor.getCompletedTaskCount());
 			durationFlowFunctionConstruction = System.currentTimeMillis() - before;
 		}
 		{
@@ -250,7 +252,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
    * @param edge the edge to process
    */
   private void scheduleEdgeProcessing(PathEdge<N,D,M> edge){
-    numRunningTasks.increment();
+    numTasks.getAndIncrement();
     executor.execute(new PathEdgeProcessingTask(edge));
     propagationCount++;
   }
@@ -260,7 +262,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
    * @param vpt
    */
   private void scheduleValueProcessing(ValuePropagationTask vpt){
-    numRunningTasks.increment();
+    numTasks.getAndIncrement();
     executor.execute(vpt);
   }
 	
@@ -498,12 +500,13 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			scheduleValueProcessing(new ValuePropagationTask(superGraphNode));
 		}
 		
-		//await termination of tasks
-		try {
-			numRunningTasks.awaitZero();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+	    do { //Wait until we are done the processing
+	      try {
+	        Thread.sleep(200);
+	      } catch (InterruptedException e) {
+	        throw new RuntimeException(e);
+	      }
+	    } while (!executor.getQueue().isEmpty() || numTasks.longValue() > executor.getCompletedTaskCount());
 		
 		//Phase II(ii)
 		//we create an array of all nodes and then dispatch fractions of this array to multiple threads
@@ -517,21 +520,10 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		}
 		//No need to keep track of the number of tasks scheduled here, since we call shutdown
 		for(int t=0;t<numThreads; t++) {
-			numRunningTasks.increment();
 			executor.execute(new ValueComputationTask(nonCallStartNodesArray, t));
 		}
-		//await termination of tasks
-		try {
-			numRunningTasks.awaitZero();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		//ask executor to shut down;
-		//this will cause new submissions to the executor to be rejected,
-		//but at this point all tasks should have completed anyway
+		//wait until done
 		executor.shutdown();
-		//similarly here: we await termination, but this should happen instantaneously,
-		//as all tasks should have completed
 		try {
 			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
 		} catch (InterruptedException e) {
@@ -693,7 +685,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 					processNormalFlow(edge);
 				}
 			}
-			numRunningTasks.decrement();
 		}
 	}
 	
@@ -712,7 +703,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			if(icfg.isCallStmt(n)) {
 				propagateValueAtCall(nAndD, n);
 			}
-			numRunningTasks.decrement();
 		}
 	}
 	
@@ -743,7 +733,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 					}
 				}
 			}
-			numRunningTasks.decrement();
 		}
 	}
 
