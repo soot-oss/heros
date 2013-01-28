@@ -28,11 +28,11 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 	}
 
 	@Override
-	protected void beforeExecute(Thread t, Runnable r) {
+	public void execute(Runnable command) {
 		numRunningTasks.increment();
-		super.beforeExecute(t, r);
+		super.execute(command);
 	}
-
+	
 	@Override
 	protected void afterExecute(Runnable r, Throwable t) {
 		numRunningTasks.decrement();
