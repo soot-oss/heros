@@ -258,6 +258,10 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
      executor.execute(vpt);
     }
   
+    /**
+     * Dispatch the computation of a given value. It may be executed in a different thread.
+     * @param task
+     */
 	private void scheduleValueComputationTask(ValueComputationTask task) {
 		executor.execute(task);
 	}
