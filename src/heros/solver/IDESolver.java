@@ -135,39 +135,30 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 
 	@DontSynchronize("readOnly")
 	protected final boolean followReturnsPastSeeds;
-	
+
 	/**
 	 * Creates a solver for the given problem, which caches flow functions and edge functions.
 	 * The solver must then be started by calling {@link #solve()}.
 	 */
 	public IDESolver(IDETabulationProblem<N,D,M,V,I> tabulationProblem) {
-		this(tabulationProblem, true);
-	}
-
-	/**
-	 * Creates a solver for the given problem, which caches flow functions and edge functions.
-	 * The solver must then be started by calling {@link #solve()}.
-	 * @param autoAddZero Automatically add ZERO nodes within flow functions.
-	 */
-	public IDESolver(IDETabulationProblem<N,D,M,V,I> tabulationProblem, boolean autoAddZero) {
-		this(tabulationProblem, autoAddZero, DEFAULT_CACHE_BUILDER, DEFAULT_CACHE_BUILDER);
+		this(tabulationProblem, DEFAULT_CACHE_BUILDER, DEFAULT_CACHE_BUILDER);
 	}
 
 	/**
 	 * Creates a solver for the given problem, constructing caches with the given {@link CacheBuilder}. The solver must then be started by calling
 	 * {@link #solve()}.
-	 * @param autoAddZero Automatically add ZERO nodes within flow functions.
 	 * @param flowFunctionCacheBuilder A valid {@link CacheBuilder} or <code>null</code> if no caching is to be used for flow functions.
 	 * @param edgeFunctionCacheBuilder A valid {@link CacheBuilder} or <code>null</code> if no caching is to be used for edge functions.
 	 */
-	public IDESolver(IDETabulationProblem<N,D,M,V,I> tabulationProblem, boolean autoAddZero, @SuppressWarnings("rawtypes") CacheBuilder flowFunctionCacheBuilder, @SuppressWarnings("rawtypes") CacheBuilder edgeFunctionCacheBuilder) {
+	public IDESolver(IDETabulationProblem<N,D,M,V,I> tabulationProblem, @SuppressWarnings("rawtypes") CacheBuilder flowFunctionCacheBuilder, @SuppressWarnings("rawtypes") CacheBuilder edgeFunctionCacheBuilder) {
 		if(DEBUG) {
 			flowFunctionCacheBuilder = flowFunctionCacheBuilder.recordStats();
 			edgeFunctionCacheBuilder = edgeFunctionCacheBuilder.recordStats();
 		}
 		this.zeroValue = tabulationProblem.zeroValue();
 		this.icfg = tabulationProblem.interproceduralCFG();		
-		FlowFunctions<N, D, M> flowFunctions = autoAddZero ? new ZeroedFlowFunctions<N,D,M>(tabulationProblem.flowFunctions(), tabulationProblem.zeroValue()) : tabulationProblem.flowFunctions(); 
+		FlowFunctions<N, D, M> flowFunctions = tabulationProblem.autoAddZero() ?
+				new ZeroedFlowFunctions<N,D,M>(tabulationProblem.flowFunctions(), tabulationProblem.zeroValue()) : tabulationProblem.flowFunctions(); 
 		EdgeFunctions<N, D, M, V> edgeFunctions = tabulationProblem.edgeFunctions();
 		if(flowFunctionCacheBuilder!=null) {
 			ffCache = new FlowFunctionCache<N,D,M>(flowFunctions, flowFunctionCacheBuilder);

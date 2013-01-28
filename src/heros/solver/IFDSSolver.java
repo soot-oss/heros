@@ -26,8 +26,6 @@ import heros.edgefunc.EdgeIdentity;
 
 import java.util.Set;
 
-
-
 /**
  * A solver for an {@link IFDSTabulationProblem}. This solver in effect uses the {@link IDESolver}
  * to solve the problem, as any IFDS problem can be intepreted as a special case of an IDE problem.
@@ -51,14 +49,6 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 	 * {@link #solve()}.
 	 */
 	public IFDSSolver(final IFDSTabulationProblem<N,D,M,I> ifdsProblem) {
-		this(ifdsProblem, true);
-	}
-	
-	/**
-	 * Creates a solver for the given problem. The solver must then be started by calling
-	 * {@link #solve()}.
-	 */
-	public IFDSSolver(final IFDSTabulationProblem<N,D,M,I> ifdsProblem, boolean autoZero) {
 		super(new IDETabulationProblem<N,D,M,BinaryDomain,I>() {
 
 			public FlowFunctions<N,D,M> flowFunctions() {
@@ -112,6 +102,11 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 				return ifdsProblem.followReturnsPastSeeds();
 			}
 			
+			@Override
+			public boolean autoAddZero() {
+				return ifdsProblem.autoAddZero();
+			}
+			
 			class IFDSEdgeFunctions implements EdgeFunctions<N,D,M,BinaryDomain> {
 		
 				public EdgeFunction<BinaryDomain> getNormalEdgeFunction(N src,D srcNode,N tgt,D tgtNode) {
@@ -135,7 +130,7 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 				}
 			}
 
-			}, autoZero);
+			});
 	}
 	
 	/**

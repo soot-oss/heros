@@ -72,4 +72,10 @@ public interface IFDSTabulationProblem<N,D,M, I extends InterproceduralCFG<N,M>>
 	 * the <i>normal</i> flow function with both <i>curr</i> and <i>succ</i> set to the exit node.
 	 */
 	boolean followReturnsPastSeeds();
+	
+	/**
+	 * If true, the solver will automatically add the zero value to each flow-function call's result set.
+	 * @see #zeroValue()
+	 */
+	boolean autoAddZero();
 }
