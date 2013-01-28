@@ -36,9 +36,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.base.Predicate;
 import com.google.common.cache.CacheBuilder;
@@ -72,13 +70,10 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	
 	//executor for dispatching individual compute jobs (may be multi-threaded)
 	@DontSynchronize("only used by single thread")
-	protected ThreadPoolExecutor executor;
+	protected CountingThreadPoolExecutor executor;
 	
 	@DontSynchronize("only used by single thread")
 	protected int numThreads;
-	
-	//the number of currently running tasks
-	protected final AtomicLong numTasks = new AtomicLong();
 	
 	@SynchronizedBy("thread safe data structure, consistent locking when used")
 	protected final JumpFunctions<N,D,V> jumpFn;
@@ -140,7 +135,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 
 	@DontSynchronize("readOnly")
 	protected final boolean followReturnsPastSeeds;
-
+	
 	/**
 	 * Creates a solver for the given problem, which caches flow functions and edge functions.
 	 * The solver must then be started by calling {@link #solve()}.
@@ -210,7 +205,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 */
 	public void solve(int numThreads) {
 		this.numThreads = Math.max(1,numThreads);
-		this.executor = new ThreadPoolExecutor(1, this.numThreads, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+		this.executor = new CountingThreadPoolExecutor(1, this.numThreads, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 		
 		for(N startPoint: initialSeeds) {
 			propagate(zeroValue, startPoint, zeroValue, allTop);
@@ -227,13 +222,12 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		   * on the exception being thrown.
 		   */
 			final long before = System.currentTimeMillis();
-			do { //Wait until we are done the processing
-		        try {
-		          Thread.sleep(200);
-		        } catch (InterruptedException e) {
-		          throw new RuntimeException(e);
-		        }
-			} while (!executor.getQueue().isEmpty() || numTasks.longValue() > executor.getCompletedTaskCount());
+			//await termination of tasks
+			try {
+				executor.awaitCompletion();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 			durationFlowFunctionConstruction = System.currentTimeMillis() - before;
 		}
 		{
@@ -252,7 +246,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
    * @param edge the edge to process
    */
   private void scheduleEdgeProcessing(PathEdge<N,D,M> edge){
-    numTasks.getAndIncrement();
     executor.execute(new PathEdgeProcessingTask(edge));
     propagationCount++;
   }
@@ -262,7 +255,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
    * @param vpt
    */
   private void scheduleValueProcessing(ValuePropagationTask vpt){
-    numTasks.getAndIncrement();
     executor.execute(vpt);
   }
 	
@@ -500,13 +492,12 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			scheduleValueProcessing(new ValuePropagationTask(superGraphNode));
 		}
 		
-	    do { //Wait until we are done the processing
-	      try {
-	        Thread.sleep(200);
-	      } catch (InterruptedException e) {
-	        throw new RuntimeException(e);
-	      }
-	    } while (!executor.getQueue().isEmpty() || numTasks.longValue() > executor.getCompletedTaskCount());
+		//await termination of tasks
+		try {
+			executor.awaitCompletion();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		
 		//Phase II(ii)
 		//we create an array of all nodes and then dispatch fractions of this array to multiple threads
@@ -522,8 +513,18 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		for(int t=0;t<numThreads; t++) {
 			executor.execute(new ValueComputationTask(nonCallStartNodesArray, t));
 		}
-		//wait until done
+		//await termination of tasks
+		try {
+			executor.awaitCompletion();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		//ask executor to shut down;
+		//this will cause new submissions to the executor to be rejected,
+		//but at this point all tasks should have completed anyway
 		executor.shutdown();
+		//similarly here: we await termination, but this should happen instantaneously,
+		//as all tasks should have completed
 		try {
 			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
 		} catch (InterruptedException e) {
