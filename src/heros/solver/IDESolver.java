@@ -241,22 +241,26 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		executor.shutdown();
 	}
 
-  /**
-   * Dispatch the processing of a given edge. It may be executed in a different thread.
-   * @param edge the edge to process
-   */
-  private void scheduleEdgeProcessing(PathEdge<N,D,M> edge){
-    executor.execute(new PathEdgeProcessingTask(edge));
-    propagationCount++;
-  }
+    /**
+     * Dispatch the processing of a given edge. It may be executed in a different thread.
+     * @param edge the edge to process
+     */
+    private void scheduleEdgeProcessing(PathEdge<N,D,M> edge){
+      executor.execute(new PathEdgeProcessingTask(edge));
+      propagationCount++;
+    }
 	
-  /**
-   * Dispatch the processing of a given value. It may be executed in a different thread.
-   * @param vpt
-   */
-  private void scheduleValueProcessing(ValuePropagationTask vpt){
-    executor.execute(vpt);
-  }
+    /**
+     * Dispatch the processing of a given value. It may be executed in a different thread.
+     * @param vpt
+     */
+    private void scheduleValueProcessing(ValuePropagationTask vpt){
+     executor.execute(vpt);
+    }
+  
+	private void scheduleValueComputationTask(ValueComputationTask task) {
+		executor.execute(task);
+	}
 	
 	/**
 	 * Lines 13-20 of the algorithm; processing a call site in the caller's context.
@@ -511,7 +515,8 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		}
 		//No need to keep track of the number of tasks scheduled here, since we call shutdown
 		for(int t=0;t<numThreads; t++) {
-			executor.execute(new ValueComputationTask(nonCallStartNodesArray, t));
+			ValueComputationTask task = new ValueComputationTask(nonCallStartNodesArray, t);
+			scheduleValueComputationTask(task);
 		}
 		//await termination of tasks
 		try {
