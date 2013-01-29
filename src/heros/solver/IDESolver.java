@@ -221,7 +221,17 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		if(DEBUG) 
 			printStats();
 		
+		//ask executor to shut down;
+		//this will cause new submissions to the executor to be rejected,
+		//but at this point all tasks should have completed anyway
 		executor.shutdown();
+		//similarly here: we await termination, but this should happen instantaneously,
+		//as all tasks should have completed
+		try {
+			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
     /**
@@ -510,17 +520,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			executor.awaitCompletion();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
-		}
-		//ask executor to shut down;
-		//this will cause new submissions to the executor to be rejected,
-		//but at this point all tasks should have completed anyway
-		executor.shutdown();
-		//similarly here: we await termination, but this should happen instantaneously,
-		//as all tasks should have completed
-		try {
-			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
-		} catch (InterruptedException e) {
-			throw new RuntimeException(e);
 		}
 	}
 
