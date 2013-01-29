@@ -136,6 +136,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	@DontSynchronize("readOnly")
 	protected final boolean followReturnsPastSeeds;
 
+	@DontSynchronize("readOnly")
+	protected final boolean computeValues;
+
 	/**
 	 * Creates a solver for the given problem, which caches flow functions and edge functions.
 	 * The solver must then be started by calling {@link #solve()}.
@@ -180,6 +183,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		this.jumpFn = new JumpFunctions<N,D,V>(allTop);
 		this.followReturnsPastSeeds = tabulationProblem.followReturnsPastSeeds();
 		this.numThreads = Math.max(1,tabulationProblem.numThreads());
+		this.computeValues = tabulationProblem.computeValues();
 		this.executor = new CountingThreadPoolExecutor(1, this.numThreads, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 	}
 
@@ -210,7 +214,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			}
 			durationFlowFunctionConstruction = System.currentTimeMillis() - before;
 		}
-		{
+		if(computeValues) {
 			final long before = System.currentTimeMillis();
 			computeValues();
 			durationFlowFunctionApplication = System.currentTimeMillis() - before;

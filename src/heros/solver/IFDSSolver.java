@@ -112,6 +112,11 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 				return ifdsProblem.numThreads();
 			}
 			
+			@Override
+			public boolean computeValues() {
+				return ifdsProblem.computeValues();
+			}
+			
 			class IFDSEdgeFunctions implements EdgeFunctions<N,D,M,BinaryDomain> {
 		
 				public EdgeFunction<BinaryDomain> getNormalEdgeFunction(N src,D srcNode,N tgt,D tgtNode) {

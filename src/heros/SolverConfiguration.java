@@ -39,5 +39,12 @@ public interface SolverConfiguration {
 	 * Returns the number of threads to be used by the solver. 
 	 */
 	int numThreads();
+	
+	/**
+	 * If false, then the solver will only compute the exploded super graph but not propagate values.
+	 * This can save time for IFDS problems where all of the interesting results are collected already
+	 * during the computation of the super graph.
+	 */	
+	boolean computeValues();
 
 }
