@@ -184,10 +184,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		this.followReturnsPastSeeds = tabulationProblem.followReturnsPastSeeds();
 		this.numThreads = Math.max(1,tabulationProblem.numThreads());
 		this.computeValues = tabulationProblem.computeValues();
-		this.executor = new CountingThreadPoolExecutor(1, this.numThreads, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+		this.executor = getExecutor();
 	}
 
-	
 	/**
 	 * Runs the solver on the configured problem. This can take some time.
 	 */
@@ -646,6 +645,13 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				return val!=zeroValue;
 			}
 		});
+	}
+	
+	/**
+	 * Factory method for this solver's thread-pool executor.
+	 */
+	protected CountingThreadPoolExecutor getExecutor() {
+		return new CountingThreadPoolExecutor(1, this.numThreads, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 	}
 
 	public void printStats() {
