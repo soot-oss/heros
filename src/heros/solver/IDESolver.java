@@ -236,8 +236,8 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
      * @param edge the edge to process
      */
     private void scheduleEdgeProcessing(PathEdge<N,D,M> edge){
-      executor.execute(new PathEdgeProcessingTask(edge));
-      propagationCount++;
+    	executor.execute(new PathEdgeProcessingTask(edge));
+    	propagationCount++;
     }
 	
     /**
@@ -245,7 +245,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
      * @param vpt
      */
     private void scheduleValueProcessing(ValuePropagationTask vpt){
-     executor.execute(vpt);
+    	executor.execute(vpt);
     }
   
     /**
