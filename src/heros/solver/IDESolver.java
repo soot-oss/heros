@@ -179,25 +179,15 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		this.allTop = tabulationProblem.allTopFunction();
 		this.jumpFn = new JumpFunctions<N,D,V>(allTop);
 		this.followReturnsPastSeeds = tabulationProblem.followReturnsPastSeeds();
+		this.numThreads = Math.max(1,tabulationProblem.numThreads());
+		this.executor = new CountingThreadPoolExecutor(1, this.numThreads, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 	}
 
-	/**
-	 * Runs the solver on the configured problem. This can take some time.
-	 * Uses a number of threads equal to the return value of
-	 * <code>Runtime.getRuntime().availableProcessors()</code>.
-	 */
-	public void solve() {
-		solve(Runtime.getRuntime().availableProcessors());
-	}
 	
 	/**
 	 * Runs the solver on the configured problem. This can take some time.
-	 * @param numThreads The number of threads to use.
 	 */
-	public void solve(int numThreads) {
-		this.numThreads = Math.max(1,numThreads);
-		this.executor = new CountingThreadPoolExecutor(1, this.numThreads, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
-		
+	public void solve() {		
 		for(N startPoint: initialSeeds) {
 			propagate(zeroValue, startPoint, zeroValue, allTop);
 			jumpFn.addFunction(zeroValue, startPoint, zeroValue, EdgeIdentity.<V>v());

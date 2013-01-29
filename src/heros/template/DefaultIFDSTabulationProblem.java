@@ -67,4 +67,9 @@ public abstract class DefaultIFDSTabulationProblem<N,D,M, I extends Interprocedu
 	public boolean autoAddZero() {
 		return true;
 	}
+	
+	@Override
+	public int numThreads() {
+		return Runtime.getRuntime().availableProcessors();
+	}
 }

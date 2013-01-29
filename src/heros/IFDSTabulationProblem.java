@@ -10,7 +10,6 @@
  ******************************************************************************/
 package heros;
 
-import heros.solver.IDESolver;
 import heros.solver.IFDSSolver;
 
 import java.util.Set;
@@ -26,7 +25,7 @@ import java.util.Set;
  * @param <M> The type of objects used to represent methods. Typically {@link SootMethod}.
  * @param <I> The type of inter-procedural control-flow graph being used.
  */
-public interface IFDSTabulationProblem<N,D,M, I extends InterproceduralCFG<N,M>> {
+public interface IFDSTabulationProblem<N,D,M, I extends InterproceduralCFG<N,M>> extends SolverConfiguration {
 
 	/**
 	 * Returns a set of flow functions. Those functions are used to compute data-flow facts
@@ -61,21 +60,5 @@ public interface IFDSTabulationProblem<N,D,M, I extends InterproceduralCFG<N,M>>
 	 * interface should therefore cache the return value! 
 	 */
 	D zeroValue();
-	
-	/**
-	 * If true, the analysis will compute a partially unbalanced analysis problem in which
-	 * function returns are followed also further up the call stack than where the initial seeds
-	 * started.
-	 * 
-	 * If this is enabled, when reaching the exit of a method that is <i>nowhere</i> called, in order
-	 * to avoid not at all processing the exit statement, the {@link IDESolver} will call
-	 * the <i>normal</i> flow function with both <i>curr</i> and <i>succ</i> set to the exit node.
-	 */
-	boolean followReturnsPastSeeds();
-	
-	/**
-	 * If true, the solver will automatically add the zero value to each flow-function call's result set.
-	 * @see #zeroValue()
-	 */
-	boolean autoAddZero();
+
 }
