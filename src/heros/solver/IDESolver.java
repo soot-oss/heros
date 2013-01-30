@@ -239,7 +239,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
      * Dispatch the processing of a given edge. It may be executed in a different thread.
      * @param edge the edge to process
      */
-    private void scheduleEdgeProcessing(PathEdge<N,D,M> edge){
+    protected void scheduleEdgeProcessing(PathEdge<N,D,M> edge){
     	executor.execute(new PathEdgeProcessingTask(edge));
     	propagationCount++;
     }
