@@ -191,13 +191,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * Runs the solver on the configured problem. This can take some time.
 	 */
 	public void solve() {		
-		for(N startPoint: initialSeeds) {
-			propagate(zeroValue, startPoint, zeroValue, allTop);
-			scheduleEdgeProcessing(new PathEdge<N,D,M>(zeroValue, startPoint, zeroValue));
-			jumpFn.addFunction(zeroValue, startPoint, zeroValue, EdgeIdentity.<V>v());
-		}
-		{
-		  /**
+		  /*
 		   * Forward-tabulates the same-level realizable paths and associated functions.
 		   * Note that this is a little different from the original IFDS formulations because
 		   * we can have statements that are, for instance, both "normal" and "exit" statements.
@@ -205,6 +199,20 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		   * lead to a catch block but on the other hand exit the method depending
 		   * on the exception being thrown.
 		   */
+		for(N startPoint: initialSeeds) {
+			propagate(zeroValue, startPoint, zeroValue, allTop);
+			scheduleEdgeProcessing(new PathEdge<N,D,M>(zeroValue, startPoint, zeroValue));
+			jumpFn.addFunction(zeroValue, startPoint, zeroValue, EdgeIdentity.<V>v());
+		}
+		awaitCompletionComputeValuesAndShutdown();
+	}
+
+	/**
+	 * Awaits the completion of the exploded super graph. When complete, computes result values,
+	 * shuts down the executor and returns.
+	 */
+	protected void awaitCompletionComputeValuesAndShutdown() {
+		{
 			final long before = System.currentTimeMillis();
 			//await termination of tasks
 			try {
