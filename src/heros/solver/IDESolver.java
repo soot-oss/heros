@@ -705,7 +705,8 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 
 		public void run() {
 			N n = nAndD.getO1();
-			if(icfg.isStartPoint(n)) {
+			if(icfg.isStartPoint(n) ||
+				initialSeeds.contains(n)) { 		//our initial seeds are not necessarily method-start points but here they should be treated as such
 				propagateValueAtStart(nAndD, n);
 			}
 			if(icfg.isCallStmt(n)) {
