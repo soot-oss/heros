@@ -1,3 +1,4 @@
+![LogoCIDE](logo/heros-logo.png)
 Heros IFDS/IDE Solver
 =====================
 Heros is a generic implementation of an IFDS/IDE Solver that can be plugged into existing, Java-based program analysis frameworks. A reference connector exists for the [Soot][1] framework.
