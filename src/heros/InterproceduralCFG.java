@@ -33,11 +33,6 @@ public interface InterproceduralCFG<N,M>  {
 	public List<N> getSuccsOf(N n);
 
 	/**
-	 * Returns the predecessor nodes.
-	 */
-	public List<N> getPredsOf(N n);
-
-	/**
 	 * Returns all callee methods for a given call.
 	 */
 	public Set<M> getCalleesOfCallAt(N n);
