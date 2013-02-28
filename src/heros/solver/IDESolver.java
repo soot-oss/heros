@@ -400,7 +400,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 							//for each jump function coming into the call, propagate to return site using the composed function
 							for(Map.Entry<D,EdgeFunction<V>> valAndFunc: jumpFn.reverseLookup(c,d4).entrySet()) {
 								EdgeFunction<V> f3 = valAndFunc.getValue();
-								if(!f3.equalTo(allTop)); {
+								if(!f3.equalTo(allTop)) {
 									D d3 = valAndFunc.getKey();
 									propagate(d3, retSiteC, d5, f3.composeWith(fPrime));
 								}
