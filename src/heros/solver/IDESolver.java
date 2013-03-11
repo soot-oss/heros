@@ -317,7 +317,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 						D d4 = entry.getColumnKey();
 						EdgeFunction<V> fCalleeSummary = entry.getValue();
 						//for each return site
-						for(N retSiteN: icfg.getReturnSitesOfCallAt(n)) {
+						for(N retSiteN: returnSiteNs) {
 							//compute return-flow function
 							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
 							flowFunctionConstructionCount++;
