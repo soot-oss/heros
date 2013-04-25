@@ -293,7 +293,8 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			Set<D> res = function.computeTargets(d2);
 			
 			//for each callee's start point(s)
-			for(N sP: icfg.getStartPointsOf(sCalledProcN)) {					
+			Set<N> startPointsOf = icfg.getStartPointsOf(sCalledProcN);
+			for(N sP: startPointsOf) {					
 				//for each result node of the call-flow function
 				for(D d3: res) {
 					//create initial self-loop
@@ -363,70 +364,71 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		final D d1 = edge.factAtSource();
 		final D d2 = edge.factAtTarget();
 		
-		//for each of the method's start points
-		for(N sP: icfg.getStartPointsOf(methodThatNeedsSummary)) {
+		//for each of the method's start points, determine incoming calls
+		Set<N> startPointsOf = icfg.getStartPointsOf(methodThatNeedsSummary);
+		Set<Entry<N,Set<D>>> inc = new HashSet<Map.Entry<N,Set<D>>>();
+		for(N sP: startPointsOf) {
 			//line 21.1 of Naeem/Lhotak/Rodriguez
 			
 			//register end-summary
-			Set<Entry<N, Set<D>>> inc;
 			synchronized (incoming) {
 				addEndSummary(sP, d1, n, d2, f);
 				//copy to avoid concurrent modification exceptions by other threads
-				inc = new HashSet<Map.Entry<N,Set<D>>>(incoming(d1, sP));
-			}
-			
-			//for each incoming call edge already processed
-			//(see processCall(..))
-			for (Entry<N,Set<D>> entry: inc) {
-				//line 22
-				N c = entry.getKey();
-				//for each return site
-				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
-					//compute return-flow function
-					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
-					flowFunctionConstructionCount++;
-					Set<D> targets = retFunction.computeTargets(d2);
-					//for each incoming-call value
-					for(D d4: entry.getValue()) {
-						//for each target value at the return site
-						//line 23
-						for(D d5: targets) {
-							//compute composed function
-							EdgeFunction<V> f4 = edgeFunctions.getCallEdgeFunction(c, d4, icfg.getMethodOf(n), d1);
-							EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
-							EdgeFunction<V> fPrime = f4.composeWith(f).composeWith(f5);
-							//for each jump function coming into the call, propagate to return site using the composed function
-							for(Map.Entry<D,EdgeFunction<V>> valAndFunc: jumpFn.reverseLookup(c,d4).entrySet()) {
-								EdgeFunction<V> f3 = valAndFunc.getValue();
-								if(!f3.equalTo(allTop)) {
-									D d3 = valAndFunc.getKey();
-									propagate(d3, retSiteC, d5, f3.composeWith(fPrime));
-								}
+				inc.addAll(incoming(d1, sP));
+			}	
+		}
+		
+		//for each incoming call edge already processed
+		//(see processCall(..))
+		for (Entry<N,Set<D>> entry: inc) {
+			//line 22
+			N c = entry.getKey();
+			//for each return site
+			for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
+				//compute return-flow function
+				FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
+				flowFunctionConstructionCount++;
+				Set<D> targets = retFunction.computeTargets(d2);
+				//for each incoming-call value
+				for(D d4: entry.getValue()) {
+					//for each target value at the return site
+					//line 23
+					for(D d5: targets) {
+						//compute composed function
+						EdgeFunction<V> f4 = edgeFunctions.getCallEdgeFunction(c, d4, icfg.getMethodOf(n), d1);
+						EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
+						EdgeFunction<V> fPrime = f4.composeWith(f).composeWith(f5);
+						//for each jump function coming into the call, propagate to return site using the composed function
+						for(Map.Entry<D,EdgeFunction<V>> valAndFunc: jumpFn.reverseLookup(c,d4).entrySet()) {
+							EdgeFunction<V> f3 = valAndFunc.getValue();
+							if(!f3.equalTo(allTop)) {
+								D d3 = valAndFunc.getKey();
+								propagate(d3, retSiteC, d5, f3.composeWith(fPrime));
 							}
 						}
 					}
 				}
 			}
-			
-			//handling for unbalanced problems where we return out of a method whose call was never processed
-			if(inc.isEmpty() && followReturnsPastSeeds) {
-				Set<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
-				for(N c: callers) {
-					for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
-						FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
-						flowFunctionConstructionCount++;
-						Set<D> targets = retFunction.computeTargets(d2);
-						for(D d5: targets) {
-							EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
-							propagate(d2, retSiteC, d5, f.composeWith(f5));
-						}
+		}
+		
+		//handling for unbalanced problems where we return out of a method whose call was never processed
+		if(inc.isEmpty() && followReturnsPastSeeds) {
+			Set<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
+			for(N c: callers) {
+				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
+					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
+					flowFunctionConstructionCount++;
+					Set<D> targets = retFunction.computeTargets(d2);
+					for(D d5: targets) {
+						EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
+						propagate(d2, retSiteC, d5, f.composeWith(f5));
 					}
 				}
-				if(callers.isEmpty()) {
-					FlowFunction<D> normalFlowFunction = flowFunctions.getNormalFlowFunction(n,n);
-					flowFunctionConstructionCount++;
-					normalFlowFunction.computeTargets(d2);
-				}
+			}
+			if(callers.isEmpty()) {
+				FlowFunction<D> normalFlowFunction = flowFunctions.getNormalFlowFunction(n,n);
+				flowFunctionConstructionCount++;
+				normalFlowFunction.computeTargets(d2);
 			}
 		}
 	}
