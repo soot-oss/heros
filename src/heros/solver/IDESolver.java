@@ -317,7 +317,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 						D d4 = entry.getColumnKey();
 						EdgeFunction<V> fCalleeSummary = entry.getValue();
 						//for each return site
-						for(N retSiteN: icfg.getReturnSitesOfCallAt(n)) {
+						for(N retSiteN: returnSiteNs) {
 							//compute return-flow function
 							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
 							flowFunctionConstructionCount++;
@@ -327,9 +327,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 								EdgeFunction<V> f4 = edgeFunctions.getCallEdgeFunction(n, d2, sCalledProcN, d3);
 								EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(n, sCalledProcN, eP, d4, retSiteN, d5);
 								EdgeFunction<V> fPrime = f4.composeWith(fCalleeSummary).composeWith(f5);							
-								for (N returnSiteN : returnSiteNs) {
-									propagate(d1, returnSiteN, d5, f.composeWith(fPrime));
-								}
+								propagate(d1, retSiteN, d5, f.composeWith(fPrime));
 							}
 						}
 					}
@@ -400,7 +398,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 							//for each jump function coming into the call, propagate to return site using the composed function
 							for(Map.Entry<D,EdgeFunction<V>> valAndFunc: jumpFn.reverseLookup(c,d4).entrySet()) {
 								EdgeFunction<V> f3 = valAndFunc.getValue();
-								if(!f3.equalTo(allTop)); {
+								if(!f3.equalTo(allTop)) {
 									D d3 = valAndFunc.getKey();
 									propagate(d3, retSiteC, d5, f3.composeWith(fPrime));
 								}
