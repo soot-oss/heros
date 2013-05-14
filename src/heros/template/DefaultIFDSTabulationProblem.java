@@ -46,7 +46,7 @@ public abstract class DefaultIFDSTabulationProblem<N,D,M, I extends Interprocedu
 	}
 
 	@Override
-	public final I interproceduralCFG() {
+	public I interproceduralCFG() {
 		return icfg;
 	}
 
