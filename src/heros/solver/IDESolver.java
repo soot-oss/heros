@@ -106,7 +106,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	@DontSynchronize("stateless")
 	protected final EdgeFunction<V> allTop;
 
-	@DontSynchronize("only used by single thread - phase II not parallelized (yet)")
+	@SynchronizedBy("consistent lock on field")
 	protected final Table<N,D,V> val = HashBasedTable.create();	
 	
 	@DontSynchronize("benign races")
@@ -577,13 +577,18 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	}
 
 	private V val(N nHashN, D nHashD){ 
-		V l = val.get(nHashN, nHashD);
+		V l;
+		synchronized (val) {
+			l = val.get(nHashN, nHashD);
+		}
 		if(l==null) return valueLattice.topElement(); //implicitly initialized to top; see line [1] of Fig. 7 in SRH96 paper
 		else return l;
 	}
 	
 	private void setVal(N nHashN, D nHashD,V l){ 
-		val.put(nHashN, nHashD,l);
+		synchronized (val) {
+			val.put(nHashN, nHashD,l);
+		}
 		if(DEBUG)
 			System.err.println("VALUE: "+icfg.getMethodOf(nHashN)+" "+nHashN+" "+nHashD+ " " + l);
 	}
@@ -638,6 +643,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * Returns the V-type result for the given value at the given statement. 
 	 */
 	public V resultAt(N stmt, D value) {
+		//no need to synchronize here as all threads are known to have terminated
 		return val.get(stmt, value);
 	}
 	
@@ -647,6 +653,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 */
 	public Map<D,V> resultsAt(N stmt) {
 		//filter out the artificial zero-value
+		//no need to synchronize here as all threads are known to have terminated
 		return Maps.filterKeys(val.row(stmt), new Predicate<D>() {
 
 			public boolean apply(D val) {
