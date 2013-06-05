@@ -71,6 +71,10 @@ public interface EdgeFunctions<N, D, M, V> {
 	 *            method from which the exitStmt is actually returning. This
 	 *            information can be exploited to compute a value that depend on
 	 *            information from before the call.
+	 *            <b>Note:</b> This value might be <code>null</code> if
+	 *            using a tabulation problem with {@link IFDSTabulationProblem#followReturnsPastSeeds()}
+	 *            returning <code>true</code> in a situation where the call graph
+	 *            does not contain a caller for the method that is returned from.
 	 * @param calleeMethod
 	 *            The method from which we are exiting.
 	 * @param exitStmt
@@ -80,6 +84,10 @@ public interface EdgeFunctions<N, D, M, V> {
 	 * @param returnSite
 	 *            One of the possible successor statements of a caller to the
 	 *            method we are exiting from.
+	 *            <b>Note:</b> This value might be <code>null</code> if
+	 *            using a tabulation problem with {@link IFDSTabulationProblem#followReturnsPastSeeds()}
+	 *            returning <code>true</code> in a situation where the call graph
+	 *            does not contain a caller for the method that is returned from.
 	 * @param tgtNode
 	 *            The D-type value with which the target value will be
 	 *            associated at the returnSite.

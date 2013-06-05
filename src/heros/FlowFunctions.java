@@ -58,8 +58,12 @@ public interface FlowFunctions<N, D, M> {
 	 * @param callSite
 	 *            One of all the call sites in the program that called the
 	 *            method from which the exitStmt is actually returning. This
-	 *            information can be exploited to compute a value that depend on
+	 *            information can be exploited to compute a value that depends on
 	 *            information from before the call.
+	 *            <b>Note:</b> This value might be <code>null</code> if
+	 *            using a tabulation problem with {@link IFDSTabulationProblem#followReturnsPastSeeds()}
+	 *            returning <code>true</code> in a situation where the call graph
+	 *            does not contain a caller for the method that is returned from.
 	 * @param calleeMethod
 	 *            The method from which exitStmt returns.
 	 * @param exitStmt
@@ -69,6 +73,10 @@ public interface FlowFunctions<N, D, M> {
 	 *            One of the successor statements of the callSite. There may be
 	 *            multiple successors in case of possible exceptional flow. This
 	 *            method will be called for each such successor.
+	 *            <b>Note:</b> This value might be <code>null</code> if
+	 *            using a tabulation problem with {@link IFDSTabulationProblem#followReturnsPastSeeds()}
+	 *            returning <code>true</code> in a situation where the call graph
+	 *            does not contain a caller for the method that is returned from.
 	 * @return
 	 */
 	public FlowFunction<D> getReturnFlowFunction(N callSite, M calleeMethod, N exitStmt, N returnSite);

@@ -425,10 +425,13 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 					}
 				}
 			}
+			//in cases where there are no callers, the return statement would normally not be processed at all;
+			//this might be undesirable if the flow function has a side effect such as registering a taint;
+			//instead we thus call the return flow function will a null caller
 			if(callers.isEmpty()) {
-				FlowFunction<D> normalFlowFunction = flowFunctions.getNormalFlowFunction(n,n);
+				FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(null, methodThatNeedsSummary,n,null);
 				flowFunctionConstructionCount++;
-				normalFlowFunction.computeTargets(d2);
+				retFunction.computeTargets(d2);
 			}
 		}
 	}
