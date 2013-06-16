@@ -413,25 +413,35 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		
 		//handling for unbalanced problems where we return out of a method whose call was never processed
 		if(inc.isEmpty() && followReturnsPastSeeds) {
-			Set<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
-			for(N c: callers) {
-				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
-					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
-					flowFunctionConstructionCount++;
-					Set<D> targets = retFunction.computeTargets(d2);
-					for(D d5: targets) {
-						EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
-						propagate(d2, retSiteC, d5, f.composeWith(f5));
+			// Make sure that the whole method was never called, regardless of the
+			// calling jump function.
+			boolean wasCalled = false;
+			for(N sP: startPointsOf)
+				if (incoming.containsRow(sP)) {
+					wasCalled = true;
+					break;
+				}
+			if(!wasCalled && followReturnsPastSeeds) {
+				Set<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
+				for(N c: callers) {
+					for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
+						FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
+						flowFunctionConstructionCount++;
+						Set<D> targets = retFunction.computeTargets(d2);
+						for(D d5: targets) {
+							EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
+							propagate(d2, retSiteC, d5, f.composeWith(f5));
+						}
 					}
 				}
-			}
-			//in cases where there are no callers, the return statement would normally not be processed at all;
-			//this might be undesirable if the flow function has a side effect such as registering a taint;
-			//instead we thus call the return flow function will a null caller
-			if(callers.isEmpty()) {
-				FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(null, methodThatNeedsSummary,n,null);
-				flowFunctionConstructionCount++;
-				retFunction.computeTargets(d2);
+				//in cases where there are no callers, the return statement would normally not be processed at all;
+				//this might be undesirable if the flow function has a side effect such as registering a taint;
+				//instead we thus call the return flow function will a null caller
+				if(callers.isEmpty()) {
+					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(null, methodThatNeedsSummary,n,null);
+					flowFunctionConstructionCount++;
+					retFunction.computeTargets(d2);
+				}
 			}
 		}
 	}
