@@ -220,6 +220,14 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
+			Set<Throwable> exceptions = executor.getExceptions();
+			if(!exceptions.isEmpty()) {
+				System.err.println("There were exceptions during IDE analysis:");
+				for (Throwable t : exceptions) {
+					t.printStackTrace();
+				}
+				throw new RuntimeException("There were exceptions during IDE analysis. Exiting.");
+			}
 			durationFlowFunctionConstruction = System.currentTimeMillis() - before;
 		}
 		if(computeValues) {
