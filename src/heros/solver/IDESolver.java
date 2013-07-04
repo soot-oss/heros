@@ -438,7 +438,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 						Set<D> targets = retFunction.computeTargets(d2);
 						for(D d5: targets) {
 							EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
-							propagate(d2, retSiteC, d5, f.composeWith(f5));
+							propagate(zeroValue, retSiteC, d5, f.composeWith(f5));
 						}
 					}
 				}
