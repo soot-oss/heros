@@ -294,7 +294,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			
 			//for each callee's start point(s)
 			Set<N> startPointsOf = icfg.getStartPointsOf(sCalledProcN);
-			for(N sP: startPointsOf) {					
+			for(N sP: startPointsOf) {
 				//for each result node of the call-flow function
 				for(D d3: res) {
 					//create initial self-loop
@@ -306,7 +306,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 						//line 15.1 of Naeem/Lhotak/Rodriguez
 						addIncoming(sP,d3,n,d2);
 						//line 15.2, copy to avoid concurrent modification exceptions by other threads
-						endSumm = new HashSet<Table.Cell<N,D,EdgeFunction<V>>>(endSummary(sP, d3));						
+						endSumm = new HashSet<Table.Cell<N,D,EdgeFunction<V>>>(endSummary(sP, d3));
+						
+						assert !jumpFn.reverseLookup(n, d2).isEmpty();
 					}
 					
 					//still line 15.2 of Naeem/Lhotak/Rodriguez
@@ -598,9 +600,13 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		else return l;
 	}
 	
-	private void setVal(N nHashN, D nHashD,V l){ 
+	private void setVal(N nHashN, D nHashD,V l){
+		// TOP is the implicit default value which we do not need to store.
 		synchronized (val) {
-			val.put(nHashN, nHashD,l);
+			if (l == valueLattice.topElement())     // do not store top values
+				val.remove(nHashN, nHashD);
+			else
+				val.put(nHashN, nHashD,l);
 		}
 		if(DEBUG)
 			System.err.println("VALUE: "+icfg.getMethodOf(nHashN)+" "+nHashN+" "+nHashD+ " " + l);
@@ -653,7 +659,8 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	}	
 	
 	/**
-	 * Returns the V-type result for the given value at the given statement. 
+	 * Returns the V-type result for the given value at the given statement.
+	 * TOP values are never returned.
 	 */
 	public V resultAt(N stmt, D value) {
 		//no need to synchronize here as all threads are known to have terminated
@@ -662,7 +669,8 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	
 	/**
 	 * Returns the resulting environment for the given statement.
-	 * The artificial zero value is automatically stripped.
+	 * The artificial zero value is automatically stripped. TOP values are
+	 * never returned.
 	 */
 	public Map<D,V> resultsAt(N stmt) {
 		//filter out the artificial zero-value
