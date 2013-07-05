@@ -10,27 +10,52 @@
  ******************************************************************************/
 package heros.solver;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-
 import heros.FlowFunction;
 import heros.FlowFunctions;
 import heros.IFDSTabulationProblem;
 import heros.InterproceduralCFG;
+import heros.solver.BiDiIFDSSolver.AbstractionWithSourceStmt;
 
-public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> extends IFDSSolver<N, BiDiIFDSSolver.AbstractionWithSourceStmt<N,D>,M,I> {
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
+public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
+
+	private final IFDSTabulationProblem<N, AbstractionWithSourceStmt<N, D>, M, I> forwardProblem;
 	private final IFDSTabulationProblem<N, AbstractionWithSourceStmt<N, D>, M, I> backwardProblem;
+	private final CountingThreadPoolExecutor sharedExecutor;
 
 	public BiDiIFDSSolver(IFDSTabulationProblem<N,D,M,I> forwardProblem, IFDSTabulationProblem<N,D,M,I> backwardProblem) {
-		super(new AugmentedTabulationProblem<N,D,M,I>(forwardProblem));
-		this.backwardProblem = new AugmentedTabulationProblem<N,D,M,I>(backwardProblem);
 		if(!forwardProblem.followReturnsPastSeeds() || !backwardProblem.followReturnsPastSeeds()) {
 			throw new IllegalArgumentException("This solver is only meant for bottom-up problems, so followReturnsPastSeeds() should return true."); 
 		}
+		this.forwardProblem = new AugmentedTabulationProblem<N,D,M,I>(forwardProblem);
+		this.backwardProblem = new AugmentedTabulationProblem<N,D,M,I>(backwardProblem);
+		this.sharedExecutor = new CountingThreadPoolExecutor(1, forwardProblem.numThreads(), 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 	}
 	
+	public void solve() {
+		
+		IFDSSolver<N,AbstractionWithSourceStmt<N,D>,M,I> fwSolver = new SingleDirectionSolver(forwardProblem);
+
+		IFDSSolver<N,AbstractionWithSourceStmt<N,D>,M,I> bwSolver = new SingleDirectionSolver(backwardProblem);
+		
+		fwSolver.solve();
+	}
+	
+	private class SingleDirectionSolver extends IFDSSolver<N, AbstractionWithSourceStmt<N, D>, M, I> {
+		private SingleDirectionSolver(IFDSTabulationProblem<N, AbstractionWithSourceStmt<N, D>, M, I> ifdsProblem) {
+			super(ifdsProblem);
+		}
+
+		protected CountingThreadPoolExecutor getExecutor() {
+			return sharedExecutor;
+		}
+	}
+
 	public static class AbstractionWithSourceStmt<N,D> {
 
 		protected final D abstraction;
@@ -102,8 +127,13 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> extends
 				}
 
 				@Override
-				public FlowFunction<AbstractionWithSourceStmt<N, D>> getCallToReturnFlowFunction(N callSite, N returnSite) {
-					return null;
+				public FlowFunction<AbstractionWithSourceStmt<N, D>> getCallToReturnFlowFunction(final N callSite, final N returnSite) {
+					return new FlowFunction<BiDiIFDSSolver.AbstractionWithSourceStmt<N,D>>() {
+						@Override
+						public Set<AbstractionWithSourceStmt<N, D>> computeTargets(AbstractionWithSourceStmt<N, D> source) {
+							return copyOverSourceStmts(source, originalFunctions.getCallToReturnFlowFunction(callSite, returnSite));
+						}
+					};
 				}
 				
 				private Set<AbstractionWithSourceStmt<N, D>> copyOverSourceStmts(AbstractionWithSourceStmt<N, D> source, FlowFunction<D> originalFunction) {

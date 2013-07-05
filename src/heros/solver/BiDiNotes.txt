@@ -1,0 +1,18 @@
+TODOs:
+
+- change initialSeeds() to return a mapping from Unit to Abstraction
+- this then allows us to overwrite the initial seeds in the AugmentedTabulationProblem to include the seed unit
+
+
+General principle:
+
+We propagate configurations (abstraction, source) in both directions. Initially, "source" is the seed unit.
+
+Whenever a configuration (abstraction, source) reaches the return-flow function, we proceed as follows:
+- if "the other" analysis has already reached the return-flow function for "source"
+	then we continue and at the same time unpause "the other" return flow 
+- if "the other" analysis has not yet reached the return-flow function for "source" but is still propagating "source"
+	then we register and pause the return flow and yield
+
+On every propagation:
+- if "the other" analysis has terminated the analysis for "source" then we kill the taint
