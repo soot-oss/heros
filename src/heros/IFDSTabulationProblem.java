@@ -12,6 +12,7 @@ package heros;
 
 import heros.solver.IFDSSolver;
 
+import java.util.Map;
 import java.util.Set;
 
 
@@ -45,9 +46,9 @@ public interface IFDSTabulationProblem<N,D,M, I extends InterproceduralCFG<N,M>>
 	I interproceduralCFG();
 	
 	/**
-	 * Returns initial seeds to be used for the analysis. (a set of statements)
+	 * Returns initial seeds to be used for the analysis. This is a mapping of statements to initial analysis facts.
 	 */
-	Set<N> initialSeeds();
+	Map<N,Set<D>> initialSeeds();
 	
 	/**
 	 * This must be a data-flow fact of type {@link D}, but must <i>not</i>

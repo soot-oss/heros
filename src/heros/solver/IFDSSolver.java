@@ -12,7 +12,6 @@ package heros.solver;
 
 import static heros.solver.IFDSSolver.BinaryDomain.BOTTOM;
 import static heros.solver.IFDSSolver.BinaryDomain.TOP;
-
 import heros.EdgeFunction;
 import heros.EdgeFunctions;
 import heros.FlowFunctions;
@@ -24,6 +23,7 @@ import heros.edgefunc.AllBottom;
 import heros.edgefunc.AllTop;
 import heros.edgefunc.EdgeIdentity;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -59,7 +59,7 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 				return ifdsProblem.interproceduralCFG();
 			}
 
-			public Set<N> initialSeeds() {
+			public Map<N,Set<D>> initialSeeds() {
 				return ifdsProblem.initialSeeds();
 			}
 
