@@ -98,7 +98,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	protected final EdgeFunctions<N,D,M,V> edgeFunctions;
 
 	@DontSynchronize("only used by single thread")
-	protected final Set<N> initialSeeds;
+	protected final Map<N,Set<D>> initialSeeds;
 
 	@DontSynchronize("stateless")
 	protected final JoinLattice<V> valueLattice;
@@ -199,9 +199,12 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		   * lead to a catch block but on the other hand exit the method depending
 		   * on the exception being thrown.
 		   */
-		for(N startPoint: initialSeeds) {
-			propagate(zeroValue, startPoint, zeroValue, allTop);
-			scheduleEdgeProcessing(new PathEdge<N,D,M>(zeroValue, startPoint, zeroValue));
+		for(Entry<N, Set<D>> seed: initialSeeds.entrySet()) {
+			N startPoint = seed.getKey();
+			for(D val: seed.getValue()) {
+				propagate(zeroValue, startPoint, val, EdgeIdentity.<V>v());
+				scheduleEdgeProcessing(new PathEdge<N,D,M>(zeroValue, startPoint, val));
+			}
 			jumpFn.addFunction(zeroValue, startPoint, zeroValue, EdgeIdentity.<V>v());
 		}
 		awaitCompletionComputeValuesAndShutdown();
@@ -511,10 +514,13 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 */
 	private void computeValues() {	
 		//Phase II(i)
-		for(N startPoint: initialSeeds) {
-			setVal(startPoint, zeroValue, valueLattice.bottomElement());
-			Pair<N, D> superGraphNode = new Pair<N,D>(startPoint, zeroValue); 
-			scheduleValueProcessing(new ValuePropagationTask(superGraphNode));
+		for(Entry<N, Set<D>> seed: initialSeeds.entrySet()) {
+			N startPoint = seed.getKey();
+			for(D val: seed.getValue()) {
+				setVal(startPoint, val, valueLattice.bottomElement());
+				Pair<N, D> superGraphNode = new Pair<N,D>(startPoint, val); 
+				scheduleValueProcessing(new ValuePropagationTask(superGraphNode));
+			}
 		}
 		
 		//await termination of tasks
@@ -734,7 +740,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		public void run() {
 			N n = nAndD.getO1();
 			if(icfg.isStartPoint(n) ||
-				initialSeeds.contains(n)) { 		//our initial seeds are not necessarily method-start points but here they should be treated as such
+				initialSeeds.containsKey(n)) { 		//our initial seeds are not necessarily method-start points but here they should be treated as such
 				propagateValueAtStart(nAndD, n);
 			}
 			if(icfg.isCallStmt(n)) {
