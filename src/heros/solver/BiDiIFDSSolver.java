@@ -149,7 +149,10 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 		
 		@Override
 		public String toString() {
-			return "[["+abstraction+" from "+source+"]]";
+			if(source!=null)
+				return ""+abstraction+"-@-"+source+"";
+			else
+				return abstraction.toString();
 		}
 	}
 	
