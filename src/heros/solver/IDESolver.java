@@ -191,14 +191,16 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * Runs the solver on the configured problem. This can take some time.
 	 */
 	public void solve() {		
-		  /*
-		   * Forward-tabulates the same-level realizable paths and associated functions.
-		   * Note that this is a little different from the original IFDS formulations because
-		   * we can have statements that are, for instance, both "normal" and "exit" statements.
-		   * This is for instance the case on a "throw" statement that may on the one hand
-		   * lead to a catch block but on the other hand exit the method depending
-		   * on the exception being thrown.
+		submitInitialSeeds();
+		awaitCompletionComputeValuesAndShutdown();
+	}
+
+	/**
+	 * Schedules the processing of initial seeds, initiating the analysis.
+	 * Clients should only call this methods if performing synchronization on
+	 * their own. Normally, {@link #solve()} should be called instead.
 		   */
+	protected void submitInitialSeeds() {
 		for(Entry<N, Set<D>> seed: initialSeeds.entrySet()) {
 			N startPoint = seed.getKey();
 			for(D val: seed.getValue()) {
@@ -207,7 +209,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			}
 			jumpFn.addFunction(zeroValue, startPoint, zeroValue, EdgeIdentity.<V>v());
 		}
-		awaitCompletionComputeValuesAndShutdown();
 	}
 
 	/**
