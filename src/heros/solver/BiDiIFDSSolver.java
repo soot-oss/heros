@@ -114,6 +114,7 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 					System.err.println("UNPAUSE "+debugName+": "+pausedEdge);
 					super.processExit(pausedEdge);
 				}
+				pausedPathEdges.remove(sourceStmt);
 			}
 		}
 		
