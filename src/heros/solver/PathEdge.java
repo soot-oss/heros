@@ -19,9 +19,8 @@ import heros.InterproceduralCFG;
  *
  * @param <N> The type of nodes in the interprocedural control-flow graph. Typically {@link Unit}.
  * @param <D> The type of data-flow facts to be computed by the tabulation problem.
- * @param <M> The type of objects used to represent methods. Typically {@link SootMethod}.
  */
-public class PathEdge<N,D,M> {
+public class PathEdge<N,D> {
 
 	protected final N target;
 	protected final D dSource, dTarget;

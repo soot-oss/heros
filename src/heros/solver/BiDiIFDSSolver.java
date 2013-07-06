@@ -59,8 +59,8 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 		private final String debugName;
 		private SingleDirectionSolver otherSolver;
 		private Set<N> leakedSources = new HashSet<N>();
-		private Map<N,Set<PathEdge<N,AbstractionWithSourceStmt<N,D>,M>>> pausedPathEdges =
-			new HashMap<N,Set<PathEdge<N,AbstractionWithSourceStmt<N,D>,M>>>();
+		private Map<N,Set<PathEdge<N,AbstractionWithSourceStmt<N,D>>>> pausedPathEdges =
+			new HashMap<N,Set<PathEdge<N,AbstractionWithSourceStmt<N,D>>>>();
 
 		private SingleDirectionSolver(IFDSTabulationProblem<N, AbstractionWithSourceStmt<N, D>, M, I> ifdsProblem, String debugName) {
 			super(ifdsProblem);
@@ -68,14 +68,14 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 		}
 		
 		@Override
-		protected void processExit(PathEdge<N, AbstractionWithSourceStmt<N, D>, M> edge) {
+		protected void processExit(PathEdge<N,AbstractionWithSourceStmt<N,D>> edge) {
 			N sourceStmt = edge.factAtTarget().getSourceStmt();
 			if(otherSolver.hasLeaked(sourceStmt)) {
 				otherSolver.unpausePathEdgesForSource(sourceStmt);
 				super.processExit(edge);
 			} else {
-				Set<PathEdge<N, AbstractionWithSourceStmt<N, D>, M>> pausedEdges = pausedPathEdges.get(sourceStmt);
-				if(pausedEdges==null) pausedEdges = new HashSet<PathEdge<N,AbstractionWithSourceStmt<N,D>,M>>();
+				Set<PathEdge<N, AbstractionWithSourceStmt<N, D>>> pausedEdges = pausedPathEdges.get(sourceStmt);
+				if(pausedEdges==null) pausedEdges = new HashSet<PathEdge<N,AbstractionWithSourceStmt<N,D>>>();
 				pausedEdges.add(edge);
 			}			
 		}
@@ -85,9 +85,9 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 		}
 		
 		private void unpausePathEdgesForSource(N sourceStmt) {
-			Set<PathEdge<N, AbstractionWithSourceStmt<N, D>, M>> pausedEdges = pausedPathEdges.get(sourceStmt);
+			Set<PathEdge<N, AbstractionWithSourceStmt<N, D>>> pausedEdges = pausedPathEdges.get(sourceStmt);
 			if(pausedEdges!=null) {
-				for(PathEdge<N, AbstractionWithSourceStmt<N, D>, M> pausedEdge: pausedEdges) {
+				for(PathEdge<N, AbstractionWithSourceStmt<N, D>> pausedEdge: pausedEdges) {
 					super.processExit(pausedEdge);
 				}
 			}
