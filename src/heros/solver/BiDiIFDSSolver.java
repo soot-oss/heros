@@ -40,20 +40,31 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 	}
 	
 	public void solve() {		
-		IFDSSolver<N,AbstractionWithSourceStmt<N,D>,M,I> fwSolver = new SingleDirectionSolver(forwardProblem);
+		IFDSSolver<N,AbstractionWithSourceStmt<N,D>,M,I> fwSolver = new SingleDirectionSolver(forwardProblem,"FW");
 
-		IFDSSolver<N,AbstractionWithSourceStmt<N,D>,M,I> bwSolver = new SingleDirectionSolver(backwardProblem);
+		IFDSSolver<N,AbstractionWithSourceStmt<N,D>,M,I> bwSolver = new SingleDirectionSolver(backwardProblem,"BW");
 		
+		bwSolver.submitInitialSeeds();
 		fwSolver.solve();
 	}
 	
 	private class SingleDirectionSolver extends IFDSSolver<N, AbstractionWithSourceStmt<N, D>, M, I> {
-		private SingleDirectionSolver(IFDSTabulationProblem<N, AbstractionWithSourceStmt<N, D>, M, I> ifdsProblem) {
-			super(ifdsProblem);
-		}
+		private final String debugName;
 
+		private SingleDirectionSolver(IFDSTabulationProblem<N, AbstractionWithSourceStmt<N, D>, M, I> ifdsProblem, String debugName) {
+			super(ifdsProblem);
+			this.debugName = debugName;
+		}
+		
+		/* we share the same executor; this will cause the call to solve() above to block
+		 * until both solvers have finished
+		 */ 
 		protected CountingThreadPoolExecutor getExecutor() {
 			return sharedExecutor;
+		}
+		
+		protected String getDebugName() {
+			return debugName;
 		}
 	}
 
