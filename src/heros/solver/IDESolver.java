@@ -198,12 +198,12 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * Schedules the processing of initial seeds, initiating the analysis.
 	 * Clients should only call this methods if performing synchronization on
 	 * their own. Normally, {@link #solve()} should be called instead.
-		   */
+	 */
 	protected void submitInitialSeeds() {
 		for(Entry<N, Set<D>> seed: initialSeeds.entrySet()) {
 			N startPoint = seed.getKey();
 			for(D val: seed.getValue()) {
-				propagate(zeroValue, startPoint, val, EdgeIdentity.<V>v());
+				propagate(zeroValue, startPoint, val, EdgeIdentity.<V>v(), null);
 				scheduleEdgeProcessing(new PathEdge<N,D>(zeroValue, startPoint, val));
 			}
 			jumpFn.addFunction(zeroValue, startPoint, zeroValue, EdgeIdentity.<V>v());
@@ -301,7 +301,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				//for each result node of the call-flow function
 				for(D d3: res) {
 					//create initial self-loop
-					propagate(d3, sP, d3, EdgeIdentity.<V>v()); //line 15
+					propagate(d3, sP, d3, EdgeIdentity.<V>v(), n); //line 15
 	
 					//register the fact that <sp,d3> has an incoming edge from <n,d2>
 					Set<Cell<N, D, EdgeFunction<V>>> endSumm;
@@ -333,7 +333,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 								EdgeFunction<V> f4 = edgeFunctions.getCallEdgeFunction(n, d2, sCalledProcN, d3);
 								EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(n, sCalledProcN, eP, d4, retSiteN, d5);
 								EdgeFunction<V> fPrime = f4.composeWith(fCalleeSummary).composeWith(f5);							
-								propagate(d1, retSiteN, d5, f.composeWith(fPrime));
+								propagate(d1, retSiteN, d5, f.composeWith(fPrime), n);
 							}
 						}
 					}
@@ -347,7 +347,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			flowFunctionConstructionCount++;
 			for(D d3: callToReturnFlowFunction.computeTargets(d2)) {
 				EdgeFunction<V> edgeFnE = edgeFunctions.getCallToReturnEdgeFunction(n, d2, returnSiteN, d3);
-				propagate(d1, returnSiteN, d3, f.composeWith(edgeFnE));
+				propagate(d1, returnSiteN, d3, f.composeWith(edgeFnE), n);
 			}
 		}
 	}
@@ -408,7 +408,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 							EdgeFunction<V> f3 = valAndFunc.getValue();
 							if(!f3.equalTo(allTop)) {
 								D d3 = valAndFunc.getKey();
-								propagate(d3, retSiteC, d5, f3.composeWith(fPrime));
+								propagate(d3, retSiteC, d5, f3.composeWith(fPrime), c);
 							}
 						}
 					}
@@ -435,7 +435,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 						Set<D> targets = retFunction.computeTargets(d2);
 						for(D d5: targets) {
 							EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
-							propagate(zeroValue, retSiteC, d5, f.composeWith(f5));
+							propagate(zeroValue, retSiteC, d5, f.composeWith(f5), c);
 						}
 					}
 				}
@@ -467,12 +467,22 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			Set<D> res = flowFunction.computeTargets(d2);
 			for (D d3 : res) {
 				EdgeFunction<V> fprime = f.composeWith(edgeFunctions.getNormalEdgeFunction(n, d2, m, d3));
-				propagate(d1, m, d3, fprime); 
+				propagate(d1, m, d3, fprime, null); 
 			}
 		}
 	}
 	
-	protected void propagate(D sourceVal, N target, D targetVal, EdgeFunction<V> f) {
+	/**
+	 * Propagates the flow further down the exploded super graph, merging any edge function that might
+	 * already have been computed for targetVal at target. 
+	 * @param sourceVal the source value of the propagated summary edge
+	 * @param target the target statement
+	 * @param targetVal the target value at the target statement
+	 * @param f the new edge function computed from (s0,sourceVal) to (target,targetVal) 
+	 * @param relatedCallSite for call and return flows the related call statement, <code>null</code> otherwise
+	 *        (this value is not used within this implementation but may be useful for subclasses of {@link IDESolver}) 
+	 */
+	protected void propagate(D sourceVal, N target, D targetVal, EdgeFunction<V> f, /* deliberately exposed to clients */ N relatedCallSite) {
 		EdgeFunction<V> jumpFnE;
 		EdgeFunction<V> fPrime;
 		boolean newFunction;
@@ -697,7 +707,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	protected CountingThreadPoolExecutor getExecutor() {
 		return new CountingThreadPoolExecutor(1, this.numThreads, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 	}
-
+	
 	/**
 	 * Returns a String used to identify the output of this solver in debug mode.
 	 * Subclasses can overwrite this string to distinguish the output from different solvers.
