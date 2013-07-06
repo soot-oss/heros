@@ -40,20 +40,57 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 	}
 	
 	public void solve() {		
-		IFDSSolver<N,AbstractionWithSourceStmt<N,D>,M,I> fwSolver = new SingleDirectionSolver(forwardProblem,"FW");
-
-		IFDSSolver<N,AbstractionWithSourceStmt<N,D>,M,I> bwSolver = new SingleDirectionSolver(backwardProblem,"BW");
+		//construct and connect the two solvers
+		SingleDirectionSolver fwSolver = new SingleDirectionSolver(forwardProblem,"FW");
+		SingleDirectionSolver bwSolver = new SingleDirectionSolver(backwardProblem,"BW");
+		fwSolver.otherSolver = bwSolver;
+		bwSolver.otherSolver = fwSolver;
 		
+		//start the bw solver
 		bwSolver.submitInitialSeeds();
+		
+		//start the fw solver and block until both solvers have completed
+		//(note that they both share the same executor, see below)
+		//note to self: the order of the two should not matter
 		fwSolver.solve();
 	}
 	
 	private class SingleDirectionSolver extends IFDSSolver<N, AbstractionWithSourceStmt<N, D>, M, I> {
 		private final String debugName;
+		private SingleDirectionSolver otherSolver;
+		private Set<N> leakedSources = new HashSet<N>();
+		private Map<N,Set<PathEdge<N,AbstractionWithSourceStmt<N,D>,M>>> pausedPathEdges =
+			new HashMap<N,Set<PathEdge<N,AbstractionWithSourceStmt<N,D>,M>>>();
 
 		private SingleDirectionSolver(IFDSTabulationProblem<N, AbstractionWithSourceStmt<N, D>, M, I> ifdsProblem, String debugName) {
 			super(ifdsProblem);
 			this.debugName = debugName;
+		}
+		
+		@Override
+		protected void processExit(PathEdge<N, AbstractionWithSourceStmt<N, D>, M> edge) {
+			N sourceStmt = edge.factAtTarget().getSourceStmt();
+			if(otherSolver.hasLeaked(sourceStmt)) {
+				otherSolver.unpausePathEdgesForSource(sourceStmt);
+				super.processExit(edge);
+			} else {
+				Set<PathEdge<N, AbstractionWithSourceStmt<N, D>, M>> pausedEdges = pausedPathEdges.get(sourceStmt);
+				if(pausedEdges==null) pausedEdges = new HashSet<PathEdge<N,AbstractionWithSourceStmt<N,D>,M>>();
+				pausedEdges.add(edge);
+			}			
+		}
+		
+		private boolean hasLeaked(N sourceStmt) {
+			return leakedSources.contains(sourceStmt);
+		}
+		
+		private void unpausePathEdgesForSource(N sourceStmt) {
+			Set<PathEdge<N, AbstractionWithSourceStmt<N, D>, M>> pausedEdges = pausedPathEdges.get(sourceStmt);
+			if(pausedEdges!=null) {
+				for(PathEdge<N, AbstractionWithSourceStmt<N, D>, M> pausedEdge: pausedEdges) {
+					super.processExit(pausedEdge);
+				}
+			}
 		}
 		
 		/* we share the same executor; this will cause the call to solve() above to block
