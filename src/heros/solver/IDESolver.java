@@ -494,6 +494,8 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			if(DEBUG) {
 				if(targetVal!=zeroValue) {			
 					StringBuilder result = new StringBuilder();
+					result.append(getDebugName());
+					result.append(": ");
 					result.append("EDGE:  <");
 					result.append(icfg.getMethodOf(target));
 					result.append(",");
@@ -695,6 +697,14 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 */
 	protected CountingThreadPoolExecutor getExecutor() {
 		return new CountingThreadPoolExecutor(1, this.numThreads, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+	}
+
+	/**
+	 * Returns a String used to identify the output of this solver in debug mode.
+	 * Subclasses can overwrite this string to distinguish the output from different solvers.
+	 */
+	protected String getDebugName() {
+		return "";
 	}
 
 	public void printStats() {
