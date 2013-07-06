@@ -14,10 +14,12 @@ import heros.FlowFunction;
 import heros.FlowFunctions;
 import heros.IFDSTabulationProblem;
 import heros.InterproceduralCFG;
-import heros.solver.BiDiIFDSSolver.AbstractionWithSourceStmt;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -37,8 +39,7 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 		this.sharedExecutor = new CountingThreadPoolExecutor(1, forwardProblem.numThreads(), 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 	}
 	
-	public void solve() {
-		
+	public void solve() {		
 		IFDSSolver<N,AbstractionWithSourceStmt<N,D>,M,I> fwSolver = new SingleDirectionSolver(forwardProblem);
 
 		IFDSSolver<N,AbstractionWithSourceStmt<N,D>,M,I> bwSolver = new SingleDirectionSolver(backwardProblem);
@@ -174,8 +175,22 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 			return delegate.interproceduralCFG();
 		}
 
-		public Set<N> initialSeeds() {
-			return delegate.initialSeeds();
+		/* attaches the original seed statement to the abstraction
+		 */
+		public Map<N,Set<AbstractionWithSourceStmt<N, D>>> initialSeeds() {
+			Map<N, Set<D>> originalSeeds = delegate.initialSeeds();
+			Map<N,Set<AbstractionWithSourceStmt<N, D>>> res = new HashMap<N, Set<AbstractionWithSourceStmt<N,D>>>();
+			for(Entry<N, Set<D>> entry: originalSeeds.entrySet()) {
+				N stmt = entry.getKey();
+				Set<D> seeds = entry.getValue();
+				Set<AbstractionWithSourceStmt<N, D>> resSet = new HashSet<AbstractionWithSourceStmt<N,D>>();
+				for (D d : seeds) {
+					//attach source stmt to abstraction
+					resSet.add(new AbstractionWithSourceStmt<N,D>(d, stmt));
+				}
+				res.put(stmt, resSet);
+			}			
+			return res;
 		}
 
 		public AbstractionWithSourceStmt<N, D> zeroValue() {
