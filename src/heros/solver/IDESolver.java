@@ -279,7 +279,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * 
 	 * @param edge an edge whose target node resembles a method call
 	 */
-	private void processCall(PathEdge<N,D,M> edge) {
+	protected void processCall(PathEdge<N,D,M> edge) {
 		final D d1 = edge.factAtSource();
 		final N n = edge.getTarget(); // a call node; line 14...
 		final D d2 = edge.factAtTarget();
@@ -361,7 +361,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * 
 	 * @param edge an edge whose target node resembles a method exits
 	 */
-	private void processExit(PathEdge<N,D,M> edge) {
+	protected void processExit(PathEdge<N,D,M> edge) {
 		final N n = edge.getTarget(); // an exit node; line 21...
 		EdgeFunction<V> f = jumpFunction(edge);
 		M methodThatNeedsSummary = icfg.getMethodOf(n);
@@ -456,7 +456,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * Simply propagate normal, intra-procedural flows.
 	 * @param edge
 	 */
-	private void processNormalFlow(PathEdge<N,D,M> edge) {
+	protected void processNormalFlow(PathEdge<N,D,M> edge) {
 		final D d1 = edge.factAtSource();
 		final N n = edge.getTarget(); 
 		final D d2 = edge.factAtTarget();
