@@ -472,7 +472,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		}
 	}
 	
-	private void propagate(D sourceVal, N target, D targetVal, EdgeFunction<V> f) {
+	protected void propagate(D sourceVal, N target, D targetVal, EdgeFunction<V> f) {
 		EdgeFunction<V> jumpFnE;
 		EdgeFunction<V> fPrime;
 		boolean newFunction;
