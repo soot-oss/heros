@@ -416,17 +416,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			}
 		}
 		
-		//handling for unbalanced problems where we return out of a method whose call was never processed
-		if(inc.isEmpty() && followReturnsPastSeeds) {
-			// Make sure that the whole method was never called, regardless of the
-			// calling jump function.
-			boolean wasCalled = false;
-			for(N sP: startPointsOf)
-				if (incoming.containsRow(sP)) {
-					wasCalled = true;
-					break;
-				}
-			if(!wasCalled && followReturnsPastSeeds) {
+		//handling for unbalanced problems where we return out of a method with a fact for which we have no incoming flow
+		if(followReturnsPastSeeds && inc.isEmpty()) {
+			// only propagate up if we 
 				Set<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
 				for(N c: callers) {
 					for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
@@ -449,7 +441,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				}
 			}
 		}
-	}
 	
 	/**
 	 * Lines 33-37 of the algorithm.
