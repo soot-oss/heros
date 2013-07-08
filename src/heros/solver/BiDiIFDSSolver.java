@@ -42,7 +42,7 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 	
 	public void solve() {		
 		//construct and connect the two solvers
-		SingleDirectionSolver fwSolver = new SingleDirectionSolver(forwardProblem,"FW");
+		SingleDirectionSolver fwSolver = new SingleDirectionSolver(forwardProblem,"  FW");
 		SingleDirectionSolver bwSolver = new SingleDirectionSolver(backwardProblem,"BW");
 		fwSolver.otherSolver = bwSolver;
 		bwSolver.otherSolver = fwSolver;
@@ -158,6 +158,38 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 				return ""+abstraction+"-@-"+source+"";
 			else
 				return abstraction.toString();
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((abstraction == null) ? 0 : abstraction.hashCode());
+			result = prime * result + ((source == null) ? 0 : source.hashCode());
+			return result;
+		}
+
+		@SuppressWarnings("rawtypes")
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			AbstractionWithSourceStmt other = (AbstractionWithSourceStmt) obj;
+			if (abstraction == null) {
+				if (other.abstraction != null)
+					return false;
+			} else if (!abstraction.equals(other.abstraction))
+				return false;
+			if (source == null) {
+				if (other.source != null)
+					return false;
+			} else if (!source.equals(other.source))
+				return false;
+			return true;
 		}
 	}
 	
