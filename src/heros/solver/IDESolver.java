@@ -417,7 +417,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		}
 		
 		//handling for unbalanced problems where we return out of a method with a fact for which we have no incoming flow
-		if(followReturnsPastSeeds && inc.isEmpty()) {
+		//note: we propagate that way only values that originate from ZERO, as conditionally generated values should only
+		//be propagated into callers that have an incoming edge for this condition
+		if(followReturnsPastSeeds && inc.isEmpty() && d1.equals(zeroValue)) {
 			// only propagate up if we 
 				Set<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
 				for(N c: callers) {
