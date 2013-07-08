@@ -71,22 +71,26 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 		
 		@Override
 		protected void processExit(PathEdge<N,AbstractionWithSourceStmt<N,D>> edge) {
-			N sourceStmt = edge.factAtTarget().getSourceStmt();
-			leakedSources.add(sourceStmt);
-			if(otherSolver.hasLeaked(sourceStmt)) {
-				otherSolver.unpausePathEdgesForSource(sourceStmt);
-				inProcessExit = true;
-				super.processExit(edge);
-				inProcessExit = false;
+			if(edge.factAtSource().equals(zeroValue)) {
+				N sourceStmt = edge.factAtTarget().getSourceStmt();
+				leakedSources.add(sourceStmt);
+				if(otherSolver.hasLeaked(sourceStmt)) {
+					otherSolver.unpausePathEdgesForSource(sourceStmt);
+					inProcessExit = true;
+					super.processExit(edge);
+					inProcessExit = false;
+				} else {
+					Set<PathEdge<N,AbstractionWithSourceStmt<N,D>>> pausedEdges = pausedPathEdges.get(sourceStmt);
+					if(pausedEdges==null) {
+						pausedEdges = new HashSet<PathEdge<N,AbstractionWithSourceStmt<N,D>>>();
+						pausedPathEdges.put(sourceStmt,pausedEdges);
+					}				
+					pausedEdges.add(edge);
+					System.err.println("PAUSE "+debugName+": "+edge);
+				}
 			} else {
-				Set<PathEdge<N,AbstractionWithSourceStmt<N,D>>> pausedEdges = pausedPathEdges.get(sourceStmt);
-				if(pausedEdges==null) {
-					pausedEdges = new HashSet<PathEdge<N,AbstractionWithSourceStmt<N,D>>>();
-					pausedPathEdges.put(sourceStmt,pausedEdges);
-				}				
-				pausedEdges.add(edge);
-				System.err.println("PAUSE "+debugName+": "+edge);
-			}			
+				super.processExit(edge);
+			}
 		}
 		
 		protected void propagate(AbstractionWithSourceStmt<N,D> sourceVal, N target, AbstractionWithSourceStmt<N,D> targetVal,
