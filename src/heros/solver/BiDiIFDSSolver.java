@@ -10,6 +10,7 @@
  ******************************************************************************/
 package heros.solver;
 
+import static heros.solver.IDESolver.DEBUG;
 import heros.EdgeFunction;
 import heros.FlowFunction;
 import heros.FlowFunctions;
@@ -42,7 +43,7 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 	
 	public void solve() {		
 		//construct and connect the two solvers
-		SingleDirectionSolver fwSolver = new SingleDirectionSolver(forwardProblem,"  FW");
+		SingleDirectionSolver fwSolver = new SingleDirectionSolver(forwardProblem, "FW");
 		SingleDirectionSolver bwSolver = new SingleDirectionSolver(backwardProblem,"BW");
 		fwSolver.otherSolver = bwSolver;
 		bwSolver.otherSolver = fwSolver;
@@ -62,7 +63,6 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 		private Set<N> leakedSources = new HashSet<N>();
 		private Map<N,Set<PathEdge<N,AbstractionWithSourceStmt<N,D>>>> pausedPathEdges =
 				new HashMap<N,Set<PathEdge<N,AbstractionWithSourceStmt<N,D>>>>();
-		private boolean inProcessExit = false;
 
 		private SingleDirectionSolver(IFDSTabulationProblem<N, AbstractionWithSourceStmt<N, D>, M, I> ifdsProblem, String debugName) {
 			super(ifdsProblem);
@@ -71,7 +71,6 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 		
 		@Override
 		protected void processExit(PathEdge<N,AbstractionWithSourceStmt<N,D>> edge) {
-			inProcessExit = true;
 			if(edge.factAtSource().equals(zeroValue)) {
 				N sourceStmt = edge.factAtTarget().getSourceStmt();
 				leakedSources.add(sourceStmt);
@@ -85,24 +84,24 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 						pausedPathEdges.put(sourceStmt,pausedEdges);
 					}				
 					pausedEdges.add(edge);
-					System.err.println("PAUSE "+debugName+": "+edge);
+					if(DEBUG)
+						System.err.println("++ PAUSE "+debugName+": "+edge);
 				}
 			} else {
 				super.processExit(edge);
 			}
-			inProcessExit = false;
 		}
 		
-		protected void propagate(AbstractionWithSourceStmt<N,D> sourceVal, N target, AbstractionWithSourceStmt<N,D> targetVal, EdgeFunction<IFDSSolver.BinaryDomain> f, N relatedCallSite) {
-			if(inProcessExit) {
+		protected void propagate(AbstractionWithSourceStmt<N,D> sourceVal, N target, AbstractionWithSourceStmt<N,D> targetVal, EdgeFunction<IFDSSolver.BinaryDomain> f, N relatedCallSite, boolean isUnbalancedReturn) {
+			if(isUnbalancedReturn) {
 				assert sourceVal.getSourceStmt()==null : "source value should have no statement attached";
 				
 				//attach target statement as new "source" statement to track
 				targetVal = new AbstractionWithSourceStmt<N, D>(targetVal.getAbstraction(),relatedCallSite);
 				
-				super.propagate(sourceVal, target, targetVal, f, relatedCallSite);
+				super.propagate(sourceVal, target, targetVal, f, relatedCallSite, isUnbalancedReturn);
 			} else { 
-				super.propagate(sourceVal, target, targetVal, f, relatedCallSite);
+				super.propagate(sourceVal, target, targetVal, f, relatedCallSite, isUnbalancedReturn);
 			}
 		}
 		
@@ -114,10 +113,9 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 			Set<PathEdge<N, AbstractionWithSourceStmt<N, D>>> pausedEdges = pausedPathEdges.get(sourceStmt);
 			if(pausedEdges!=null) {
 				for(PathEdge<N, AbstractionWithSourceStmt<N, D>> pausedEdge: pausedEdges) {
-					System.err.println("-- UNPAUSE "+debugName+": "+pausedEdge);
-					this.inProcessExit = true;
+					if(DEBUG)
+						System.err.println("-- UNPAUSE "+debugName+": "+pausedEdge);
 					super.processExit(pausedEdge);
-					this.inProcessExit = false;
 				}
 				pausedPathEdges.remove(sourceStmt);
 			}
