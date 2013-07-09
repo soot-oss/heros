@@ -10,7 +10,6 @@
  ******************************************************************************/
 package heros.solver;
 
-import static heros.solver.IDESolver.DEBUG;
 import heros.EdgeFunction;
 import heros.FlowFunction;
 import heros.FlowFunctions;
