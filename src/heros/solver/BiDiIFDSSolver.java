@@ -25,12 +25,33 @@ import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * This is a special IFDS solver that solves the analysis problem inside out, i.e., from further down the call stack to
+ * further up the call stack. This can be useful, for instance, for taint analysis problems that track flows in two directions.
+ * 
+ * The solver is instantiated with two analyses, one to be computed forward and one to be computed backward. Both analysis problems
+ * must be unbalanced, i.e., must return <code>true</code> for {@link IFDSTabulationProblem#followReturnsPastSeeds()}.
+ * The solver then executes both analyses in lockstep, i.e., when one of the analyses reaches an unbalanced return edge (signified
+ * by a ZERO source value) then the solver pauses this analysis until the other analysis reaches the same unbalanced return (if ever).
+ * The result is that the analyses will never diverge, i.e., will ultimately always only propagate into contexts in which both their
+ * computed paths are realizable at the same time.
+ *
+ * @param <N> see {@link IFDSSolver}
+ * @param <D> see {@link IFDSSolver}
+ * @param <M> see {@link IFDSSolver}
+ * @param <I> see {@link IFDSSolver}
+ */
 public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 
 	private final IFDSTabulationProblem<N, AbstractionWithSourceStmt<N, D>, M, I> forwardProblem;
 	private final IFDSTabulationProblem<N, AbstractionWithSourceStmt<N, D>, M, I> backwardProblem;
 	private final CountingThreadPoolExecutor sharedExecutor;
+	private SingleDirectionSolver fwSolver;
+	private SingleDirectionSolver bwSolver;
 
+	/**
+	 * Instantiates a {@link BiDiIFDSSolver} with the associated forward and backward problem.
+	 */
 	public BiDiIFDSSolver(IFDSTabulationProblem<N,D,M,I> forwardProblem, IFDSTabulationProblem<N,D,M,I> backwardProblem) {
 		if(!forwardProblem.followReturnsPastSeeds() || !backwardProblem.followReturnsPastSeeds()) {
 			throw new IllegalArgumentException("This solver is only meant for bottom-up problems, so followReturnsPastSeeds() should return true."); 
@@ -41,9 +62,8 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 	}
 	
 	public void solve() {		
-		//construct and connect the two solvers
-		SingleDirectionSolver fwSolver = new SingleDirectionSolver(forwardProblem, "FW");
-		SingleDirectionSolver bwSolver = new SingleDirectionSolver(backwardProblem,"BW");
+		fwSolver = new SingleDirectionSolver(forwardProblem, "FW");
+		bwSolver = new SingleDirectionSolver(backwardProblem,"BW");
 		fwSolver.otherSolver = bwSolver;
 		bwSolver.otherSolver = fwSolver;
 		
@@ -56,6 +76,9 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 		fwSolver.solve();
 	}
 	
+	/**
+	 * This is a modified IFDS solver that is capable of pausing and unpausing return-flow edges.
+	 */
 	private class SingleDirectionSolver extends IFDSSolver<N, AbstractionWithSourceStmt<N, D>, M, I> {
 		private final String debugName;
 		private SingleDirectionSolver otherSolver;
@@ -70,13 +93,17 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 		
 		@Override
 		protected void processExit(PathEdge<N,AbstractionWithSourceStmt<N,D>> edge) {
+			//if an edge is originating from ZERO then to us this signifies an unbalanced return edge
 			if(edge.factAtSource().equals(zeroValue)) {
 				N sourceStmt = edge.factAtTarget().getSourceStmt();
+				//we mark the fact that this solver would like to "leak" this edge to the caller
 				leakedSources.add(sourceStmt);
 				if(otherSolver.hasLeaked(sourceStmt)) {
+					//if the other solver has leaked already then unpause its edges and continue
 					otherSolver.unpausePathEdgesForSource(sourceStmt);
 					super.processExit(edge);
 				} else {
+					//otherwise we pause this solver's edge and don't continue
 					Set<PathEdge<N,AbstractionWithSourceStmt<N,D>>> pausedEdges = pausedPathEdges.get(sourceStmt);
 					if(pausedEdges==null) {
 						pausedEdges = new HashSet<PathEdge<N,AbstractionWithSourceStmt<N,D>>>();
@@ -87,16 +114,18 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 						System.err.println("++ PAUSE "+debugName+": "+edge);
 				}
 			} else {
+				//the default case
 				super.processExit(edge);
 			}
 		}
 		
 		protected void propagate(AbstractionWithSourceStmt<N,D> sourceVal, N target, AbstractionWithSourceStmt<N,D> targetVal, EdgeFunction<IFDSSolver.BinaryDomain> f, N relatedCallSite, boolean isUnbalancedReturn) {
+			//the follwing branch will be taken only on an unbalanced return
 			if(isUnbalancedReturn) {
 				assert sourceVal.getSourceStmt()==null : "source value should have no statement attached";
 				
 				//attach target statement as new "source" statement to track
-				targetVal = new AbstractionWithSourceStmt<N, D>(targetVal.getAbstraction(),relatedCallSite);
+				targetVal = new AbstractionWithSourceStmt<N, D>(targetVal.getAbstraction(), relatedCallSite);
 				
 				super.propagate(sourceVal, target, targetVal, f, relatedCallSite, isUnbalancedReturn);
 			} else { 
@@ -104,10 +133,17 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 			}
 		}
 		
+		/**
+		 * Returns <code>true</code> if this solver has tried to leak an edge originating from the given source
+		 * to its caller.
+		 */
 		private boolean hasLeaked(N sourceStmt) {
 			return leakedSources.contains(sourceStmt);
 		}
 		
+		/**
+		 * Unpauses all edges associated with the given source statement.
+		 */
 		private void unpausePathEdgesForSource(N sourceStmt) {
 			Set<PathEdge<N, AbstractionWithSourceStmt<N, D>>> pausedEdges = pausedPathEdges.get(sourceStmt);
 			if(pausedEdges!=null) {
@@ -132,6 +168,10 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 		}
 	}
 
+	/**
+	 * This is an augmented abstraction propagated by the {@link SingleDirectionSolver}. It associates with the
+	 * abstraction the source statement from which this fact originated. 
+	 */
 	public static class AbstractionWithSourceStmt<N,D> {
 
 		protected final D abstraction;
@@ -191,7 +231,11 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 		}
 	}
 	
-	static class AugmentedTabulationProblem<N,D,M,I extends InterproceduralCFG<N, M>> implements IFDSTabulationProblem<N, BiDiIFDSSolver.AbstractionWithSourceStmt<N,D>,M,I> {
+	/**
+	 * This tabulation problem simply propagates augmented abstractions where the normal problem would propagate normal abstractions.
+	 */
+	private static class AugmentedTabulationProblem<N,D,M,I extends InterproceduralCFG<N, M>>
+		implements IFDSTabulationProblem<N, BiDiIFDSSolver.AbstractionWithSourceStmt<N,D>,M,I> {
 
 		private final IFDSTabulationProblem<N,D,M,I> delegate;
 		private final AbstractionWithSourceStmt<N, D> ZERO;
@@ -307,6 +351,23 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 			return ZERO;
 		}
 
+	}
+	
+	public Set<D> fwIFDSResultAt(N stmt) {
+		return extractResults(fwSolver.ifdsResultsAt(stmt));
+	}
+
+	
+	public Set<D> bwIFDSResultAt(N stmt) {
+		return extractResults(bwSolver.ifdsResultsAt(stmt));
+	}
+
+	private Set<D> extractResults(Set<AbstractionWithSourceStmt<N, D>> annotatedResults) {
+		Set<D> res = new HashSet<D>();		
+		for (AbstractionWithSourceStmt<N, D> abstractionWithSourceStmt : annotatedResults) {
+			res.add(abstractionWithSourceStmt.getAbstraction());
+		}
+		return res;
 	}
 	
 }
