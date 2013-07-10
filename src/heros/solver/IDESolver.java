@@ -30,7 +30,6 @@ import heros.edgefunc.EdgeIdentity;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -98,7 +97,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	protected final EdgeFunctions<N,D,M,V> edgeFunctions;
 
 	@DontSynchronize("only used by single thread")
-	protected final Set<N> initialSeeds;
+	protected final Map<N,Set<D>> initialSeeds;
 
 	@DontSynchronize("stateless")
 	protected final JoinLattice<V> valueLattice;
@@ -191,20 +190,24 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * Runs the solver on the configured problem. This can take some time.
 	 */
 	public void solve() {		
-		  /*
-		   * Forward-tabulates the same-level realizable paths and associated functions.
-		   * Note that this is a little different from the original IFDS formulations because
-		   * we can have statements that are, for instance, both "normal" and "exit" statements.
-		   * This is for instance the case on a "throw" statement that may on the one hand
-		   * lead to a catch block but on the other hand exit the method depending
-		   * on the exception being thrown.
-		   */
-		for(N startPoint: initialSeeds) {
-			propagate(zeroValue, startPoint, zeroValue, allTop);
-			scheduleEdgeProcessing(new PathEdge<N,D,M>(zeroValue, startPoint, zeroValue));
+		submitInitialSeeds();
+		awaitCompletionComputeValuesAndShutdown();
+	}
+
+	/**
+	 * Schedules the processing of initial seeds, initiating the analysis.
+	 * Clients should only call this methods if performing synchronization on
+	 * their own. Normally, {@link #solve()} should be called instead.
+	 */
+	protected void submitInitialSeeds() {
+		for(Entry<N, Set<D>> seed: initialSeeds.entrySet()) {
+			N startPoint = seed.getKey();
+			for(D val: seed.getValue()) {
+				propagate(zeroValue, startPoint, val, EdgeIdentity.<V>v(), null, false);
+				scheduleEdgeProcessing(new PathEdge<N,D>(zeroValue, startPoint, val));
+			}
 			jumpFn.addFunction(zeroValue, startPoint, zeroValue, EdgeIdentity.<V>v());
 		}
-		awaitCompletionComputeValuesAndShutdown();
 	}
 
 	/**
@@ -255,7 +258,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
      * Dispatch the processing of a given edge. It may be executed in a different thread.
      * @param edge the edge to process
      */
-    protected void scheduleEdgeProcessing(PathEdge<N,D,M> edge){
+    protected void scheduleEdgeProcessing(PathEdge<N,D> edge){
     	executor.execute(new PathEdgeProcessingTask(edge));
     	propagationCount++;
     }
@@ -284,7 +287,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * 
 	 * @param edge an edge whose target node resembles a method call
 	 */
-	private void processCall(PathEdge<N,D,M> edge) {
+	private void processCall(PathEdge<N,D> edge) {
 		final D d1 = edge.factAtSource();
 		final N n = edge.getTarget(); // a call node; line 14...
 		final D d2 = edge.factAtTarget();
@@ -302,11 +305,11 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			
 			//for each callee's start point(s)
 			Set<N> startPointsOf = icfg.getStartPointsOf(sCalledProcN);
-			for(N sP: startPointsOf) {					
+			for(N sP: startPointsOf) {
 				//for each result node of the call-flow function
 				for(D d3: res) {
 					//create initial self-loop
-					propagate(d3, sP, d3, EdgeIdentity.<V>v()); //line 15
+					propagate(d3, sP, d3, EdgeIdentity.<V>v(), n, false); //line 15
 	
 					//register the fact that <sp,d3> has an incoming edge from <n,d2>
 					Set<Cell<N, D, EdgeFunction<V>>> endSumm;
@@ -314,7 +317,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 						//line 15.1 of Naeem/Lhotak/Rodriguez
 						addIncoming(sP,d3,n,d2);
 						//line 15.2, copy to avoid concurrent modification exceptions by other threads
-						endSumm = new HashSet<Table.Cell<N,D,EdgeFunction<V>>>(endSummary(sP, d3));						
+						endSumm = new HashSet<Table.Cell<N,D,EdgeFunction<V>>>(endSummary(sP, d3));
+						
+						assert !jumpFn.reverseLookup(n, d2).isEmpty();
 					}
 					
 					//still line 15.2 of Naeem/Lhotak/Rodriguez
@@ -336,7 +341,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 								EdgeFunction<V> f4 = edgeFunctions.getCallEdgeFunction(n, d2, sCalledProcN, d3);
 								EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(n, sCalledProcN, eP, d4, retSiteN, d5);
 								EdgeFunction<V> fPrime = f4.composeWith(fCalleeSummary).composeWith(f5);							
-								propagate(d1, retSiteN, d5, f.composeWith(fPrime));
+								propagate(d1, retSiteN, d5, f.composeWith(fPrime), n, false);
 							}
 						}
 					}
@@ -350,7 +355,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			flowFunctionConstructionCount++;
 			for(D d3: callToReturnFlowFunction.computeTargets(d2)) {
 				EdgeFunction<V> edgeFnE = edgeFunctions.getCallToReturnEdgeFunction(n, d2, returnSiteN, d3);
-				propagate(d1, returnSiteN, d3, f.composeWith(edgeFnE));
+				propagate(d1, returnSiteN, d3, f.composeWith(edgeFnE), n, false);
 			}
 		}
 	}
@@ -364,7 +369,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * 
 	 * @param edge an edge whose target node resembles a method exits
 	 */
-	private void processExit(PathEdge<N,D,M> edge) {
+	protected void processExit(PathEdge<N,D> edge) {
 		final N n = edge.getTarget(); // an exit node; line 21...
 		EdgeFunction<V> f = jumpFunction(edge);
 		M methodThatNeedsSummary = icfg.getMethodOf(n);
@@ -411,7 +416,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 							EdgeFunction<V> f3 = valAndFunc.getValue();
 							if(!f3.equalTo(allTop)) {
 								D d3 = valAndFunc.getKey();
-								propagate(d3, retSiteC, d5, f3.composeWith(fPrime));
+								propagate(d3, retSiteC, d5, f3.composeWith(fPrime), c, false);
 							}
 						}
 					}
@@ -419,17 +424,11 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			}
 		}
 		
-		//handling for unbalanced problems where we return out of a method whose call was never processed
-		if(inc.isEmpty() && followReturnsPastSeeds) {
-			// Make sure that the whole method was never called, regardless of the
-			// calling jump function.
-			boolean wasCalled = false;
-			for(N sP: startPointsOf)
-				if (incoming.containsRow(sP)) {
-					wasCalled = true;
-					break;
-				}
-			if(!wasCalled && followReturnsPastSeeds) {
+		//handling for unbalanced problems where we return out of a method with a fact for which we have no incoming flow
+		//note: we propagate that way only values that originate from ZERO, as conditionally generated values should only
+		//be propagated into callers that have an incoming edge for this condition
+		if(followReturnsPastSeeds && inc.isEmpty() && d1.equals(zeroValue)) {
+			// only propagate up if we 
 				Set<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
 				for(N c: callers) {
 					for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
@@ -438,7 +437,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 						Set<D> targets = retFunction.computeTargets(d2);
 						for(D d5: targets) {
 							EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
-							propagate(zeroValue, retSiteC, d5, f.composeWith(f5));
+							propagate(zeroValue, retSiteC, d5, f.composeWith(f5), c, true);
 						}
 					}
 				}
@@ -452,14 +451,13 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				}
 			}
 		}
-	}
 	
 	/**
 	 * Lines 33-37 of the algorithm.
 	 * Simply propagate normal, intra-procedural flows.
 	 * @param edge
 	 */
-	private void processNormalFlow(PathEdge<N,D,M> edge) {
+	private void processNormalFlow(PathEdge<N,D> edge) {
 		final D d1 = edge.factAtSource();
 		final N n = edge.getTarget(); 
 		final D d2 = edge.factAtTarget();
@@ -470,12 +468,26 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			Set<D> res = flowFunction.computeTargets(d2);
 			for (D d3 : res) {
 				EdgeFunction<V> fprime = f.composeWith(edgeFunctions.getNormalEdgeFunction(n, d2, m, d3));
-				propagate(d1, m, d3, fprime); 
+				propagate(d1, m, d3, fprime, null, false); 
 			}
 		}
 	}
 	
-	private void propagate(D sourceVal, N target, D targetVal, EdgeFunction<V> f) {
+	/**
+	 * Propagates the flow further down the exploded super graph, merging any edge function that might
+	 * already have been computed for targetVal at target. 
+	 * @param sourceVal the source value of the propagated summary edge
+	 * @param target the target statement
+	 * @param targetVal the target value at the target statement
+	 * @param f the new edge function computed from (s0,sourceVal) to (target,targetVal) 
+	 * @param relatedCallSite for call and return flows the related call statement, <code>null</code> otherwise
+	 *        (this value is not used within this implementation but may be useful for subclasses of {@link IDESolver}) 
+	 * @param isUnbalancedReturn <code>true</code> if this edge is propagating an unbalanced return
+	 *        (this value is not used within this implementation but may be useful for subclasses of {@link IDESolver}) 
+	 */
+	protected void propagate(D sourceVal, N target, D targetVal, EdgeFunction<V> f,
+		/* deliberately exposed to clients */ N relatedCallSite,
+		/* deliberately exposed to clients */ boolean isUnbalancedReturn) {
 		EdgeFunction<V> jumpFnE;
 		EdgeFunction<V> fPrime;
 		boolean newFunction;
@@ -490,12 +502,14 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		}
 
 		if(newFunction) {
-			PathEdge<N,D,M> edge = new PathEdge<N,D,M>(sourceVal, target, targetVal);
+			PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
 			scheduleEdgeProcessing(edge);
 
 			if(DEBUG) {
 				if(targetVal!=zeroValue) {			
 					StringBuilder result = new StringBuilder();
+					result.append(getDebugName());
+					result.append(": ");
 					result.append("EDGE:  <");
 					result.append(icfg.getMethodOf(target));
 					result.append(",");
@@ -517,10 +531,13 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 */
 	private void computeValues() {	
 		//Phase II(i)
-		for(N startPoint: initialSeeds) {
-			setVal(startPoint, zeroValue, valueLattice.bottomElement());
-			Pair<N, D> superGraphNode = new Pair<N,D>(startPoint, zeroValue); 
-			scheduleValueProcessing(new ValuePropagationTask(superGraphNode));
+		for(Entry<N, Set<D>> seed: initialSeeds.entrySet()) {
+			N startPoint = seed.getKey();
+			for(D val: seed.getValue()) {
+				setVal(startPoint, val, valueLattice.bottomElement());
+				Pair<N, D> superGraphNode = new Pair<N,D>(startPoint, val); 
+				scheduleValueProcessing(new ValuePropagationTask(superGraphNode));
+			}
 		}
 		
 		//await termination of tasks
@@ -606,15 +623,19 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		else return l;
 	}
 	
-	private void setVal(N nHashN, D nHashD,V l){ 
+	private void setVal(N nHashN, D nHashD,V l){
+		// TOP is the implicit default value which we do not need to store.
 		synchronized (val) {
-			val.put(nHashN, nHashD,l);
+			if (l == valueLattice.topElement())     // do not store top values
+				val.remove(nHashN, nHashD);
+			else
+				val.put(nHashN, nHashD,l);
 		}
 		if(DEBUG)
 			System.err.println("VALUE: "+icfg.getMethodOf(nHashN)+" "+nHashN+" "+nHashD+ " " + l);
 	}
 
-	private EdgeFunction<V> jumpFunction(PathEdge<N, D, M> edge) {
+	private EdgeFunction<V> jumpFunction(PathEdge<N,D> edge) {
 		synchronized (jumpFn) {
 			EdgeFunction<V> function = jumpFn.forwardLookup(edge.factAtSource(), edge.getTarget()).get(edge.factAtTarget());
 			if(function==null) return allTop; //JumpFn initialized to all-top, see line [2] in SRH96 paper
@@ -661,7 +682,8 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	}	
 	
 	/**
-	 * Returns the V-type result for the given value at the given statement. 
+	 * Returns the V-type result for the given value at the given statement.
+	 * TOP values are never returned.
 	 */
 	public V resultAt(N stmt, D value) {
 		//no need to synchronize here as all threads are known to have terminated
@@ -670,7 +692,8 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	
 	/**
 	 * Returns the resulting environment for the given statement.
-	 * The artificial zero value is automatically stripped.
+	 * The artificial zero value is automatically stripped. TOP values are
+	 * never returned.
 	 */
 	public Map<D,V> resultsAt(N stmt) {
 		//filter out the artificial zero-value
@@ -689,6 +712,14 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	protected CountingThreadPoolExecutor getExecutor() {
 		return new CountingThreadPoolExecutor(1, this.numThreads, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 	}
+	
+	/**
+	 * Returns a String used to identify the output of this solver in debug mode.
+	 * Subclasses can overwrite this string to distinguish the output from different solvers.
+	 */
+	protected String getDebugName() {
+		return "";
+	}
 
 	public void printStats() {
 		if(DEBUG) {
@@ -702,9 +733,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	}
 	
 	private class PathEdgeProcessingTask implements Runnable {
-		private final PathEdge<N, D, M> edge;
+		private final PathEdge<N,D> edge;
 
-		public PathEdgeProcessingTask(PathEdge<N, D, M> edge) {
+		public PathEdgeProcessingTask(PathEdge<N,D> edge) {
 			this.edge = edge;
 		}
 
@@ -734,7 +765,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		public void run() {
 			N n = nAndD.getO1();
 			if(icfg.isStartPoint(n) ||
-				initialSeeds.contains(n)) { 		//our initial seeds are not necessarily method-start points but here they should be treated as such
+				initialSeeds.containsKey(n)) { 		//our initial seeds are not necessarily method-start points but here they should be treated as such
 				propagateValueAtStart(nAndD, n);
 			}
 			if(icfg.isCallStmt(n)) {
