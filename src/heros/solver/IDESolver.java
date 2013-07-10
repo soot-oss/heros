@@ -204,7 +204,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			N startPoint = seed.getKey();
 			for(D val: seed.getValue()) {
 				propagate(zeroValue, startPoint, val, EdgeIdentity.<V>v(), null, false);
-				scheduleEdgeProcessing(new PathEdge<N,D>(zeroValue, startPoint, val));
 			}
 			jumpFn.addFunction(zeroValue, startPoint, zeroValue, EdgeIdentity.<V>v());
 		}
