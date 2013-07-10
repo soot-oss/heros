@@ -40,7 +40,10 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 	@Override
 	protected void afterExecute(Runnable r, Throwable t) {
 		numRunningTasks.decrement();
-		if(t!=null) exceptions.add(t);
+		if(t!=null) {
+			exceptions.add(t);
+			shutdownNow();
+		}
 		super.afterExecute(r, t);
 	}
 
