@@ -10,8 +10,6 @@
  ******************************************************************************/
 package heros.solver;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -24,7 +22,7 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 	
 	protected final CountLatch numRunningTasks = new CountLatch(0);
 	
-	protected final Set<Throwable> exceptions = new HashSet<Throwable>();
+	protected Throwable exception = null;
 
 	public CountingThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit,
 			BlockingQueue<Runnable> workQueue) {
@@ -41,7 +39,7 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 	protected void afterExecute(Runnable r, Throwable t) {
 		numRunningTasks.decrement();
 		if(t!=null) {
-			exceptions.add(t);
+			exception = t;
 			shutdownNow();
 		}
 		super.afterExecute(r, t);
@@ -62,10 +60,10 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 	}
 	
 	/**
-	 * Returns the set of exceptions thrown during task execution (if any).
+	 * Returns the exception thrown during task execution (if any).
 	 */
-	public Set<Throwable> getExceptions() {
-		return exceptions;
+	public Throwable getException() {
+		return exception;
 	}
 
 }

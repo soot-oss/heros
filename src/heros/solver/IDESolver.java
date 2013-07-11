@@ -216,20 +216,8 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	protected void awaitCompletionComputeValuesAndShutdown() {
 		{
 			final long before = System.currentTimeMillis();
-			//await termination of tasks
-			try {
-				executor.awaitCompletion();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			Set<Throwable> exceptions = executor.getExceptions();
-			if(!exceptions.isEmpty()) {
-				System.err.println("There were exceptions during IDE analysis:");
-				for (Throwable t : exceptions) {
-					t.printStackTrace();
-				}
-				throw new RuntimeException("There were exceptions during IDE analysis. Exiting.");
-			}
+			//run executor and await termination of tasks
+			runExecutorAndAwaitCompletion();
 			durationFlowFunctionConstruction = System.currentTimeMillis() - before;
 		}
 		if(computeValues) {
@@ -246,10 +234,21 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		executor.shutdown();
 		//similarly here: we await termination, but this should happen instantaneously,
 		//as all tasks should have completed
+		runExecutorAndAwaitCompletion();
+	}
+
+	/**
+	 * Runs execution, re-throwing exceptions that might be thrown during its execution.
+	 */
+	private void runExecutorAndAwaitCompletion() {
 		try {
-			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+			executor.awaitCompletion();
 		} catch (InterruptedException e) {
-			throw new RuntimeException(e);
+			e.printStackTrace();
+		}
+		Throwable exception = executor.getException();
+		if(exception!=null) {
+			throw new RuntimeException("There were exceptions during IDE analysis. Exiting.",exception);
 		}
 	}
 
