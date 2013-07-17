@@ -58,7 +58,7 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 		}
 		this.forwardProblem = new AugmentedTabulationProblem<N,D,M,I>(forwardProblem);
 		this.backwardProblem = new AugmentedTabulationProblem<N,D,M,I>(backwardProblem);
-		this.sharedExecutor = new CountingThreadPoolExecutor(1, forwardProblem.numThreads(), 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+		this.sharedExecutor = new CountingThreadPoolExecutor(1, Math.max(1,forwardProblem.numThreads()), 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 	}
 	
 	public void solve() {		

@@ -21,6 +21,8 @@ import java.util.concurrent.TimeUnit;
 public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 	
 	protected final CountLatch numRunningTasks = new CountLatch(0);
+	
+	protected Throwable exception = null;
 
 	public CountingThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit,
 			BlockingQueue<Runnable> workQueue) {
@@ -36,6 +38,10 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 	@Override
 	protected void afterExecute(Runnable r, Throwable t) {
 		numRunningTasks.decrement();
+		if(t!=null) {
+			exception = t;
+			shutdownNow();
+		}
 		super.afterExecute(r, t);
 	}
 
@@ -51,6 +57,13 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 	 */
 	public void awaitCompletion(long timeout, TimeUnit unit) throws InterruptedException {
 		numRunningTasks.awaitZero(timeout, unit);
+	}
+	
+	/**
+	 * Returns the exception thrown during task execution (if any).
+	 */
+	public Throwable getException() {
+		return exception;
 	}
 
 }
