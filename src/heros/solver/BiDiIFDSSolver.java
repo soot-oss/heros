@@ -15,6 +15,7 @@ import heros.FlowFunction;
 import heros.FlowFunctions;
 import heros.IFDSTabulationProblem;
 import heros.InterproceduralCFG;
+import heros.SummarizableAbstraction;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -62,8 +63,8 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 	}
 	
 	public void solve() {		
-		fwSolver = new SingleDirectionSolver(forwardProblem, "FW");
-		bwSolver = new SingleDirectionSolver(backwardProblem,"BW");
+		fwSolver = createSingleDirectionSolver(forwardProblem, "FW");
+		bwSolver = createSingleDirectionSolver(backwardProblem, "BW");
 		fwSolver.otherSolver = bwSolver;
 		bwSolver.otherSolver = fwSolver;
 		
@@ -77,16 +78,23 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 	}
 	
 	/**
+	 * Creates a solver to be used for each single analysis direction.
+	 */
+	protected SingleDirectionSolver createSingleDirectionSolver(IFDSTabulationProblem<N, AbstractionWithSourceStmt<N, D>, M, I> problem, String debugName) {
+		return new SingleDirectionSolver(problem, debugName);
+	}
+	
+	/**
 	 * This is a modified IFDS solver that is capable of pausing and unpausing return-flow edges.
 	 */
-	private class SingleDirectionSolver extends IFDSSolver<N, AbstractionWithSourceStmt<N, D>, M, I> {
+	protected class SingleDirectionSolver extends IFDSSolver<N, AbstractionWithSourceStmt<N, D>, M, I> {
 		private final String debugName;
 		private SingleDirectionSolver otherSolver;
 		private Set<N> leakedSources = new HashSet<N>();
 		private Map<N,Set<PathEdge<N,AbstractionWithSourceStmt<N,D>>>> pausedPathEdges =
 				new HashMap<N,Set<PathEdge<N,AbstractionWithSourceStmt<N,D>>>>();
 
-		private SingleDirectionSolver(IFDSTabulationProblem<N, AbstractionWithSourceStmt<N, D>, M, I> ifdsProblem, String debugName) {
+		public SingleDirectionSolver(IFDSTabulationProblem<N, AbstractionWithSourceStmt<N, D>, M, I> ifdsProblem, String debugName) {
 			super(ifdsProblem);
 			this.debugName = debugName;
 		}
@@ -182,11 +190,11 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 			this.source = source;
 		}
 
-		private D getAbstraction() {
+		public D getAbstraction() {
 			return abstraction;
 		}
 		
-		private N getSourceStmt() {
+		public N getSourceStmt() {
 			return source;
 		}	
 		
