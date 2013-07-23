@@ -172,7 +172,7 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 	 * This is an augmented abstraction propagated by the {@link SingleDirectionSolver}. It associates with the
 	 * abstraction the source statement from which this fact originated. 
 	 */
-	public static class AbstractionWithSourceStmt<N,D> {
+	public static class AbstractionWithSourceStmt<N,D> implements SummarizableAbstraction<AbstractionWithSourceStmt<N, D>> {
 
 		protected final D abstraction;
 		protected final N source;
@@ -228,6 +228,29 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 			} else if (!source.equals(other.source))
 				return false;
 			return true;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public SummarizableAbstraction<AbstractionWithSourceStmt<N, D>> summarize() {
+			D abs = abstraction;
+			if(abstraction instanceof SummarizableAbstraction) {
+				SummarizableAbstraction<D> inner = (SummarizableAbstraction<D>) abstraction;
+				abs = (D) inner.summarize();
+			}
+			return new AbstractionWithSourceStmt<N, D>(abs, null);
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public SummarizableAbstraction<AbstractionWithSourceStmt<N, D>> expand(AbstractionWithSourceStmt<N, D> fullAbstraction) {
+			D abs = abstraction;
+			if(abstraction instanceof SummarizableAbstraction) {
+				SummarizableAbstraction<D> inner = (SummarizableAbstraction<D>) abstraction;
+				SummarizableAbstraction<D> full = (SummarizableAbstraction<D>) fullAbstraction.abstraction;
+				abs = (D) inner.expand((D) full);
+			}
+			return new AbstractionWithSourceStmt<N, D>(abs, fullAbstraction.source);
 		}
 	}
 	
