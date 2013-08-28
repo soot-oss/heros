@@ -1,8 +1,8 @@
 *.class
 
 # Package Files #
-*.jar
 *.war
 *.ear
 /ant.settings
 bin
+heros-trunk.jar
