@@ -41,6 +41,7 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 		if(t!=null) {
 			exception = t;
 			shutdownNow();
+            numRunningTasks.resetAndInterrupt();
 		}
 		super.afterExecute(r, t);
 	}
