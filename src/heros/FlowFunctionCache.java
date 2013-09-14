@@ -13,6 +13,8 @@ package heros;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FlowFunctionCache<N, D, M> implements FlowFunctions<N, D, M> {
 	
@@ -25,6 +27,8 @@ public class FlowFunctionCache<N, D, M> implements FlowFunctions<N, D, M> {
 	protected final LoadingCache<ReturnKey, FlowFunction<D>> returnCache;
 
 	protected final LoadingCache<NNKey, FlowFunction<D>> callToReturnCache;
+
+    private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	@SuppressWarnings("unchecked")
 	public FlowFunctionCache(final FlowFunctions<N, D, M> delegate, @SuppressWarnings("rawtypes") CacheBuilder builder) {
@@ -218,15 +222,12 @@ public class FlowFunctionCache<N, D, M> implements FlowFunctions<N, D, M> {
 	}
 	
 	public void printStats() {
-		System.err.println("Stats for flow-function cache:");
-		System.err.print("Normal:         ");
-		System.err.println(normalCache.stats());
-		System.err.print("Call:           ");
-		System.err.println(callCache.stats());
-		System.err.print("Return:         ");
-		System.err.println(returnCache.stats());
-		System.err.print("Call-to-return: ");
-		System.err.println(callToReturnCache.stats());
+        logger.debug("Stats for flow-function cache:\n" +
+                "Normal:         {}\n"+
+                "Call:           {}\n"+
+                "Return:         {}\n"+
+                "Call-to-return: {}\n",
+                normalCache.stats(), callCache.stats(),returnCache.stats(),callToReturnCache.stats());
 	}
 	
 
