@@ -334,7 +334,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
 							flowFunctionConstructionCount++;
 							//for each target value of the function
-							for(D d5: retFunction.computeTargets(d4)) {
+							for(D d5: computeReturnFlowFunction(retFunction, d4, Collections.singleton(d1))) {
 								//update the caller-side summary function
 								EdgeFunction<V> f4 = edgeFunctions.getCallEdgeFunction(n, d2, sCalledProcN, d3);
 								EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(n, sCalledProcN, eP, d4, retSiteN, d5);
@@ -351,7 +351,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		for (N returnSiteN : returnSiteNs) {
 			FlowFunction<D> callToReturnFlowFunction = flowFunctions.getCallToReturnFlowFunction(n, returnSiteN);
 			flowFunctionConstructionCount++;
-			for(D d3: callToReturnFlowFunction.computeTargets(d2)) {
+			for(D d3: computeCallToReturnFlowFunction(callToReturnFlowFunction, d1, d2)) {
 				EdgeFunction<V> edgeFnE = edgeFunctions.getCallToReturnEdgeFunction(n, d2, returnSiteN, d3);
 				propagate(d1, returnSiteN, d3, f.composeWith(edgeFnE), n, false);
 			}
@@ -359,7 +359,21 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	}
 
 	/**
-	 * Lines 21-32 of the algorithm.	
+	 * Computes the call-to-return flow function for the given call-site
+	 * asbtraction
+	 * @param callToReturnFlowFunction The call-to-return flow function to
+	 * compute
+	 * @param d1 The abstraction at the current method's start node.
+	 * @param d2 The abstraction at the return size
+	 * @return The set of caller-side abstractions at the return site
+	 */
+	protected Set<D> computeCallToReturnFlowFunction
+			(FlowFunction<D> callToReturnFlowFunction, D d1, D d2) {
+		return callToReturnFlowFunction.computeTargets(d2);
+	}
+
+	/**
+	 * Lines 21-32 of the algorithm.
 	 * 
 	 * Stores callee-side summaries.
 	 * Also, at the side of the caller, propagates intra-procedural flows to return sites
@@ -399,7 +413,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				//compute return-flow function
 				FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
 				flowFunctionConstructionCount++;
-				Set<D> targets = retFunction.computeTargets(d2);
+				Set<D> targets = computeReturnFlowFunction(retFunction, d2, entry.getValue());
 				//for each incoming-call value
 				for(D d4: entry.getValue()) {
 					//for each target value at the return site
@@ -451,6 +465,19 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		}
 	
 	/**
+	 * Computes the return flow function for the given set of caller-side
+	 * abstractions.
+	 * @param retFunction The return flow function to compute
+	 * @param d2 The abstraction at the exit node in the callee
+	 * @param callerSideD1s The abstractions at the callers' start nodes.
+	 * @return The set of caller-side abstractions at the return site
+	 */
+	protected Set<D> computeReturnFlowFunction
+			(FlowFunction<D> retFunction, D d2, Set<D> callerSideD1s) {
+		return retFunction.computeTargets(d2);
+	}
+
+	/**
 	 * Lines 33-37 of the algorithm.
 	 * Simply propagate normal, intra-procedural flows.
 	 * @param edge
@@ -463,7 +490,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		for (N m : icfg.getSuccsOf(n)) {
 			FlowFunction<D> flowFunction = flowFunctions.getNormalFlowFunction(n,m);
 			flowFunctionConstructionCount++;
-			Set<D> res = flowFunction.computeTargets(d2);
+			Set<D> res = computeNormalFlowFunction(flowFunction, d1, d2);
 			for (D d3 : res) {
 				EdgeFunction<V> fprime = f.composeWith(edgeFunctions.getNormalEdgeFunction(n, d2, m, d3));
 				propagate(d1, m, d3, fprime, null, false); 
@@ -471,6 +498,19 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		}
 	}
 	
+	/**
+	 * Computes the normal flow function for the given set of start and end
+	 * abstractions-
+	 * @param flowFunction The normal flow function to compute
+	 * @param d1 The abstraction at the method's start node
+	 * @param d1 The abstraction at the current node
+	 * @return The set of abstractions at the successor node
+	 */
+	protected Set<D> computeNormalFlowFunction
+			(FlowFunction<D> flowFunction, D d1, D d2) {
+		return flowFunction.computeTargets(d2);
+	}
+
 	/**
 	 * Propagates the flow further down the exploded super graph, merging any edge function that might
 	 * already have been computed for targetVal at target. 
