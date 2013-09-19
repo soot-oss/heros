@@ -334,7 +334,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
 							flowFunctionConstructionCount++;
 							//for each target value of the function
-							for(D d5: computeReturnFlowFunction(retFunction, d4, Collections.singleton(d1))) {
+							for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2))) {
 								//update the caller-side summary function
 								EdgeFunction<V> f4 = edgeFunctions.getCallEdgeFunction(n, d2, sCalledProcN, d3);
 								EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(n, sCalledProcN, eP, d4, retSiteN, d5);
@@ -364,7 +364,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * @param callToReturnFlowFunction The call-to-return flow function to
 	 * compute
 	 * @param d1 The abstraction at the current method's start node.
-	 * @param d2 The abstraction at the return size
+	 * @param d2 The abstraction at the call site
 	 * @return The set of caller-side abstractions at the return site
 	 */
 	protected Set<D> computeCallToReturnFlowFunction
@@ -413,7 +413,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				//compute return-flow function
 				FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
 				flowFunctionConstructionCount++;
-				Set<D> targets = computeReturnFlowFunction(retFunction, d2, entry.getValue());
+				Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, entry.getValue());
 				//for each incoming-call value
 				for(D d4: entry.getValue()) {
 					//for each target value at the return site
@@ -469,11 +469,12 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * abstractions.
 	 * @param retFunction The return flow function to compute
 	 * @param d2 The abstraction at the exit node in the callee
-	 * @param callerSideD1s The abstractions at the callers' start nodes.
+	 * @param callSite The call site
+	 * @param callerSideDs The abstractions at the call site
 	 * @return The set of caller-side abstractions at the return site
 	 */
 	protected Set<D> computeReturnFlowFunction
-			(FlowFunction<D> retFunction, D d2, Set<D> callerSideD1s) {
+			(FlowFunction<D> retFunction, D d2, N callSite, Set<D> callerSideDs) {
 		return retFunction.computeTargets(d2);
 	}
 
