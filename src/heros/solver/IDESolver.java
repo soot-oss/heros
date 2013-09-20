@@ -561,6 +561,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 */
 	private void computeValues() {	
 		//Phase II(i)
+        logger.debug("Computing the final values for the edge functions");
 		for(Entry<N, Set<D>> seed: initialSeeds.entrySet()) {
 			N startPoint = seed.getKey();
 			for(D val: seed.getValue()) {
