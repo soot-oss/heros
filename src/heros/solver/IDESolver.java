@@ -67,10 +67,10 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	
 	public static CacheBuilder<Object, Object> DEFAULT_CACHE_BUILDER = CacheBuilder.newBuilder().concurrencyLevel(Runtime.getRuntime().availableProcessors()).initialCapacity(10000).softValues();
 	
-    protected final Logger logger = LoggerFactory.getLogger(getClass());
-	
-	//executor for dispatching individual compute jobs (may be multi-threaded)
-	@DontSynchronize("only used by single thread")
+    protected static final Logger logger = LoggerFactory.getLogger(IDESolver.class);
+
+    public static final boolean DEBUG = logger.isDebugEnabled();
+
 	protected CountingThreadPoolExecutor executor;
 	
 	@DontSynchronize("only used by single thread")
@@ -550,7 +550,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			scheduleEdgeProcessing(edge);
 
             if(targetVal!=zeroValue) {
-                logger.debug("EDGE: <{},{}> -> <{},{}> - {}", icfg.getMethodOf(target), sourceVal, target, targetVal, fPrime );
+                logger.trace("EDGE: <{},{}> -> <{},{}> - {}", icfg.getMethodOf(target), sourceVal, target, targetVal, fPrime );
 
             }
 		}
@@ -570,7 +570,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				scheduleValueProcessing(new ValuePropagationTask(superGraphNode));
 			}
 		}
-		
+		logger.debug("Computed the final values of the edge functions");
 		//await termination of tasks
 		try {
 			executor.awaitCompletion();
