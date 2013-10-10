@@ -134,4 +134,42 @@ public class JumpFunctions<N,D,L> {
 		return res;
 	}
 	
+	/**
+	 * Removes a jump function. The source statement is implicit.
+	 * @see PathEdge
+	 * @return True if the function has actually been removed. False if it was not
+	 * there anyway.
+	 */
+	public synchronized boolean removeFunction(D sourceVal, N target, D targetVal) {
+		assert sourceVal!=null;
+		assert target!=null;
+		assert targetVal!=null;
+		
+		Map<D,EdgeFunction<L>> sourceValToFunc = nonEmptyReverseLookup.get(target, targetVal);
+		if (sourceValToFunc == null)
+			return false;
+		if (sourceValToFunc.remove(sourceVal) == null)
+			return false;
+		if (sourceValToFunc.isEmpty())
+			nonEmptyReverseLookup.remove(targetVal, targetVal);
+		
+		Map<D, EdgeFunction<L>> targetValToFunc = nonEmptyForwardLookup.get(sourceVal, target);
+		if (targetValToFunc == null)
+			return false;
+		if (targetValToFunc.remove(targetVal) == null)
+			return false;
+		if (targetValToFunc.isEmpty())
+			nonEmptyForwardLookup.remove(sourceVal, target);
+
+		Table<D,D,EdgeFunction<L>> table = nonEmptyLookupByTargetNode.get(target);
+		if (table == null)
+			return false;
+		if (table.remove(sourceVal, targetVal) == null)
+			return false;
+		if (table.isEmpty())
+			nonEmptyLookupByTargetNode.remove(target);
+		
+		return true;
+	}
+
 }

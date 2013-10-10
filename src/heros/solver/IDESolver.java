@@ -316,7 +316,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 						addIncoming(sP,d3,n,d2);
 						//line 15.2, copy to avoid concurrent modification exceptions by other threads
 						endSumm = new HashSet<Table.Cell<N,D,EdgeFunction<V>>>(endSummary(sP, d3));
-						
 						assert !jumpFn.reverseLookup(n, d2).isEmpty();
 					}
 					
@@ -371,7 +370,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			(FlowFunction<D> callToReturnFlowFunction, D d1, D d2) {
 		return callToReturnFlowFunction.computeTargets(d2);
 	}
-
+	
 	/**
 	 * Lines 21-32 of the algorithm.
 	 * 
@@ -400,7 +399,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				addEndSummary(sP, d1, n, d2, f);
 				//copy to avoid concurrent modification exceptions by other threads
 				inc.addAll(incoming(d1, sP));
-			}	
+			}
 		}
 		
 		//for each incoming call edge already processed
@@ -446,7 +445,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 					for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
 						FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
 						flowFunctionConstructionCount++;
-						Set<D> targets = retFunction.computeTargets(d2);
+						Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, Collections.singleton(zeroValue));
 						for(D d5: targets) {
 							EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
 							propagate(zeroValue, retSiteC, d5, f.composeWith(f5), c, true);
@@ -487,6 +486,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		final D d1 = edge.factAtSource();
 		final N n = edge.getTarget(); 
 		final D d2 = edge.factAtTarget();
+		
 		EdgeFunction<V> f = jumpFunction(edge);
 		for (N m : icfg.getSuccsOf(n)) {
 			FlowFunction<D> flowFunction = flowFunctions.getNormalFlowFunction(n,m);
