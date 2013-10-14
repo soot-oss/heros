@@ -13,6 +13,8 @@ package heros;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class EdgeFunctionCache<N, D, M, V> implements EdgeFunctions<N, D, M, V> {
 	
@@ -25,8 +27,9 @@ public class EdgeFunctionCache<N, D, M, V> implements EdgeFunctions<N, D, M, V> 
 	protected final LoadingCache<ReturnKey, EdgeFunction<V>> returnCache;
 
 	protected final LoadingCache<NDNDKey, EdgeFunction<V>> callToReturnCache;
-	
-	@SuppressWarnings("unchecked")
+
+    Logger logger = LoggerFactory.getLogger(getClass());
+
 	public EdgeFunctionCache(final EdgeFunctions<N, D, M, V> delegate, @SuppressWarnings("rawtypes") CacheBuilder builder) {
 		this.delegate = delegate;
 		
@@ -265,15 +268,12 @@ public class EdgeFunctionCache<N, D, M, V> implements EdgeFunctions<N, D, M, V> 
 
 
 	public void printStats() {
-		System.err.println("Stats for edge-function cache:");
-		System.err.print("Normal:         ");
-		System.err.println(normalCache.stats());
-		System.err.print("Call:           ");
-		System.err.println(callCache.stats());
-		System.err.print("Return:         ");
-		System.err.println(returnCache.stats());
-		System.err.print("Call-to-return: ");
-		System.err.println(callToReturnCache.stats());
+        logger.debug("Stats for edge-function cache:\n" +
+                     "Normal:         {}\n"+
+                     "Call:           {}\n"+
+                     "Return:         {}\n"+
+                     "Call-to-return: {}\n",
+                normalCache.stats(), callCache.stats(),returnCache.stats(),callToReturnCache.stats());
 	}
 
 }
