@@ -706,7 +706,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		return map.entrySet();		
 	}
 	
-	private void addIncoming(N sP, D d3, N n, D d2) {
+	protected void addIncoming(N sP, D d3, N n, D d2) {
 		Map<N, Set<D>> summaries = incoming.get(sP, d3);
 		if(summaries==null) {
 			summaries = new HashMap<N, Set<D>>();
