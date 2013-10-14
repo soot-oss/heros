@@ -110,8 +110,7 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 						pausedPathEdges.put(sourceStmt,pausedEdges);
 					}				
 					pausedEdges.add(edge);
-					if(DEBUG)
-						System.err.println("++ PAUSE "+debugName+": "+edge);
+                    logger.debug(" ++ PAUSE {}: {}", debugName, edge);
 				}
 			} else {
 				//the default case
@@ -148,8 +147,7 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 			Set<PathEdge<N, AbstractionWithSourceStmt<N, D>>> pausedEdges = pausedPathEdges.get(sourceStmt);
 			if(pausedEdges!=null) {
 				for(PathEdge<N, AbstractionWithSourceStmt<N, D>> pausedEdge: pausedEdges) {
-					if(DEBUG)
-						System.err.println("-- UNPAUSE "+debugName+": "+pausedEdge);
+					logger.debug("-- UNPAUSE {}: {}",debugName, pausedEdge);
 					super.processExit(pausedEdge);
 				}
 				pausedPathEdges.remove(sourceStmt);

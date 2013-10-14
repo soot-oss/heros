@@ -43,6 +43,8 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -50,7 +52,7 @@ import com.google.common.collect.Table.Cell;
  * Horwitz and Reps. To solve the problem, call {@link #solve()}. Results can then be
  * queried by using {@link #resultAt(Object, Object)} and {@link #resultsAt(Object)}.
  * 
- * Note that this solver and its data structures internally use mostly {@link LinkedHashSet}s
+ * Note that this solver and its data structures internally use mostly {@link java.util.LinkedHashSet}s
  * instead of normal {@link HashSet}s to fix the iteration order as much as possible. This
  * is to produce, as much as possible, reproducible benchmarking results. We have found
  * that the iteration order can matter a lot in terms of speed.
@@ -65,10 +67,10 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	
 	public static CacheBuilder<Object, Object> DEFAULT_CACHE_BUILDER = CacheBuilder.newBuilder().concurrencyLevel(Runtime.getRuntime().availableProcessors()).initialCapacity(10000).softValues();
 	
-	public static final boolean DEBUG = !System.getProperty("HEROS_DEBUG", "false").equals("false");
-	
-	//executor for dispatching individual compute jobs (may be multi-threaded)
-	@DontSynchronize("only used by single thread")
+    protected static final Logger logger = LoggerFactory.getLogger(IDESolver.class);
+
+    public static final boolean DEBUG = logger.isDebugEnabled();
+
 	protected CountingThreadPoolExecutor executor;
 	
 	@DontSynchronize("only used by single thread")
@@ -153,7 +155,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * @param edgeFunctionCacheBuilder A valid {@link CacheBuilder} or <code>null</code> if no caching is to be used for edge functions.
 	 */
 	public IDESolver(IDETabulationProblem<N,D,M,V,I> tabulationProblem, @SuppressWarnings("rawtypes") CacheBuilder flowFunctionCacheBuilder, @SuppressWarnings("rawtypes") CacheBuilder edgeFunctionCacheBuilder) {
-		if(DEBUG) {
+		if(logger.isDebugEnabled()) {
 			flowFunctionCacheBuilder = flowFunctionCacheBuilder.recordStats();
 			edgeFunctionCacheBuilder = edgeFunctionCacheBuilder.recordStats();
 		}
@@ -225,7 +227,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			computeValues();
 			durationFlowFunctionApplication = System.currentTimeMillis() - before;
 		}
-		if(DEBUG) 
+		if(logger.isDebugEnabled())
 			printStats();
 		
 		//ask executor to shut down;
@@ -288,6 +290,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	private void processCall(PathEdge<N,D> edge) {
 		final D d1 = edge.factAtSource();
 		final N n = edge.getTarget(); // a call node; line 14...
+
+        logger.trace("Processing call to {}", n);
+
 		final D d2 = edge.factAtTarget();
 		EdgeFunction<V> f = jumpFunction(edge);
 		List<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
@@ -544,24 +549,10 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
 			scheduleEdgeProcessing(edge);
 
-			if(DEBUG) {
-				if(targetVal!=zeroValue) {			
-					StringBuilder result = new StringBuilder();
-					result.append(getDebugName());
-					result.append(": ");
-					result.append("EDGE:  <");
-					result.append(icfg.getMethodOf(target));
-					result.append(",");
-					result.append(sourceVal);
-					result.append("> -> <");
-					result.append(target);
-					result.append(",");
-					result.append(targetVal);
-					result.append("> - ");
-					result.append(fPrime);
-					System.err.println(result.toString());
-				}
-			}
+            if(targetVal!=zeroValue) {
+                logger.trace("EDGE: <{},{}> -> <{},{}> - {}", icfg.getMethodOf(target), sourceVal, target, targetVal, fPrime );
+
+            }
 		}
 	}
 	
@@ -570,6 +561,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 */
 	private void computeValues() {	
 		//Phase II(i)
+        logger.debug("Computing the final values for the edge functions");
 		for(Entry<N, Set<D>> seed: initialSeeds.entrySet()) {
 			N startPoint = seed.getKey();
 			for(D val: seed.getValue()) {
@@ -578,7 +570,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				scheduleValueProcessing(new ValuePropagationTask(superGraphNode));
 			}
 		}
-		
+		logger.debug("Computed the final values of the edge functions");
 		//await termination of tasks
 		try {
 			executor.awaitCompletion();
@@ -670,8 +662,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			else
 				val.put(nHashN, nHashD,l);
 		}
-		if(DEBUG)
-			System.err.println("VALUE: "+icfg.getMethodOf(nHashN)+" "+nHashN+" "+nHashD+ " " + l);
+        logger.debug("VALUE: {} {} {} {}", icfg.getMethodOf(nHashN), nHashN, nHashD, l);
 	}
 
 	private EdgeFunction<V> jumpFunction(PathEdge<N,D> edge) {
@@ -761,13 +752,13 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	}
 
 	public void printStats() {
-		if(DEBUG) {
+		if(logger.isDebugEnabled()) {
 			if(ffCache!=null)
 				ffCache.printStats();
 			if(efCache!=null)
 				efCache.printStats();
 		} else {
-			System.err.println("No statistics were collected, as DEBUG is disabled.");
+			logger.info("No statistics were collected, as DEBUG is disabled.");
 		}
 	}
 	
