@@ -23,7 +23,6 @@ import heros.FlowFunctions;
 import heros.IDETabulationProblem;
 import heros.InterproceduralCFG;
 import heros.JoinLattice;
-import heros.SummarizableAbstraction;
 import heros.SynchronizedBy;
 import heros.ZeroedFlowFunctions;
 import heros.edgefunc.EdgeIdentity;
@@ -307,8 +306,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			for(N sP: startPointsOf) {
 				//for each result node of the call-flow function
 				for(D d3: res) {
-					d3 = summarize(d3);
-					
 					//create initial self-loop
 					propagate(d3, sP, d3, EdgeIdentity.<V>v(), n, false); //line 15
 	
@@ -341,8 +338,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 								//update the caller-side summary function
 								EdgeFunction<V> f4 = edgeFunctions.getCallEdgeFunction(n, d2, sCalledProcN, d3);
 								EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(n, sCalledProcN, eP, d4, retSiteN, d5);
-								EdgeFunction<V> fPrime = f4.composeWith(fCalleeSummary).composeWith(f5);
-								d5 = expand(d5,d3);
+								EdgeFunction<V> fPrime = f4.composeWith(fCalleeSummary).composeWith(f5);							
 								propagate(d1, retSiteN, d5, f.composeWith(fPrime), n, false);
 							}
 						}
@@ -409,7 +405,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 					//for each target value at the return site
 					//line 23
 					for(D d5: targets) {
-						d5 = expand(d5,d4);
 						//compute composed function
 						EdgeFunction<V> f4 = edgeFunctions.getCallEdgeFunction(c, d4, icfg.getMethodOf(n), d1);
 						EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
@@ -653,8 +648,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	}
 
 	private void addEndSummary(N sP, D d1, N eP, D d2, EdgeFunction<V> f) {
-		d1 = summarize(d1);
-		d2 = summarize(d2);
 		Table<N, D, EdgeFunction<V>> summaries = endSummary.get(sP, d1);
 		if(summaries==null) {
 			summaries = HashBasedTable.create();
@@ -666,26 +659,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		summaries.put(eP,d2,f);
 	}	
 	
-	@SuppressWarnings("unchecked")
-	private D summarize(D d) {
-		if(d instanceof SummarizableAbstraction) {
-			@SuppressWarnings("rawtypes")
-			SummarizableAbstraction sa = (SummarizableAbstraction) d;
-			d = (D) sa.summarize();
-		}
-		return d;
-	}
-	
-	@SuppressWarnings("unchecked")
-	private D expand(D d, D fullAbstraction) {
-		if(fullAbstraction instanceof SummarizableAbstraction) {
-			@SuppressWarnings("rawtypes")
-			SummarizableAbstraction sa = (SummarizableAbstraction) d;
-			d = (D) sa.expand(fullAbstraction);
-		}
-		return d;
-	}
-
 	private Set<Entry<N, Set<D>>> incoming(D d1, N sP) {
 		Map<N, Set<D>> map = incoming.get(sP, d1);
 		if(map==null) return Collections.emptySet();
