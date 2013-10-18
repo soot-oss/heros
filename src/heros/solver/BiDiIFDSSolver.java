@@ -15,6 +15,7 @@ import heros.FlowFunction;
 import heros.FlowFunctions;
 import heros.IFDSTabulationProblem;
 import heros.InterproceduralCFG;
+import heros.solver.PathTrackingIFDSSolver.LinkedNode;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,16 +36,20 @@ import java.util.concurrent.TimeUnit;
  * by a ZERO source value) then the solver pauses this analysis until the other analysis reaches the same unbalanced return (if ever).
  * The result is that the analyses will never diverge, i.e., will ultimately always only propagate into contexts in which both their
  * computed paths are realizable at the same time.
+ * 
+ * This solver requires data-flow abstractions that implement the {@link LinkedNode} interface such that data-flow values can be linked to form
+ * reportable paths.  
  *
  * @param <N> see {@link IFDSSolver}
- * @param <D> see {@link IFDSSolver}
+ * @param <D> A data-flow abstraction that must implement the {@link LinkedNode} interface such that data-flow values can be linked to form
+ * 				reportable paths.
  * @param <M> see {@link IFDSSolver}
  * @param <I> see {@link IFDSSolver}
  */
-public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
+public class BiDiIFDSSolver<N, D extends PathTrackingIFDSSolver.LinkedNode<D>, M, I extends InterproceduralCFG<N, M>> {
 
-	private final IFDSTabulationProblem<N, AbstractionWithSourceStmt<N, D>, M, I> forwardProblem;
-	private final IFDSTabulationProblem<N, AbstractionWithSourceStmt<N, D>, M, I> backwardProblem;
+	private final IFDSTabulationProblem<N, AbstractionWithSourceStmt, M, I> forwardProblem;
+	private final IFDSTabulationProblem<N, AbstractionWithSourceStmt, M, I> backwardProblem;
 	private final CountingThreadPoolExecutor sharedExecutor;
 	private SingleDirectionSolver fwSolver;
 	private SingleDirectionSolver bwSolver;
@@ -56,14 +61,14 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 		if(!forwardProblem.followReturnsPastSeeds() || !backwardProblem.followReturnsPastSeeds()) {
 			throw new IllegalArgumentException("This solver is only meant for bottom-up problems, so followReturnsPastSeeds() should return true."); 
 		}
-		this.forwardProblem = new AugmentedTabulationProblem<N,D,M,I>(forwardProblem);
-		this.backwardProblem = new AugmentedTabulationProblem<N,D,M,I>(backwardProblem);
+		this.forwardProblem = new AugmentedTabulationProblem(forwardProblem);
+		this.backwardProblem = new AugmentedTabulationProblem(backwardProblem);
 		this.sharedExecutor = new CountingThreadPoolExecutor(1, Math.max(1,forwardProblem.numThreads()), 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 	}
 	
 	public void solve() {		
-		fwSolver = new SingleDirectionSolver(forwardProblem, "FW");
-		bwSolver = new SingleDirectionSolver(backwardProblem,"BW");
+		fwSolver = createSingleDirectionSolver(forwardProblem, "FW");
+		bwSolver = createSingleDirectionSolver(backwardProblem, "BW");
 		fwSolver.otherSolver = bwSolver;
 		bwSolver.otherSolver = fwSolver;
 		
@@ -77,22 +82,29 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 	}
 	
 	/**
+	 * Creates a solver to be used for each single analysis direction.
+	 */
+	protected SingleDirectionSolver createSingleDirectionSolver(IFDSTabulationProblem<N, AbstractionWithSourceStmt, M, I> problem, String debugName) {
+		return new SingleDirectionSolver(problem, debugName);
+	}
+	
+	/**
 	 * This is a modified IFDS solver that is capable of pausing and unpausing return-flow edges.
 	 */
-	private class SingleDirectionSolver extends IFDSSolver<N, AbstractionWithSourceStmt<N, D>, M, I> {
+	protected class SingleDirectionSolver extends PathTrackingIFDSSolver<N, AbstractionWithSourceStmt, M, I> {
 		private final String debugName;
 		private SingleDirectionSolver otherSolver;
 		private Set<N> leakedSources = new HashSet<N>();
-		private Map<N,Set<PathEdge<N,AbstractionWithSourceStmt<N,D>>>> pausedPathEdges =
-				new HashMap<N,Set<PathEdge<N,AbstractionWithSourceStmt<N,D>>>>();
+		private Map<N,Set<PathEdge<N,AbstractionWithSourceStmt>>> pausedPathEdges =
+				new HashMap<N,Set<PathEdge<N,AbstractionWithSourceStmt>>>();
 
-		private SingleDirectionSolver(IFDSTabulationProblem<N, AbstractionWithSourceStmt<N, D>, M, I> ifdsProblem, String debugName) {
+		public SingleDirectionSolver(IFDSTabulationProblem<N, AbstractionWithSourceStmt, M, I> ifdsProblem, String debugName) {
 			super(ifdsProblem);
 			this.debugName = debugName;
 		}
 		
 		@Override
-		protected void processExit(PathEdge<N,AbstractionWithSourceStmt<N,D>> edge) {
+		protected void processExit(PathEdge<N,AbstractionWithSourceStmt> edge) {
 			//if an edge is originating from ZERO then to us this signifies an unbalanced return edge
 			if(edge.factAtSource().equals(zeroValue)) {
 				N sourceStmt = edge.factAtTarget().getSourceStmt();
@@ -104,9 +116,9 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 					super.processExit(edge);
 				} else {
 					//otherwise we pause this solver's edge and don't continue
-					Set<PathEdge<N,AbstractionWithSourceStmt<N,D>>> pausedEdges = pausedPathEdges.get(sourceStmt);
+					Set<PathEdge<N,AbstractionWithSourceStmt>> pausedEdges = pausedPathEdges.get(sourceStmt);
 					if(pausedEdges==null) {
-						pausedEdges = new HashSet<PathEdge<N,AbstractionWithSourceStmt<N,D>>>();
+						pausedEdges = new HashSet<PathEdge<N,AbstractionWithSourceStmt>>();
 						pausedPathEdges.put(sourceStmt,pausedEdges);
 					}				
 					pausedEdges.add(edge);
@@ -118,13 +130,13 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 			}
 		}
 		
-		protected void propagate(AbstractionWithSourceStmt<N,D> sourceVal, N target, AbstractionWithSourceStmt<N,D> targetVal, EdgeFunction<IFDSSolver.BinaryDomain> f, N relatedCallSite, boolean isUnbalancedReturn) {
+		protected void propagate(AbstractionWithSourceStmt sourceVal, N target, AbstractionWithSourceStmt targetVal, EdgeFunction<IFDSSolver.BinaryDomain> f, N relatedCallSite, boolean isUnbalancedReturn) {
 			//the follwing branch will be taken only on an unbalanced return
 			if(isUnbalancedReturn) {
 				assert sourceVal.getSourceStmt()==null : "source value should have no statement attached";
 				
 				//attach target statement as new "source" statement to track
-				targetVal = new AbstractionWithSourceStmt<N, D>(targetVal.getAbstraction(), relatedCallSite);
+				targetVal = new AbstractionWithSourceStmt(targetVal.getAbstraction(), relatedCallSite);
 				
 				super.propagate(sourceVal, target, targetVal, f, relatedCallSite, isUnbalancedReturn);
 			} else { 
@@ -144,10 +156,11 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 		 * Unpauses all edges associated with the given source statement.
 		 */
 		private void unpausePathEdgesForSource(N sourceStmt) {
-			Set<PathEdge<N, AbstractionWithSourceStmt<N, D>>> pausedEdges = pausedPathEdges.get(sourceStmt);
+			Set<PathEdge<N, AbstractionWithSourceStmt>> pausedEdges = pausedPathEdges.get(sourceStmt);
 			if(pausedEdges!=null) {
-				for(PathEdge<N, AbstractionWithSourceStmt<N, D>> pausedEdge: pausedEdges) {
-					logger.debug("-- UNPAUSE {}: {}",debugName, pausedEdge);
+			for(PathEdge<N, AbstractionWithSourceStmt> pausedEdge: pausedEdges) {
+					if(DEBUG)
+						logger.debug("-- UNPAUSE {}: {}",debugName, pausedEdge);
 					super.processExit(pausedEdge);
 				}
 				pausedPathEdges.remove(sourceStmt);
@@ -170,7 +183,7 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 	 * This is an augmented abstraction propagated by the {@link SingleDirectionSolver}. It associates with the
 	 * abstraction the source statement from which this fact originated. 
 	 */
-	public static class AbstractionWithSourceStmt<N,D> {
+	public class AbstractionWithSourceStmt implements PathTrackingIFDSSolver.LinkedNode<AbstractionWithSourceStmt> {
 
 		protected final D abstraction;
 		protected final N source;
@@ -180,11 +193,11 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 			this.source = source;
 		}
 
-		private D getAbstraction() {
+		public D getAbstraction() {
 			return abstraction;
 		}
 		
-		private N getSourceStmt() {
+		public N getSourceStmt() {
 			return source;
 		}	
 		
@@ -205,7 +218,6 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 			return result;
 		}
 
-		@SuppressWarnings("rawtypes")
 		@Override
 		public boolean equals(Object obj) {
 			if (this == obj)
@@ -214,6 +226,7 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 				return false;
 			if (getClass() != obj.getClass())
 				return false;
+			@SuppressWarnings("unchecked")
 			AbstractionWithSourceStmt other = (AbstractionWithSourceStmt) obj;
 			if (abstraction == null) {
 				if (other.abstraction != null)
@@ -227,78 +240,83 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 				return false;
 			return true;
 		}
+
+		@Override
+		public void addNeighbor(AbstractionWithSourceStmt originalAbstraction) {
+			getAbstraction().addNeighbor(originalAbstraction.getAbstraction());
+		}
+
 	}
 	
 	/**
 	 * This tabulation problem simply propagates augmented abstractions where the normal problem would propagate normal abstractions.
 	 */
-	private static class AugmentedTabulationProblem<N,D,M,I extends InterproceduralCFG<N, M>>
-		implements IFDSTabulationProblem<N, BiDiIFDSSolver.AbstractionWithSourceStmt<N,D>,M,I> {
+	private class AugmentedTabulationProblem implements IFDSTabulationProblem<N, AbstractionWithSourceStmt,M,I> {
 
 		private final IFDSTabulationProblem<N,D,M,I> delegate;
-		private final AbstractionWithSourceStmt<N, D> ZERO;
+		private final AbstractionWithSourceStmt ZERO;
 		private final FlowFunctions<N, D, M> originalFunctions;
 		
 		public AugmentedTabulationProblem(IFDSTabulationProblem<N, D, M, I> delegate) {
 			this.delegate = delegate;
 			originalFunctions = this.delegate.flowFunctions();
-			ZERO = new AbstractionWithSourceStmt<N, D>(delegate.zeroValue(), null);
+			ZERO = new AbstractionWithSourceStmt(delegate.zeroValue(), null);
 		}
 
 		@Override
-		public FlowFunctions<N, AbstractionWithSourceStmt<N, D>, M> flowFunctions() {
-			return new FlowFunctions<N, AbstractionWithSourceStmt<N, D>, M>() {
+		public FlowFunctions<N, AbstractionWithSourceStmt, M> flowFunctions() {
+			return new FlowFunctions<N, AbstractionWithSourceStmt, M>() {
 
 				@Override
-				public FlowFunction<AbstractionWithSourceStmt<N, D>> getNormalFlowFunction(final N curr, final N succ) {
-					return new FlowFunction<BiDiIFDSSolver.AbstractionWithSourceStmt<N,D>>() {
+				public FlowFunction<AbstractionWithSourceStmt> getNormalFlowFunction(final N curr, final N succ) {
+					return new FlowFunction<AbstractionWithSourceStmt>() {
 						@Override
-						public Set<AbstractionWithSourceStmt<N, D>> computeTargets(AbstractionWithSourceStmt<N, D> source) {
+						public Set<AbstractionWithSourceStmt> computeTargets(AbstractionWithSourceStmt source) {
 							return copyOverSourceStmts(source, originalFunctions.getNormalFlowFunction(curr, succ));
 						}
 					};
 				}
 
 				@Override
-				public FlowFunction<AbstractionWithSourceStmt<N, D>> getCallFlowFunction(final N callStmt, final M destinationMethod) {
-					return new FlowFunction<BiDiIFDSSolver.AbstractionWithSourceStmt<N,D>>() {
+				public FlowFunction<AbstractionWithSourceStmt> getCallFlowFunction(final N callStmt, final M destinationMethod) {
+					return new FlowFunction<AbstractionWithSourceStmt>() {
 						@Override
-						public Set<AbstractionWithSourceStmt<N, D>> computeTargets(AbstractionWithSourceStmt<N, D> source) {
+						public Set<AbstractionWithSourceStmt> computeTargets(AbstractionWithSourceStmt source) {
 							return copyOverSourceStmts(source, originalFunctions.getCallFlowFunction(callStmt, destinationMethod));
 						}
 					};
 				}
 
 				@Override
-				public FlowFunction<AbstractionWithSourceStmt<N, D>> getReturnFlowFunction(final N callSite, final M calleeMethod, final N exitStmt, final N returnSite) {
-					return new FlowFunction<BiDiIFDSSolver.AbstractionWithSourceStmt<N,D>>() {
+				public FlowFunction<AbstractionWithSourceStmt> getReturnFlowFunction(final N callSite, final M calleeMethod, final N exitStmt, final N returnSite) {
+					return new FlowFunction<AbstractionWithSourceStmt>() {
 						@Override
-						public Set<AbstractionWithSourceStmt<N, D>> computeTargets(AbstractionWithSourceStmt<N, D> source) {
+						public Set<AbstractionWithSourceStmt> computeTargets(AbstractionWithSourceStmt source) {
 							return copyOverSourceStmts(source, originalFunctions.getReturnFlowFunction(callSite, calleeMethod, exitStmt, returnSite));
 						}
 					};
 				}
 
 				@Override
-				public FlowFunction<AbstractionWithSourceStmt<N, D>> getCallToReturnFlowFunction(final N callSite, final N returnSite) {
-					return new FlowFunction<BiDiIFDSSolver.AbstractionWithSourceStmt<N,D>>() {
+				public FlowFunction<AbstractionWithSourceStmt> getCallToReturnFlowFunction(final N callSite, final N returnSite) {
+					return new FlowFunction<AbstractionWithSourceStmt>() {
 						@Override
-						public Set<AbstractionWithSourceStmt<N, D>> computeTargets(AbstractionWithSourceStmt<N, D> source) {
+						public Set<AbstractionWithSourceStmt> computeTargets(AbstractionWithSourceStmt source) {
 							return copyOverSourceStmts(source, originalFunctions.getCallToReturnFlowFunction(callSite, returnSite));
 						}
 					};
 				}
 				
-				private Set<AbstractionWithSourceStmt<N, D>> copyOverSourceStmts(AbstractionWithSourceStmt<N, D> source, FlowFunction<D> originalFunction) {
+				private Set<AbstractionWithSourceStmt> copyOverSourceStmts(AbstractionWithSourceStmt source, FlowFunction<D> originalFunction) {
 					D originalAbstraction = source.getAbstraction();
 					Set<D> origTargets = originalFunction.computeTargets(originalAbstraction);
 
 					//optimization
 					if(origTargets.equals(Collections.singleton(originalAbstraction))) return Collections.singleton(source); 
 					
-					Set<AbstractionWithSourceStmt<N, D>> res = new HashSet<AbstractionWithSourceStmt<N,D>>();
+					Set<AbstractionWithSourceStmt> res = new HashSet<AbstractionWithSourceStmt>();
 					for(D d: origTargets) {
-						res.add(new AbstractionWithSourceStmt<N,D>(d,source.getSourceStmt()));
+						res.add(new AbstractionWithSourceStmt(d,source.getSourceStmt()));
 					}
 					return res;
 				}
@@ -329,23 +347,23 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 
 		/* attaches the original seed statement to the abstraction
 		 */
-		public Map<N,Set<AbstractionWithSourceStmt<N, D>>> initialSeeds() {
+		public Map<N,Set<AbstractionWithSourceStmt>> initialSeeds() {
 			Map<N, Set<D>> originalSeeds = delegate.initialSeeds();
-			Map<N,Set<AbstractionWithSourceStmt<N, D>>> res = new HashMap<N, Set<AbstractionWithSourceStmt<N,D>>>();
+			Map<N,Set<AbstractionWithSourceStmt>> res = new HashMap<N, Set<AbstractionWithSourceStmt>>();
 			for(Entry<N, Set<D>> entry: originalSeeds.entrySet()) {
 				N stmt = entry.getKey();
 				Set<D> seeds = entry.getValue();
-				Set<AbstractionWithSourceStmt<N, D>> resSet = new HashSet<AbstractionWithSourceStmt<N,D>>();
+				Set<AbstractionWithSourceStmt> resSet = new HashSet<AbstractionWithSourceStmt>();
 				for (D d : seeds) {
 					//attach source stmt to abstraction
-					resSet.add(new AbstractionWithSourceStmt<N,D>(d, stmt));
+					resSet.add(new AbstractionWithSourceStmt(d, stmt));
 				}
 				res.put(stmt, resSet);
 			}			
 			return res;
 		}
 
-		public AbstractionWithSourceStmt<N, D> zeroValue() {
+		public AbstractionWithSourceStmt zeroValue() {
 			return ZERO;
 		}
 
@@ -360,9 +378,9 @@ public class BiDiIFDSSolver<N, D, M, I extends InterproceduralCFG<N, M>> {
 		return extractResults(bwSolver.ifdsResultsAt(stmt));
 	}
 
-	private Set<D> extractResults(Set<AbstractionWithSourceStmt<N, D>> annotatedResults) {
+	private Set<D> extractResults(Set<AbstractionWithSourceStmt> annotatedResults) {
 		Set<D> res = new HashSet<D>();		
-		for (AbstractionWithSourceStmt<N, D> abstractionWithSourceStmt : annotatedResults) {
+		for (AbstractionWithSourceStmt abstractionWithSourceStmt : annotatedResults) {
 			res.add(abstractionWithSourceStmt.getAbstraction());
 		}
 		return res;
