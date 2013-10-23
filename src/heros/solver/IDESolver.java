@@ -428,11 +428,13 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 						EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
 						EdgeFunction<V> fPrime = f4.composeWith(f).composeWith(f5);
 						//for each jump function coming into the call, propagate to return site using the composed function
-						for(Map.Entry<D,EdgeFunction<V>> valAndFunc: jumpFn.reverseLookup(c,d4).entrySet()) {
-							EdgeFunction<V> f3 = valAndFunc.getValue();
-							if(!f3.equalTo(allTop)) {
-								D d3 = valAndFunc.getKey();
-								propagate(d3, retSiteC, d5, f3.composeWith(fPrime), c, false);
+						synchronized (jumpFn) { // some other thread might change jumpFn on the way
+							for(Map.Entry<D,EdgeFunction<V>> valAndFunc: jumpFn.reverseLookup(c,d4).entrySet()) {
+								EdgeFunction<V> f3 = valAndFunc.getValue();
+								if(!f3.equalTo(allTop)) {
+									D d3 = valAndFunc.getKey();
+									propagate(d3, retSiteC, d5, f3.composeWith(fPrime), c, false);
+								}
 							}
 						}
 					}
@@ -692,23 +694,27 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	}	
 	
 	private Set<Entry<N, Set<D>>> incoming(D d1, N sP) {
-		Map<N, Set<D>> map = incoming.get(sP, d1);
-		if(map==null) return Collections.emptySet();
-		return map.entrySet();		
+		synchronized (incoming) {
+			Map<N, Set<D>> map = incoming.get(sP, d1);
+			if(map==null) return Collections.emptySet();
+			return map.entrySet();
+		}
 	}
 	
 	protected void addIncoming(N sP, D d3, N n, D d2) {
-		Map<N, Set<D>> summaries = incoming.get(sP, d3);
-		if(summaries==null) {
-			summaries = new HashMap<N, Set<D>>();
-			incoming.put(sP, d3, summaries);
+		synchronized (incoming) {
+			Map<N, Set<D>> summaries = incoming.get(sP, d3);
+			if(summaries==null) {
+				summaries = new HashMap<N, Set<D>>();
+				incoming.put(sP, d3, summaries);
+			}
+			Set<D> set = summaries.get(n);
+			if(set==null) {
+				set = new HashSet<D>();
+				summaries.put(n,set);
+			}
+			set.add(d2);
 		}
-		Set<D> set = summaries.get(n);
-		if(set==null) {
-			set = new HashSet<D>();
-			summaries.put(n,set);
-		}
-		set.add(d2);
 	}	
 	
 	/**
