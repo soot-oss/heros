@@ -395,7 +395,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		
 		//for each of the method's start points, determine incoming calls
 		Set<N> startPointsOf = icfg.getStartPointsOf(methodThatNeedsSummary);
-		Set<Entry<N,Set<D>>> inc = new HashSet<Map.Entry<N,Set<D>>>();
+		Map<N,Set<D>> inc = new HashMap<N,Set<D>>();
 		for(N sP: startPointsOf) {
 			//line 21.1 of Naeem/Lhotak/Rodriguez
 			
@@ -403,13 +403,14 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			synchronized (incoming) {
 				addEndSummary(sP, d1, n, d2, f);
 				//copy to avoid concurrent modification exceptions by other threads
-				inc.addAll(incoming(d1, sP));
+				for (Entry<N, Set<D>> entry : incoming(d1, sP).entrySet())
+					inc.put(entry.getKey(), new HashSet<D>(entry.getValue()));
 			}
 		}
 		
 		//for each incoming call edge already processed
 		//(see processCall(..))
-		for (Entry<N,Set<D>> entry: inc) {
+		for (Entry<N,Set<D>> entry: inc.entrySet()) {
 			//line 22
 			N c = entry.getKey();
 			//for each return site
@@ -693,11 +694,11 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		summaries.put(eP,d2,f);
 	}	
 	
-	private Set<Entry<N, Set<D>>> incoming(D d1, N sP) {
+	private Map<N, Set<D>> incoming(D d1, N sP) {
 		synchronized (incoming) {
 			Map<N, Set<D>> map = incoming.get(sP, d1);
-			if(map==null) return Collections.emptySet();
-			return map.entrySet();
+			if(map==null) return Collections.emptyMap();
+			return map;
 		}
 	}
 	

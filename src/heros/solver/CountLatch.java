@@ -36,6 +36,7 @@ public class CountLatch {
             setState(0);
         }
 
+        @Override
 		protected int tryAcquireShared(int acquires) {
 			return (getState() == 0) ? 1 : -1;
 		}
@@ -50,6 +51,7 @@ public class CountLatch {
 			}
 		}
 
+        @Override
 		protected boolean tryReleaseShared(int releases) {
 			// Decrement count; signal when transition to zero
 			for (;;) {
