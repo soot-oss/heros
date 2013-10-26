@@ -321,7 +321,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 						addIncoming(sP,d3,n,d2);
 						//line 15.2, copy to avoid concurrent modification exceptions by other threads
 						endSumm = new HashSet<Table.Cell<N,D,EdgeFunction<V>>>(endSummary(sP, d3));
-						assert !jumpFn.reverseLookup(n, d2).isEmpty();
 					}
 					
 					//still line 15.2 of Naeem/Lhotak/Rodriguez
