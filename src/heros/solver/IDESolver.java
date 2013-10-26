@@ -259,6 +259,10 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
      * @param edge the edge to process
      */
     protected void scheduleEdgeProcessing(PathEdge<N,D> edge){
+    	// If the executor has been killed, there is little point
+    	// in submitting new tasks
+    	if (executor.isTerminating())
+    		return;
     	executor.execute(new PathEdgeProcessingTask(edge));
     	propagationCount++;
     }
@@ -268,6 +272,10 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
      * @param vpt
      */
     private void scheduleValueProcessing(ValuePropagationTask vpt){
+    	// If the executor has been killed, there is little point
+    	// in submitting new tasks
+    	if (executor.isTerminating())
+    		return;
     	executor.execute(vpt);
     }
   
@@ -276,6 +284,10 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
      * @param task
      */
 	private void scheduleValueComputationTask(ValueComputationTask task) {
+    	// If the executor has been killed, there is little point
+    	// in submitting new tasks
+    	if (executor.isTerminating())
+    		return;
 		executor.execute(task);
 	}
 	
