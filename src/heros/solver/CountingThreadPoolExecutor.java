@@ -14,13 +14,18 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * A {@link ThreadPoolExecutor} which keeps track of the number of spawned
  * tasks to allow clients to await their completion. 
  */
 public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 	
-	protected final CountLatch numRunningTasks = new CountLatch(0);
+    protected static final Logger logger = LoggerFactory.getLogger(IDESolver.class);
+
+    protected final CountLatch numRunningTasks = new CountLatch(0);
 	
 	protected Throwable exception = null;
 
@@ -40,6 +45,8 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 		numRunningTasks.decrement();
 		if(t!=null) {
 			exception = t;
+			logger.error("Worker thread execution failed: " + t.getMessage(), t);
+			
 			shutdownNow();
             numRunningTasks.resetAndInterrupt();
 		}
