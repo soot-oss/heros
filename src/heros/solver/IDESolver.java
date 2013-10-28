@@ -304,7 +304,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			//compute the call-flow function
 			FlowFunction<D> function = flowFunctions.getCallFlowFunction(n, sCalledProcN);
 			flowFunctionConstructionCount++;
-			Set<D> res = function.computeTargets(d2);
+			Set<D> res = computeCallFlowFunction(function, d1, d2);
 			
 			//for each callee's start point(s)
 			Set<N> startPointsOf = icfg.getStartPointsOf(sCalledProcN);
@@ -362,8 +362,20 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	}
 
 	/**
+	 * Computes the call flow function for the given call-site abstraction
+	 * @param callFlowFunction The call flow function to compute
+	 * @param d1 The abstraction at the current method's start node.
+	 * @param d2 The abstraction at the call site
+	 * @return The set of caller-side abstractions at the callee's start node
+	 */
+	protected Set<D> computeCallFlowFunction
+			(FlowFunction<D> callFlowFunction, D d1, D d2) {
+		return callFlowFunction.computeTargets(d2);
+	}
+
+	/**
 	 * Computes the call-to-return flow function for the given call-site
-	 * asbtraction
+	 * abstraction
 	 * @param callToReturnFlowFunction The call-to-return flow function to
 	 * compute
 	 * @param d1 The abstraction at the current method's start node.
