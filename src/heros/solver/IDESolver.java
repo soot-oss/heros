@@ -69,6 +69,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	
     protected static final Logger logger = LoggerFactory.getLogger(IDESolver.class);
 
+    //enable with -Dorg.slf4j.simpleLogger.defaultLogLevel=trace
     public static final boolean DEBUG = logger.isDebugEnabled();
 
 	protected CountingThreadPoolExecutor executor;
