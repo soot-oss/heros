@@ -11,8 +11,12 @@
 package heros.solver;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A {@link ThreadPoolExecutor} which keeps track of the number of spawned
@@ -20,7 +24,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 	
-	protected final CountLatch numRunningTasks = new CountLatch(0);
+    protected static final Logger logger = LoggerFactory.getLogger(IDESolver.class);
+
+    protected final CountLatch numRunningTasks = new CountLatch(0);
 	
 	protected Throwable exception = null;
 
@@ -31,8 +37,14 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 
 	@Override
 	public void execute(Runnable command) {
-		numRunningTasks.increment();
-		super.execute(command);
+		try {
+			numRunningTasks.increment();
+			super.execute(command);
+		}
+		catch (RejectedExecutionException ex) {
+			// If we were unable to submit the task, we may not count it!
+			numRunningTasks.decrement();
+		}
 	}
 	
 	@Override
@@ -40,6 +52,8 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 		numRunningTasks.decrement();
 		if(t!=null) {
 			exception = t;
+			logger.error("Worker thread execution failed: " + t.getMessage(), t);
+			
 			shutdownNow();
             numRunningTasks.resetAndInterrupt();
 		}
