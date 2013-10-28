@@ -25,7 +25,7 @@ public interface SolverConfiguration {
 	 * 
 	 * If this is enabled, when reaching the exit of a method that is <i>nowhere</i> called, in order
 	 * to avoid not at all processing the exit statement, the {@link IDESolver} will call
-	 * the <i>normal</i> flow function with both <i>curr</i> and <i>succ</i> set to the exit node.
+	 * the <i>return</i> flow function with a <code>null</code> call site and return site.
 	 */
 	boolean followReturnsPastSeeds();
 	
