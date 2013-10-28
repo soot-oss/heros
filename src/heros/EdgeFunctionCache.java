@@ -30,6 +30,7 @@ public class EdgeFunctionCache<N, D, M, V> implements EdgeFunctions<N, D, M, V> 
 
     Logger logger = LoggerFactory.getLogger(getClass());
 
+	@SuppressWarnings("unchecked")
 	public EdgeFunctionCache(final EdgeFunctions<N, D, M, V> delegate, @SuppressWarnings("rawtypes") CacheBuilder builder) {
 		this.delegate = delegate;
 		

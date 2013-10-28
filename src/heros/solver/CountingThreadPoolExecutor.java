@@ -11,6 +11,7 @@
 package heros.solver;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -36,8 +37,14 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 
 	@Override
 	public void execute(Runnable command) {
-		numRunningTasks.increment();
-		super.execute(command);
+		try {
+			numRunningTasks.increment();
+			super.execute(command);
+		}
+		catch (RejectedExecutionException ex) {
+			// If we were unable to submit the task, we may not count it!
+			numRunningTasks.decrement();
+		}
 	}
 	
 	@Override
