@@ -172,4 +172,13 @@ public class JumpFunctions<N,D,L> {
 		return true;
 	}
 
+	/**
+	 * Removes all jump functions
+	 */
+	public synchronized void clear() {
+		this.nonEmptyForwardLookup.clear();
+		this.nonEmptyLookupByTargetNode.clear();
+		this.nonEmptyReverseLookup.clear();
+	}
+
 }
