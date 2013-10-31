@@ -44,7 +44,7 @@ public class PathTrackingIFDSSolver<N, D extends PathTrackingIFDSSolver.LinkedNo
 		super(ifdsProblem);
 	}
 
-	private final Map<CacheEntry, LinkedNode<D>> cache = Maps.newHashMap();
+	protected final Map<CacheEntry, LinkedNode<D>> cache = Maps.newHashMap();
 	
 	@Override
 	protected void propagate(D sourceVal, N target, D targetVal, EdgeFunction<IFDSSolver.BinaryDomain> f, N relatedCallSite, boolean isUnbalancedReturn) {
