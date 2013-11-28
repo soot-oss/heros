@@ -15,7 +15,6 @@ import heros.FlowFunction;
 import heros.FlowFunctions;
 import heros.IFDSTabulationProblem;
 import heros.InterproceduralCFG;
-import heros.solver.PathTrackingIFDSSolver.LinkedNode;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -46,7 +45,7 @@ import java.util.concurrent.TimeUnit;
  * @param <M> see {@link IFDSSolver}
  * @param <I> see {@link IFDSSolver}
  */
-public class BiDiIFDSSolver<N, D extends PathTrackingIFDSSolver.LinkedNode<D>, M, I extends InterproceduralCFG<N, M>> {
+public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends InterproceduralCFG<N, M>> {
 
 	private final IFDSTabulationProblem<N, AbstractionWithSourceStmt, M, I> forwardProblem;
 	private final IFDSTabulationProblem<N, AbstractionWithSourceStmt, M, I> backwardProblem;
@@ -183,7 +182,7 @@ public class BiDiIFDSSolver<N, D extends PathTrackingIFDSSolver.LinkedNode<D>, M
 	 * This is an augmented abstraction propagated by the {@link SingleDirectionSolver}. It associates with the
 	 * abstraction the source statement from which this fact originated. 
 	 */
-	public class AbstractionWithSourceStmt implements PathTrackingIFDSSolver.LinkedNode<AbstractionWithSourceStmt> {
+	public class AbstractionWithSourceStmt implements LinkedNode<AbstractionWithSourceStmt> {
 
 		protected final D abstraction;
 		protected final N source;

@@ -26,19 +26,7 @@ import com.google.common.collect.Maps;
  *  
  * @author Eric Bodden
  */
-public class PathTrackingIFDSSolver<N, D extends PathTrackingIFDSSolver.LinkedNode<D>, M, I extends InterproceduralCFG<N, M>> extends IFDSSolver<N, D, M, I> {
-
-	/**
-	 * A data-flow fact that can be linked with other equal facts.
-	 * Equality and hash-code operations must <i>not</i> take the linking data structures into account!
-	 */
-	public static interface LinkedNode<D> {
-		/**
-		 * Links this node to a neighbor node, i.e., to an abstraction that would have been merged
-		 * with this one of paths were not being tracked.
-		 */
-		public void addNeighbor(D originalAbstraction);
-	}
+public class PathTrackingIFDSSolver<N, D extends LinkedNode<D>, M, I extends InterproceduralCFG<N, M>> extends IFDSSolver<N, D, M, I> {
 
 	public PathTrackingIFDSSolver(IFDSTabulationProblem<N, D, M, I> ifdsProblem) {
 		super(ifdsProblem);
