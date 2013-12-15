@@ -578,7 +578,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 
             if(targetVal!=zeroValue) {
                 logger.trace("EDGE: <{},{}> -> <{},{}> - {}", icfg.getMethodOf(target), sourceVal, target, targetVal, fPrime );
-
             }
 		}
 	}
