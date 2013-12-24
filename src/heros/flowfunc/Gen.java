@@ -10,10 +10,10 @@
  ******************************************************************************/
 package heros.flowfunc;
 
+import static heros.TwoElementSet.twoElementSet;
+import static java.util.Collections.singleton;
 import heros.FlowFunction;
 
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
 
 
@@ -36,12 +36,9 @@ public class Gen<D> implements FlowFunction<D> {
 
 	public Set<D> computeTargets(D source) {
 		if(source==zeroValue) {
-			HashSet<D> res = new HashSet<D>();
-			res.add(source);
-			res.add(genValue);
-			return res;
+			return twoElementSet(source, genValue);
 		} else
-			return Collections.singleton(source);
+			return singleton(source);
 	}
 	
 }
