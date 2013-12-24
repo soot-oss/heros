@@ -10,9 +10,10 @@
  ******************************************************************************/
 package heros.flowfunc;
 
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singleton;
 import heros.FlowFunction;
 
-import java.util.Collections;
 import java.util.Set;
 
 
@@ -33,9 +34,9 @@ public class Kill<D> implements FlowFunction<D> {
 
 	public Set<D> computeTargets(D source) {
 		if(source==killValue) {
-			return Collections.emptySet();
+			return emptySet();
 		} else
-			return Collections.singleton(source);
+			return singleton(source);
 	}
 	
 }

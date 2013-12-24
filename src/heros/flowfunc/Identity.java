@@ -10,9 +10,9 @@
  ******************************************************************************/
 package heros.flowfunc;
 
+import static java.util.Collections.singleton;
 import heros.FlowFunction;
 
-import java.util.Collections;
 import java.util.Set;
 
 
@@ -25,7 +25,7 @@ public class Identity<D> implements FlowFunction<D> {
 	private Identity(){} //use v() instead
 
 	public Set<D> computeTargets(D source) {
-		return Collections.singleton(source);
+		return singleton(source);
 	}
 
 	@SuppressWarnings("unchecked")

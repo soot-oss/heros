@@ -10,13 +10,12 @@
  ******************************************************************************/
 package heros.flowfunc;
 
+import static com.google.common.collect.Sets.newHashSet;
 import heros.FlowFunction;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-
-import com.google.common.collect.Sets;
 
 
 /**
@@ -31,7 +30,7 @@ public class Union<D> implements FlowFunction<D> {
 	} 
 
 	public Set<D> computeTargets(D source) {
-		Set<D> res = Sets.newHashSet();
+		Set<D> res = newHashSet();
 		for (FlowFunction<D> func : funcs) {
 			res.addAll(func.computeTargets(source));
 		}
