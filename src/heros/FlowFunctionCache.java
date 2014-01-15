@@ -62,7 +62,7 @@ public class FlowFunctionCache<N, D, M> implements FlowFunctions<N, D, M> {
 	public FlowFunction<D> getNormalFlowFunction(N curr, N succ) {
 		return normalCache.getUnchecked(new NNKey(curr, succ));
 	}
-
+	
 	public FlowFunction<D> getCallFlowFunction(N callStmt, M destinationMethod) {
 		return callCache.getUnchecked(new CallKey(callStmt, destinationMethod));
 	}
