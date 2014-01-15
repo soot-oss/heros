@@ -10,10 +10,10 @@
  ******************************************************************************/
 package heros.flowfunc;
 
+import static heros.TwoElementSet.twoElementSet;
 import heros.FlowFunction;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
 
 
@@ -30,10 +30,7 @@ public class Transfer<D> implements FlowFunction<D> {
 
 	public Set<D> computeTargets(D source) {
 		if(source==fromValue) {
-			HashSet<D> res = new HashSet<D>();
-			res.add(source);
-			res.add(toValue);
-			return res;
+			return twoElementSet(source, toValue);
 		} else if(source==toValue) {
 			return Collections.emptySet();
 		} else {

@@ -10,9 +10,9 @@
  ******************************************************************************/
 package heros.flowfunc;
 
+import static java.util.Collections.emptySet;
 import heros.FlowFunction;
 
-import java.util.Collections;
 import java.util.Set;
 
 
@@ -31,7 +31,7 @@ public class KillAll<D> implements FlowFunction<D> {
 	private KillAll(){} //use v() instead
 
 	public Set<D> computeTargets(D source) {
-		return Collections.emptySet();
+		return emptySet();
 	}
 	
 	@SuppressWarnings("unchecked")

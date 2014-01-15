@@ -16,6 +16,8 @@
             </manifest>
             <fileset dir="bin"/>
             <zipfileset src="${guava.jar}"/>
+            <zipfileset src="${slf4j-api.jar}"/>
+            <zipfileset src="${slf4j-simple.jar}"/>
         </jar>
     </target>
 
@@ -33,8 +35,8 @@
         >
         	<classpath>
         		<pathelement location="${guava.jar}"/>
-        		<pathelement location="slf4j-api-1.7.5.jar"/>
-        		<pathelement location="slf4j-simple-1.7.5.jar"/>
+        		<pathelement location="${slf4j-api.jar}"/>
+        		<pathelement location="${slf4j-simple.jar}"/>
         	</classpath>
             <src path="src"/>
         </javac>
