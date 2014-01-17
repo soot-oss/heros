@@ -27,15 +27,18 @@ import heros.SynchronizedBy;
 import heros.ZeroedFlowFunctions;
 import heros.edgefunc.EdgeIdentity;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Predicate;
 import com.google.common.cache.CacheBuilder;
@@ -43,8 +46,6 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 
 /**
@@ -308,7 +309,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 
 		final D d2 = edge.factAtTarget();
 		EdgeFunction<V> f = jumpFunction(edge);
-		List<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
+		Collection<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
 		
 		//for each possible callee
 		Set<M> callees = icfg.getCalleesOfCallAt(n);
@@ -320,7 +321,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			Set<D> res = computeCallFlowFunction(function, d1, d2);
 			
 			//for each callee's start point(s)
-			Set<N> startPointsOf = icfg.getStartPointsOf(sCalledProcN);
+			Collection<N> startPointsOf = icfg.getStartPointsOf(sCalledProcN);
 			for(N sP: startPointsOf) {
 				//for each result node of the call-flow function
 				for(D d3: res) {
@@ -418,7 +419,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		final D d2 = edge.factAtTarget();
 		
 		//for each of the method's start points, determine incoming calls
-		Set<N> startPointsOf = icfg.getStartPointsOf(methodThatNeedsSummary);
+		Collection<N> startPointsOf = icfg.getStartPointsOf(methodThatNeedsSummary);
 		Map<N,Set<D>> inc = new HashMap<N,Set<D>>();
 		for(N sP: startPointsOf) {
 			//line 21.1 of Naeem/Lhotak/Rodriguez
