@@ -143,6 +143,11 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 			}
 		}
 		
+		@Override
+		protected AbstractionWithSourceStmt restoreContextOnReturnedFact(AbstractionWithSourceStmt d4, AbstractionWithSourceStmt d5) {
+			return new AbstractionWithSourceStmt(d5.getAbstraction(), d4.getSourceStmt());
+		}
+		
 		/**
 		 * Returns <code>true</code> if this solver has tried to leak an edge originating from the given source
 		 * to its caller.
@@ -281,7 +286,14 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 					return new FlowFunction<AbstractionWithSourceStmt>() {
 						@Override
 						public Set<AbstractionWithSourceStmt> computeTargets(AbstractionWithSourceStmt source) {
-							return copyOverSourceStmts(source, originalFunctions.getCallFlowFunction(callStmt, destinationMethod));
+							Set<D> origTargets = originalFunctions.getCallFlowFunction(callStmt, destinationMethod).computeTargets(
+									source.getAbstraction());
+
+							Set<AbstractionWithSourceStmt> res = new HashSet<AbstractionWithSourceStmt>();
+							for (D d : origTargets) {
+								res.add(new AbstractionWithSourceStmt(d, null));
+							}
+							return res;
 						}
 					};
 				}
@@ -309,9 +321,6 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 				private Set<AbstractionWithSourceStmt> copyOverSourceStmts(AbstractionWithSourceStmt source, FlowFunction<D> originalFunction) {
 					D originalAbstraction = source.getAbstraction();
 					Set<D> origTargets = originalFunction.computeTargets(originalAbstraction);
-
-					//optimization
-					if(origTargets.equals(Collections.singleton(originalAbstraction))) return Collections.singleton(source); 
 					
 					Set<AbstractionWithSourceStmt> res = new HashSet<AbstractionWithSourceStmt>();
 					for(D d: origTargets) {

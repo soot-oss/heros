@@ -459,7 +459,8 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 								EdgeFunction<V> f3 = valAndFunc.getValue();
 								if(!f3.equalTo(allTop)) {
 									D d3 = valAndFunc.getKey();
-									propagate(d3, retSiteC, d5, f3.composeWith(fPrime), c, false);
+									D d5_restoredCtx = restoreContextOnReturnedFact(d4, d5);
+									propagate(d3, retSiteC, d5_restoredCtx, f3.composeWith(fPrime), c, false);
 								}
 							}
 						}
@@ -495,6 +496,22 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				}
 			}
 		}
+	
+	/**
+	 * This method will be called for each incoming edge and can be used to
+	 * transfer knowledge from the calling edge to the returning edge, without
+	 * affecting the summary edges at the callee.
+	 * 
+	 * @param d4
+	 *            Fact stored with the incoming edge, i.e., present at the
+	 *            caller side
+	 * @param d5
+	 *            Fact that originally should be propagated to the caller.
+	 * @return Fact that will be propagated to the caller.
+	 */
+	protected D restoreContextOnReturnedFact(D d4, D d5) {
+		return d5;
+	}
 	
 	/**
 	 * Computes the return flow function for the given set of caller-side
