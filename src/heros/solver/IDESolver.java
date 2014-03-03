@@ -355,8 +355,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 								//update the caller-side summary function
 								EdgeFunction<V> f4 = edgeFunctions.getCallEdgeFunction(n, d2, sCalledProcN, d3);
 								EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(n, sCalledProcN, eP, d4, retSiteN, d5);
-								EdgeFunction<V> fPrime = f4.composeWith(fCalleeSummary).composeWith(f5);							
-								propagate(d1, retSiteN, d5, f.composeWith(fPrime), n, false);
+								EdgeFunction<V> fPrime = f4.composeWith(fCalleeSummary).composeWith(f5);					
+								D d5_restoredCtx = restoreContextOnReturnedFact(d2, d5);
+								propagate(d1, retSiteN, d5_restoredCtx, f.composeWith(fPrime), n, false);
 							}
 						}
 					}
@@ -595,7 +596,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			scheduleEdgeProcessing(edge);
 
             if(targetVal!=zeroValue) {
-                logger.trace("EDGE: <{},{}> -> <{},{}> - {}", icfg.getMethodOf(target), sourceVal, target, targetVal, fPrime );
+                logger.trace("{} - EDGE: <{},{}> -> <{},{}> - {}", getDebugName(), icfg.getMethodOf(target), sourceVal, target, targetVal, fPrime );
             }
 		}
 	}
