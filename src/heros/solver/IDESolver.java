@@ -322,6 +322,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			
 			//for each callee's start point(s)
 			Collection<N> startPointsOf = icfg.getStartPointsOf(sCalledProcN);
+			Set<Cell<N, D, EdgeFunction<V>>> endSumm = new HashSet<>();
 			for(N sP: startPointsOf) {
 				//for each result node of the call-flow function
 				for(D d3: res) {
@@ -329,14 +330,15 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 					propagate(d3, sP, d3, EdgeIdentity.<V>v(), n, false); //line 15
 	
 					//register the fact that <sp,d3> has an incoming edge from <n,d2>
-					Set<Cell<N, D, EdgeFunction<V>>> endSumm;
 					synchronized (incoming) {
 						//line 15.1 of Naeem/Lhotak/Rodriguez
 						addIncoming(sP,d3,n,d2);
 						//line 15.2, copy to avoid concurrent modification exceptions by other threads
 						endSumm = new HashSet<Table.Cell<N,D,EdgeFunction<V>>>(endSummary(sP, d3));
 					}
-					
+				}
+			}
+			for(D d3: res) {					
 					//still line 15.2 of Naeem/Lhotak/Rodriguez
 					//for each already-queried exit value <eP,d4> reachable from <sP,d3>,
 					//create new caller-side jump functions to the return sites
@@ -361,7 +363,6 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 							}
 						}
 					}
-				}		
 			}
 		}
 		//line 17-19 of Naeem/Lhotak/Rodriguez		
