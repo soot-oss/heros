@@ -1,3 +1,5 @@
 heros.version=trunk
 
 guava.jar=guava-14.0.1.jar
+slf4j-api.jar=slf4j-api-1.7.5.jar
+slf4j-simple.jar=slf4j-simple-1.7.5.jar
