@@ -312,7 +312,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		Collection<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
 		
 		//for each possible callee
-		Set<M> callees = icfg.getCalleesOfCallAt(n);
+		Collection<M> callees = icfg.getCalleesOfCallAt(n);
 		for(M sCalledProcN: callees) { //still line 14
 			
 			//compute the call-flow function
@@ -475,7 +475,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		//be propagated into callers that have an incoming edge for this condition
 		if(followReturnsPastSeeds && inc.isEmpty() && d1.equals(zeroValue)) {
 			// only propagate up if we 
-				Set<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
+				Collection<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
 				for(N c: callers) {
 					for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
 						FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);

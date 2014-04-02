@@ -36,12 +36,12 @@ public interface InterproceduralCFG<N,M>  {
 	/**
 	 * Returns all callee methods for a given call.
 	 */
-	public Set<M> getCalleesOfCallAt(N n);
+	public Collection<M> getCalleesOfCallAt(N n);
 
 	/**
 	 * Returns all caller statements/nodes of a given method.
 	 */
-	public Set<N> getCallersOf(M m);
+	public Collection<N> getCallersOf(M m);
 
 	/**
 	 * Returns all call sites within a given method.
