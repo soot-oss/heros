@@ -14,6 +14,8 @@ package heros.solver;
 public class Pair<T, U> {
 	protected T o1;
 	protected U o2;
+	
+	protected int hashCode = 0;
 
 	public Pair() {
 		o1 = null;
@@ -27,11 +29,16 @@ public class Pair<T, U> {
 
 	@Override
 	public int hashCode() {
+		if (hashCode != 0)
+			return hashCode;
+		
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((o1 == null) ? 0 : o1.hashCode());
 		result = prime * result + ((o2 == null) ? 0 : o2.hashCode());
-		return result;
+		hashCode = result;
+		
+		return hashCode;
 	}
 
 	@Override
@@ -71,15 +78,18 @@ public class Pair<T, U> {
 
 	public void setO1(T no1) {
 		o1 = no1;
+		hashCode = 0;
 	}
 
 	public void setO2(U no2) {
 		o2 = no2;
+		hashCode = 0;
 	}
 
 	public void setPair(T no1, U no2) {
 		o1 = no1;
 		o2 = no2;
+		hashCode = 0;
 	}
 
 }
