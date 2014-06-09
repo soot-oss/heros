@@ -158,8 +158,10 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 */
 	public IDESolver(IDETabulationProblem<N,D,M,V,I> tabulationProblem, @SuppressWarnings("rawtypes") CacheBuilder flowFunctionCacheBuilder, @SuppressWarnings("rawtypes") CacheBuilder edgeFunctionCacheBuilder) {
 		if(logger.isDebugEnabled()) {
-			flowFunctionCacheBuilder = flowFunctionCacheBuilder.recordStats();
-			edgeFunctionCacheBuilder = edgeFunctionCacheBuilder.recordStats();
+			if(flowFunctionCacheBuilder != null)
+				flowFunctionCacheBuilder = flowFunctionCacheBuilder.recordStats();
+			if(edgeFunctionCacheBuilder != null)
+				edgeFunctionCacheBuilder = edgeFunctionCacheBuilder.recordStats();
 		}
 		this.zeroValue = tabulationProblem.zeroValue();
 		this.icfg = tabulationProblem.interproceduralCFG();		
