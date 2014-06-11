@@ -8,9 +8,14 @@
  * Contributors:
  *     Johannes Lerch - initial API and implementation
  ******************************************************************************/
-package heros;
+package heros.utilities;
 
 import static org.junit.Assert.assertTrue;
+import heros.FlowFunction;
+import heros.FlowFunctions;
+import heros.IFDSTabulationProblem;
+import heros.InterproceduralCFG;
+import heros.solver.BiDiIFDSSolver;
 import heros.solver.IFDSSolver;
 import heros.solver.Pair;
 
@@ -226,27 +231,27 @@ public class TestHelper {
 				
 				edge.accept(new EdgeVisitor() {
 					@Override
-					public void visit(heros.TestHelper.ReturnEdge edge) {
+					public void visit(heros.utilities.TestHelper.ReturnEdge edge) {
 						addOrVerifyStmt2Method(edge.exitStmt, method);
 						edge.calleeMethod = method;
 						returnEdges.add(edge);
 					}
 					
 					@Override
-					public void visit(heros.TestHelper.Call2ReturnEdge edge) {
+					public void visit(heros.utilities.TestHelper.Call2ReturnEdge edge) {
 						addOrVerifyStmt2Method(edge.callSite, method);
 						addOrVerifyStmt2Method(edge.returnSite, method);
 						call2retEdges.add(edge);
 					}
 					
 					@Override
-					public void visit(heros.TestHelper.CallEdge edge) {
+					public void visit(heros.utilities.TestHelper.CallEdge edge) {
 						addOrVerifyStmt2Method(edge.callSite, method);
 						callEdges.add(edge);
 					}
 					
 					@Override
-					public void visit(heros.TestHelper.NormalEdge edge) {
+					public void visit(heros.utilities.TestHelper.NormalEdge edge) {
 						addOrVerifyStmt2Method(edge.unit, method);
 						addOrVerifyStmt2Method(edge.succUnit, method);
 						normalEdges.add(edge);
@@ -463,57 +468,72 @@ public class TestHelper {
 	}
 
 	public void runSolver(final boolean followReturnsPastSeeds, final String...initialSeeds) {
-		final InterproceduralCFG<Statement, Method> icfg = buildIcfg();
-		final FlowFunctions<Statement, Fact, Method> flowFunctions = flowFunctions();
 		IFDSSolver<Statement, Fact, Method, InterproceduralCFG<Statement, Method>> solver = new IFDSSolver<>(
-				new IFDSTabulationProblem<Statement, Fact, Method, InterproceduralCFG<Statement, Method>>() {
-
-					@Override
-					public boolean followReturnsPastSeeds() {
-						return followReturnsPastSeeds;
-					}
-
-					@Override
-					public boolean autoAddZero() {
-						return false;
-					}
-
-					@Override
-					public int numThreads() {
-						return 1;
-					}
-
-					@Override
-					public boolean computeValues() {
-						return false;
-					}
-
-					@Override
-					public FlowFunctions<Statement, Fact, Method> flowFunctions() {
-						return flowFunctions;
-					}
-
-					@Override
-					public InterproceduralCFG<Statement, Method> interproceduralCFG() {
-						return icfg;
-					}
-
-					@Override
-					public Map<Statement, Set<Fact>> initialSeeds() {
-						Map<Statement, Set<Fact>> result = Maps.newHashMap();
-						for (String stmt : initialSeeds) {
-							result.put(new Statement(stmt), Sets.newHashSet(new Fact("0")));
-						}
-						return result;
-					}
-
-					@Override
-					public Fact zeroValue() {
-						return new Fact("0");
-					}
-				});
+				createTabulationProblem(followReturnsPastSeeds, initialSeeds));
 
 		solver.solve();
 		assertAllFlowFunctionsUsed();
+	}
+	
+	public void runBiDiSolver(TestHelper backwardHelper, final String...initialSeeds) {
+		BiDiIFDSSolver<Statement, Fact, Method, InterproceduralCFG<Statement, Method>> solver = new BiDiIFDSSolver<>(
+				createTabulationProblem(true, initialSeeds), 
+				backwardHelper.createTabulationProblem(true, initialSeeds));
+		
+		solver.solve();
+		assertAllFlowFunctionsUsed();
+		backwardHelper.assertAllFlowFunctionsUsed();
+	}
+	
+	private IFDSTabulationProblem<Statement, Fact, Method, InterproceduralCFG<Statement, Method>> createTabulationProblem(final boolean followReturnsPastSeeds, final String[] initialSeeds) {
+		final InterproceduralCFG<Statement, Method> icfg = buildIcfg();
+		final FlowFunctions<Statement, Fact, Method> flowFunctions = flowFunctions();
+		
+		return new IFDSTabulationProblem<Statement, Fact, Method, InterproceduralCFG<Statement, Method>>() {
+
+			@Override
+			public boolean followReturnsPastSeeds() {
+				return followReturnsPastSeeds;
+			}
+
+			@Override
+			public boolean autoAddZero() {
+				return false;
+			}
+
+			@Override
+			public int numThreads() {
+				return 1;
+			}
+
+			@Override
+			public boolean computeValues() {
+				return false;
+			}
+
+			@Override
+			public FlowFunctions<Statement, Fact, Method> flowFunctions() {
+				return flowFunctions;
+			}
+
+			@Override
+			public InterproceduralCFG<Statement, Method> interproceduralCFG() {
+				return icfg;
+			}
+
+			@Override
+			public Map<Statement, Set<Fact>> initialSeeds() {
+				Map<Statement, Set<Fact>> result = Maps.newHashMap();
+				for (String stmt : initialSeeds) {
+					result.put(new Statement(stmt), Sets.newHashSet(new Fact("0")));
+				}
+				return result;
+			}
+
+			@Override
+			public Fact zeroValue() {
+				return new Fact("0");
+			}
+		};
 	}
 }

@@ -8,16 +8,16 @@
  * Contributors:
  *     Johannes Lerch - initial API and implementation
  ******************************************************************************/
-package heros;
+package heros.utilities;
 
 import java.util.Collection;
 import java.util.List;
 
 import com.google.common.collect.Lists;
 
-import heros.TestHelper.Edge;
-import heros.TestHelper.ExpectedFlowFunction;
-import heros.TestHelper.ReturnEdge;
+import heros.utilities.TestHelper.Edge;
+import heros.utilities.TestHelper.ExpectedFlowFunction;
+import heros.utilities.TestHelper.ReturnEdge;
 
 public abstract class EdgeBuilder {
 	

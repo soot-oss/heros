@@ -8,13 +8,13 @@
  * Contributors:
  *     Johannes Lerch - initial API and implementation
  ******************************************************************************/
-package heros;
+package heros.utilities;
 
-public class Fact {
+public class Method {
 
 	public final String name;
 	
-	public Fact(String name) {
+	public Method(String name) {
 		this.name = name;
 	}
 
@@ -32,9 +32,9 @@ public class Fact {
 			return true;
 		if (obj == null)
 			return false;
-		if (!(obj instanceof Fact))
+		if (!(obj instanceof Method))
 			return false;
-		Fact other = (Fact) obj;
+		Method other = (Method) obj;
 		if (name == null) {
 			if (other.name != null)
 				return false;
@@ -45,6 +45,6 @@ public class Fact {
 	
 	@Override
 	public String toString() {
-		return "[Fact "+name+"]";
+		return "[Method "+name+"]";
 	}
 }

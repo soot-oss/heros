@@ -10,10 +10,12 @@
  ******************************************************************************/
 package heros;
 
+import heros.utilities.TestHelper;
+
 import org.junit.Before;
 import org.junit.Test;
 
-import static heros.TestHelper.*;
+import static heros.utilities.TestHelper.*;
 
 public class IFDSSolverTest {
 
@@ -25,7 +27,7 @@ public class IFDSSolverTest {
 	}
 	
 	@Test
-	public void test() {
+	public void happyPath() {
 		helper.method("bar", 
 				startPoints("a"),
 				normalStmt("a").succ("b", flow("0", "x")),
