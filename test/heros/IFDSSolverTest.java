@@ -58,6 +58,23 @@ public class IFDSSolverTest {
 	}
 	
 	@Test
+	public void reuseSummaryForRecursiveCall() {
+		helper.method("foo",
+				startPoints("a"),
+				callSite("a").calls("bar", flow("0", "1")).retSite("b", flow("0")),
+				normalStmt("b").succ("c", flow("2", "3")));
+		
+		helper.method("bar",
+				startPoints("g"),
+				normalStmt("g").succ("h", flow("1", "1")).succ("i", flow("1", "1")),
+				callSite("i").calls("bar", flow("1", "1")).retSite("h", flow("1")),
+				exitStmt("h").returns(over("a"), to("b"), flow("1"), flow("2" ,"2"))
+							.returns(over("i"), to("h"), flow("1","2"), flow("2", "2")));
+				
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
 	public void branch() {
 		helper.method("foo",
 				startPoints("a"),
