@@ -29,10 +29,12 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 
 public class TestHelper {
@@ -43,7 +45,7 @@ public class TestHelper {
 	private List<Call2ReturnEdge> call2retEdges = Lists.newLinkedList();
 	private List<ReturnEdge> returnEdges = Lists.newLinkedList();
 	private Map<Statement, Method> stmt2method = Maps.newHashMap();
-	private Set<ExpectedFlowFunction> remainingFlowFunctions = Sets.newHashSet();
+	private Multiset<ExpectedFlowFunction> remainingFlowFunctions = HashMultiset.create();
 
 	public MethodHelper method(String methodName, Statement[] startingPoints, EdgeBuilder... edgeBuilders) {
 		MethodHelper methodHelper = new MethodHelper(new Method(methodName));
@@ -82,12 +84,28 @@ public class TestHelper {
 		return new Statement(returnSite);
 	}
 	
+	public static ExpectedFlowFunction kill(String source) {
+		return kill(1, source);
+	}
+	
+	public static ExpectedFlowFunction kill(int times, String source) {
+		return new ExpectedFlowFunction(times, new Fact(source));
+	}
+
 	public static ExpectedFlowFunction flow(String source, String... targets) {
+		return flow(1, source, targets);
+	}
+	
+	public static ExpectedFlowFunction flow(int times, String source, String... targets) {
 		Fact[] targetFacts = new Fact[targets.length];
 		for(int i=0; i<targets.length; i++) {
 			targetFacts[i] = new Fact(targets[i]);
 		}
-		return new ExpectedFlowFunction(new Fact(source), targetFacts);
+		return new ExpectedFlowFunction(times, new Fact(source), targetFacts);
+	}
+	
+	public static int times(int times) {
+		return times;
 	}
 
 	public InterproceduralCFG<Statement, Method> buildIcfg() {
@@ -227,7 +245,9 @@ public class TestHelper {
 
 		public void edges(Collection<Edge> edges) {
 			for(Edge edge : edges) {
-				remainingFlowFunctions.addAll(Lists.newArrayList(edge.flowFunctions));
+				for(ExpectedFlowFunction ff : edge.flowFunctions) {
+					remainingFlowFunctions.add(ff, ff.times);
+				}
 				
 				edge.accept(new EdgeVisitor() {
 					@Override
@@ -270,8 +290,10 @@ public class TestHelper {
 		public final Fact source;
 		public final Fact[] targets;
 		public Edge edge;
+		private int times;
 
-		public ExpectedFlowFunction(Fact source, Fact... targets) {
+		public ExpectedFlowFunction(int times, Fact source, Fact... targets) {
+			this.times = times;
 			this.source = source;
 			this.targets = targets;
 		}
@@ -475,10 +497,15 @@ public class TestHelper {
 		assertAllFlowFunctionsUsed();
 	}
 	
-	public void runBiDiSolver(TestHelper backwardHelper, final String...initialSeeds) {
-		BiDiIFDSSolver<Statement, Fact, Method, InterproceduralCFG<Statement, Method>> solver = new BiDiIFDSSolver<>(
-				createTabulationProblem(true, initialSeeds), 
-				backwardHelper.createTabulationProblem(true, initialSeeds));
+	
+	public static enum TabulationProblemExchange {AsSpecified, ExchangeForwardAndBackward};
+	public void runBiDiSolver(TestHelper backwardHelper, TabulationProblemExchange direction, final String...initialSeeds) {
+		BiDiIFDSSolver<Statement, Fact, Method, InterproceduralCFG<Statement, Method>> solver =
+				direction == TabulationProblemExchange.AsSpecified ? 
+				new BiDiIFDSSolver<>(createTabulationProblem(true, initialSeeds), 
+									backwardHelper.createTabulationProblem(true, initialSeeds)) :
+				new BiDiIFDSSolver<>(backwardHelper.createTabulationProblem(true, initialSeeds), 
+									createTabulationProblem(true, initialSeeds));
 		
 		solver.solve();
 		assertAllFlowFunctionsUsed();
