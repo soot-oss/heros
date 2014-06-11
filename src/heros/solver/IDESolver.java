@@ -444,9 +444,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				//compute return-flow function
 				FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
 				flowFunctionConstructionCount++;
-				Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, entry.getValue());
 				//for each incoming-call value
 				for(D d4: entry.getValue()) {
+					Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, entry.getValue());
 					//for each target value at the return site
 					//line 23
 					for(D d5: targets) {
