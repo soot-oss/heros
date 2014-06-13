@@ -127,8 +127,8 @@ public class BiDiIFDSSolverTest {
 		backwardHelper.method("foo",
 				startPoints("c"),
 				normalStmt("c").succ("b"),
-				normalStmt("b").succ("a", flow("0", "2")),
-				exitStmt("a").returns(over("y"), to("x"), kill("2")));
+				normalStmt("b").succ("a", kill("0")),
+				exitStmt("a").returns(over("y"), to("x") /*none*/));
 		
 		backwardHelper.method("bar",
 				startPoints(),
@@ -182,5 +182,27 @@ public class BiDiIFDSSolverTest {
 					
 		forwardHelper.runBiDiSolver(backwardHelper, exchange, "a1", "a2");
 	}
-	
+
+	@Test
+	public void dontUnpauseIfReturnFlowIsKilled() {
+		forwardHelper.method("foo",
+				startPoints(), 
+				normalStmt("a").succ("b", flow("0", "1")),
+				exitStmt("b").returns(over("cs"), to("y"), kill("1")));
+		
+		forwardHelper.method("bar",
+				startPoints(),
+				normalStmt("y").succ("z" /* none */));
+		
+		backwardHelper.method("foo",
+				startPoints(),
+				normalStmt("a").succ("c", flow("0", "1")),
+				exitStmt("c").returns(over("cs"), to("x"), flow("1", "2")));
+		
+		backwardHelper.method("bar",
+				startPoints(),
+				normalStmt("x").succ("z" /*none*/));
+		
+		forwardHelper.runBiDiSolver(backwardHelper, exchange, "a");
+	}
 }
