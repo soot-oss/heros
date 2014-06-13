@@ -16,7 +16,6 @@ import heros.FlowFunctions;
 import heros.IFDSTabulationProblem;
 import heros.InterproceduralCFG;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -145,6 +144,7 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 		
 		@Override
 		protected AbstractionWithSourceStmt restoreContextOnReturnedFact(AbstractionWithSourceStmt d4, AbstractionWithSourceStmt d5) {
+			d5.getAbstraction().setCallingContext(d4.getAbstraction());
 			return new AbstractionWithSourceStmt(d5.getAbstraction(), d4.getSourceStmt());
 		}
 		
@@ -248,6 +248,11 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 		@Override
 		public void addNeighbor(AbstractionWithSourceStmt originalAbstraction) {
 			getAbstraction().addNeighbor(originalAbstraction.getAbstraction());
+		}
+
+		@Override
+		public void setCallingContext(AbstractionWithSourceStmt callingContext) {
+			abstraction.setCallingContext(callingContext.getAbstraction());
 		}
 
 	}

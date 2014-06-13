@@ -510,7 +510,11 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 *            Fact that originally should be propagated to the caller.
 	 * @return Fact that will be propagated to the caller.
 	 */
+	@SuppressWarnings("unchecked")
 	protected D restoreContextOnReturnedFact(D d4, D d5) {
+		if (d5 instanceof LinkedNode) {
+			((LinkedNode<D>) d5).setCallingContext(d4);
+		}
 		return d5;
 	}
 	

@@ -52,7 +52,11 @@ public class Fact implements LinkedNode<Fact> {
 
 	@Override
 	public void addNeighbor(Fact originalAbstraction) {
-		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void setCallingContext(Fact callingContext) {
 		
 	}
 }
