@@ -72,7 +72,7 @@ public class BiDiIFDSSolverTest {
 		
 		forwardHelper.method("bar",
 				startPoints(),
-				exitStmt("z").expectArtificalFlow(flow("2")));
+				exitStmt("z").expectArtificalFlow(kill("2")));
 		
 		backwardHelper.method("foo",
 				startPoints("c"),
@@ -82,7 +82,7 @@ public class BiDiIFDSSolverTest {
 		
 		backwardHelper.method("bar",
 				startPoints(),
-				exitStmt("x").expectArtificalFlow(flow("3")));
+				exitStmt("x").expectArtificalFlow(kill("3")));
 		
 		forwardHelper.runBiDiSolver(backwardHelper, exchange, "b");
 	}
@@ -113,7 +113,7 @@ public class BiDiIFDSSolverTest {
 	}
 	
 	@Test
-	public void returnsOnlyOneDirection() {
+	public void returnsOnlyOneDirectionAndStops() {
 		forwardHelper.method("foo",
 				startPoints("a"),
 				normalStmt("a").succ("b"),
@@ -184,7 +184,7 @@ public class BiDiIFDSSolverTest {
 	}
 
 	@Test
-	public void dontUnpauseIfReturnFlowIsKilled() {
+	public void dontResumeIfReturnFlowIsKilled() {
 		forwardHelper.method("foo",
 				startPoints(), 
 				normalStmt("a").succ("b", flow("0", "1")),

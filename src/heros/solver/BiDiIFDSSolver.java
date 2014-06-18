@@ -16,13 +16,17 @@ import heros.FlowFunctions;
 import heros.IFDSTabulationProblem;
 import heros.InterproceduralCFG;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+
+import com.google.common.collect.Maps;
 
 /**
  * This is a special IFDS solver that solves the analysis problem inside out, i.e., from further down the call stack to
@@ -92,9 +96,9 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 	protected class SingleDirectionSolver extends PathTrackingIFDSSolver<N, AbstractionWithSourceStmt, M, I> {
 		private final String debugName;
 		private SingleDirectionSolver otherSolver;
-		private Set<N> leakedSources = new HashSet<N>();
-		private Map<N,Set<PathEdge<N,AbstractionWithSourceStmt>>> pausedPathEdges =
-				new HashMap<N,Set<PathEdge<N,AbstractionWithSourceStmt>>>();
+		private Set<N> leakedSources = Collections.newSetFromMap(Maps.<N, Boolean>newConcurrentMap());
+		private ConcurrentMap<N,Set<PathEdge<N,AbstractionWithSourceStmt>>> pausedPathEdges =
+				Maps.newConcurrentMap();
 
 		public SingleDirectionSolver(IFDSTabulationProblem<N, AbstractionWithSourceStmt, M, I> ifdsProblem, String debugName) {
 			super(ifdsProblem);
@@ -114,12 +118,19 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 					super.processExit(edge);
 				} else {
 					//otherwise we pause this solver's edge and don't continue
-					Set<PathEdge<N,AbstractionWithSourceStmt>> pausedEdges = pausedPathEdges.get(sourceStmt);
-					if(pausedEdges==null) {
-						pausedEdges = new HashSet<PathEdge<N,AbstractionWithSourceStmt>>();
-						pausedPathEdges.put(sourceStmt,pausedEdges);
-					}				
-					pausedEdges.add(edge);
+					Set<PathEdge<N,AbstractionWithSourceStmt>> newPausedEdges = 
+							Collections.newSetFromMap(Maps.<PathEdge<N,AbstractionWithSourceStmt>, Boolean>newConcurrentMap()); 
+					Set<PathEdge<N,AbstractionWithSourceStmt>> existingPausedEdges = pausedPathEdges.putIfAbsent(sourceStmt, newPausedEdges);
+					if(existingPausedEdges==null)
+						existingPausedEdges=newPausedEdges;
+					
+					existingPausedEdges.add(edge);
+					
+					//if the other solver has leaked in the meantime, we have to make sure that the paused edge is unpaused
+					if(otherSolver.hasLeaked(sourceStmt) && existingPausedEdges.remove(edge)) {
+						super.processExit(edge);
+					}
+							
                     logger.debug(" ++ PAUSE {}: {}", debugName, edge);
 				}
 			} else {
@@ -162,10 +173,12 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 		private void unpausePathEdgesForSource(N sourceStmt) {
 			Set<PathEdge<N, AbstractionWithSourceStmt>> pausedEdges = pausedPathEdges.get(sourceStmt);
 			if(pausedEdges!=null) {
-			for(PathEdge<N, AbstractionWithSourceStmt> pausedEdge: pausedEdges) {
-					if(DEBUG)
-						logger.debug("-- UNPAUSE {}: {}",debugName, pausedEdge);
-					super.processExit(pausedEdge);
+				for(PathEdge<N, AbstractionWithSourceStmt> pausedEdge: pausedEdges) {
+					if(pausedEdges.remove(pausedEdge)) {
+						if(DEBUG)
+							logger.debug("-- UNPAUSE {}: {}",debugName, pausedEdge);
+						super.processExit(pausedEdge);
+					}
 				}
 				pausedPathEdges.remove(sourceStmt);
 			}
