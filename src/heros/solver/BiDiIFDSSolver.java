@@ -15,6 +15,7 @@ import heros.FlowFunction;
 import heros.FlowFunctions;
 import heros.IFDSTabulationProblem;
 import heros.InterproceduralCFG;
+import heros.solver.IFDSSolver.BinaryDomain;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -22,8 +23,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+
+import com.google.common.collect.Maps;
 
 /**
  * This is a special IFDS solver that solves the analysis problem inside out, i.e., from further down the call stack to
@@ -87,15 +91,79 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 		return new SingleDirectionSolver(problem, debugName);
 	}
 	
+	private class PausedEdge {
+		private N retSiteC;
+		private AbstractionWithSourceStmt targetVal;
+		private EdgeFunction<heros.solver.IFDSSolver.BinaryDomain> edgeFunction;
+		private N relatedCallSite;
+		
+		public PausedEdge(N retSiteC, AbstractionWithSourceStmt targetVal, EdgeFunction<BinaryDomain> edgeFunction, N relatedCallSite) {
+			this.retSiteC = retSiteC;
+			this.targetVal = targetVal;
+			this.edgeFunction = edgeFunction;
+			this.relatedCallSite = relatedCallSite;
+		}
+	}
+
+	/**
+	 *  Data structure used to identify which edges can be unpaused by a {@link SingleDirectionSolver}. Each {@link SingleDirectionSolver} stores 
+	 *  its leaks using this structure. A leak always requires a flow from some {@link #sourceStmt} (this is either the statement used as initial seed
+	 *  or a call site of an unbalanced return) to a return site. This return site is always different for the forward and backward solvers,
+	 *  but, the related call site of these return sites must be the same, if two entangled flows exist. 
+	 *  Moreover, this structure represents the pair of such a {@link #sourceStmt} and the {@link #relatedCallSite}.
+	 *
+	 */
+	private static class LeakKey<N> {
+		private N sourceStmt;
+		private N relatedCallSite;
+		
+		public LeakKey(N sourceStmt, N relatedCallSite) {
+			this.sourceStmt = sourceStmt;
+			this.relatedCallSite = relatedCallSite;
+		}
+		
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((relatedCallSite == null) ? 0 : relatedCallSite.hashCode());
+			result = prime * result + ((sourceStmt == null) ? 0 : sourceStmt.hashCode());
+			return result;
+		}
+		
+		@SuppressWarnings("rawtypes")
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (!(obj instanceof LeakKey))
+				return false;
+			LeakKey other = (LeakKey) obj;
+			if (relatedCallSite == null) {
+				if (other.relatedCallSite != null)
+					return false;
+			} else if (!relatedCallSite.equals(other.relatedCallSite))
+				return false;
+			if (sourceStmt == null) {
+				if (other.sourceStmt != null)
+					return false;
+			} else if (!sourceStmt.equals(other.sourceStmt))
+				return false;
+			return true;
+		}
+	}
+	
 	/**
 	 * This is a modified IFDS solver that is capable of pausing and unpausing return-flow edges.
 	 */
 	protected class SingleDirectionSolver extends PathTrackingIFDSSolver<N, AbstractionWithSourceStmt, M, I> {
 		private final String debugName;
 		private SingleDirectionSolver otherSolver;
-		private Set<N> leakedSources = new HashSet<N>();
-		private Map<N,Set<PathEdge<N,AbstractionWithSourceStmt>>> pausedPathEdges =
-				new HashMap<N,Set<PathEdge<N,AbstractionWithSourceStmt>>>();
+		private Set<LeakKey<N>> leakedSources = Collections.newSetFromMap(Maps.<LeakKey<N>, Boolean>newConcurrentMap());
+		private ConcurrentMap<LeakKey<N>,Set<PausedEdge>> pausedPathEdges =
+				Maps.newConcurrentMap();
 
 		public SingleDirectionSolver(IFDSTabulationProblem<N, AbstractionWithSourceStmt, M, I> ifdsProblem, String debugName) {
 			super(ifdsProblem);
@@ -103,29 +171,34 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 		}
 		
 		@Override
-		protected void processExit(PathEdge<N,AbstractionWithSourceStmt> edge) {
+		protected void propagateUnbalancedReturnFlow(N retSiteC, AbstractionWithSourceStmt targetVal,
+				EdgeFunction<heros.solver.IFDSSolver.BinaryDomain> edgeFunction, N relatedCallSite) {
 			//if an edge is originating from ZERO then to us this signifies an unbalanced return edge
-			if(edge.factAtSource().equals(zeroValue)) {
-				N sourceStmt = edge.factAtTarget().getSourceStmt();
-				//we mark the fact that this solver would like to "leak" this edge to the caller
-				leakedSources.add(sourceStmt);
-				if(otherSolver.hasLeaked(sourceStmt)) {
-					//if the other solver has leaked already then unpause its edges and continue
-					otherSolver.unpausePathEdgesForSource(sourceStmt);
-					super.processExit(edge);
-				} else {
-					//otherwise we pause this solver's edge and don't continue
-					Set<PathEdge<N,AbstractionWithSourceStmt>> pausedEdges = pausedPathEdges.get(sourceStmt);
-					if(pausedEdges==null) {
-						pausedEdges = new HashSet<PathEdge<N,AbstractionWithSourceStmt>>();
-						pausedPathEdges.put(sourceStmt,pausedEdges);
-					}				
-					pausedEdges.add(edge);
-                    logger.debug(" ++ PAUSE {}: {}", debugName, edge);
-				}
+			N sourceStmt = targetVal.getSourceStmt();
+			//we mark the fact that this solver would like to "leak" this edge to the caller
+			LeakKey<N> leakKey = new LeakKey<N>(sourceStmt, relatedCallSite);
+			leakedSources.add(leakKey);
+			if(otherSolver.hasLeaked(leakKey)) {
+				//if the other solver has leaked already then unpause its edges and continue
+				otherSolver.unpausePathEdgesForSource(leakKey);
+				super.propagateUnbalancedReturnFlow(retSiteC, targetVal, edgeFunction, relatedCallSite);
 			} else {
-				//the default case
-				super.processExit(edge);
+				//otherwise we pause this solver's edge and don't continue
+				Set<PausedEdge> newPausedEdges = 
+						Collections.newSetFromMap(Maps.<PausedEdge, Boolean>newConcurrentMap()); 
+				Set<PausedEdge> existingPausedEdges = pausedPathEdges.putIfAbsent(leakKey, newPausedEdges);
+				if(existingPausedEdges==null)
+					existingPausedEdges=newPausedEdges;
+				
+				PausedEdge edge = new PausedEdge(retSiteC, targetVal, edgeFunction, relatedCallSite);
+				existingPausedEdges.add(edge);
+				
+				//if the other solver has leaked in the meantime, we have to make sure that the paused edge is unpaused
+				if(otherSolver.hasLeaked(leakKey) && existingPausedEdges.remove(edge)) {
+					super.propagateUnbalancedReturnFlow(retSiteC, targetVal, edgeFunction, relatedCallSite);
+				}
+						
+                logger.debug(" ++ PAUSE {}: {}", debugName, edge);
 			}
 		}
 		
@@ -145,6 +218,7 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 		
 		@Override
 		protected AbstractionWithSourceStmt restoreContextOnReturnedFact(AbstractionWithSourceStmt d4, AbstractionWithSourceStmt d5) {
+			d5.getAbstraction().setCallingContext(d4.getAbstraction());
 			return new AbstractionWithSourceStmt(d5.getAbstraction(), d4.getSourceStmt());
 		}
 		
@@ -152,22 +226,23 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 		 * Returns <code>true</code> if this solver has tried to leak an edge originating from the given source
 		 * to its caller.
 		 */
-		private boolean hasLeaked(N sourceStmt) {
-			return leakedSources.contains(sourceStmt);
+		private boolean hasLeaked(LeakKey<N> leakKey) {
+			return leakedSources.contains(leakKey);
 		}
 		
 		/**
 		 * Unpauses all edges associated with the given source statement.
 		 */
-		private void unpausePathEdgesForSource(N sourceStmt) {
-			Set<PathEdge<N, AbstractionWithSourceStmt>> pausedEdges = pausedPathEdges.get(sourceStmt);
+		private void unpausePathEdgesForSource(LeakKey<N> leakKey) {
+			Set<PausedEdge> pausedEdges = pausedPathEdges.get(leakKey);
 			if(pausedEdges!=null) {
-			for(PathEdge<N, AbstractionWithSourceStmt> pausedEdge: pausedEdges) {
-					if(DEBUG)
-						logger.debug("-- UNPAUSE {}: {}",debugName, pausedEdge);
-					super.processExit(pausedEdge);
+				for(PausedEdge edge: pausedEdges) {
+					if(pausedEdges.remove(edge)) {
+						if(DEBUG)
+							logger.debug("-- UNPAUSE {}: {}",debugName, edge);
+						super.propagateUnbalancedReturnFlow(edge.retSiteC, edge.targetVal, edge.edgeFunction, edge.relatedCallSite);
+					}
 				}
-				pausedPathEdges.remove(sourceStmt);
 			}
 		}
 		
@@ -248,6 +323,11 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 		@Override
 		public void addNeighbor(AbstractionWithSourceStmt originalAbstraction) {
 			getAbstraction().addNeighbor(originalAbstraction.getAbstraction());
+		}
+
+		@Override
+		public void setCallingContext(AbstractionWithSourceStmt callingContext) {
+			abstraction.setCallingContext(callingContext.getAbstraction());
 		}
 
 	}

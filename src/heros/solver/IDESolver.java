@@ -446,9 +446,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				//compute return-flow function
 				FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
 				flowFunctionConstructionCount++;
-				Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, entry.getValue());
 				//for each incoming-call value
 				for(D d4: entry.getValue()) {
+					Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, entry.getValue());
 					//for each target value at the return site
 					//line 23
 					for(D d5: targets) {
@@ -485,7 +485,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 						Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, Collections.singleton(zeroValue));
 						for(D d5: targets) {
 							EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
-							propagate(zeroValue, retSiteC, d5, f.composeWith(f5), c, true);
+							propagateUnbalancedReturnFlow(retSiteC, d5, f.composeWith(f5), c);
 						}
 					}
 				}
@@ -500,6 +500,10 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			}
 		}
 	
+	protected void propagateUnbalancedReturnFlow(N retSiteC, D targetVal, EdgeFunction<V> edgeFunction, N relatedCallSite) {
+		propagate(zeroValue, retSiteC, targetVal, edgeFunction, relatedCallSite, true);
+	}
+
 	/**
 	 * This method will be called for each incoming edge and can be used to
 	 * transfer knowledge from the calling edge to the returning edge, without
@@ -512,7 +516,11 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 *            Fact that originally should be propagated to the caller.
 	 * @return Fact that will be propagated to the caller.
 	 */
+	@SuppressWarnings("unchecked")
 	protected D restoreContextOnReturnedFact(D d4, D d5) {
+		if (d5 instanceof LinkedNode) {
+			((LinkedNode<D>) d5).setCallingContext(d4);
+		}
 		return d5;
 	}
 	

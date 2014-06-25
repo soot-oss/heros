@@ -20,4 +20,6 @@ public interface LinkedNode<D> {
 	 * with this one of paths were not being tracked.
 	 */
 	public void addNeighbor(D originalAbstraction);
+	
+	public void setCallingContext(D callingContext);
 }

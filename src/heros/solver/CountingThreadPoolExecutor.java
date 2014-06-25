@@ -28,7 +28,7 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 
     protected final CountLatch numRunningTasks = new CountLatch(0);
 	
-	protected Throwable exception = null;
+	protected volatile Throwable exception = null;
 
 	public CountingThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit,
 			BlockingQueue<Runnable> workQueue) {
@@ -49,13 +49,15 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 	
 	@Override
 	protected void afterExecute(Runnable r, Throwable t) {
-		numRunningTasks.decrement();
 		if(t!=null) {
 			exception = t;
 			logger.error("Worker thread execution failed: " + t.getMessage(), t);
 			
 			shutdownNow();
             numRunningTasks.resetAndInterrupt();
+		}
+		else {
+			numRunningTasks.decrement();
 		}
 		super.afterExecute(r, t);
 	}
