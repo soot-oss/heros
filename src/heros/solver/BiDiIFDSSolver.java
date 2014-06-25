@@ -118,6 +118,7 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 					super.processExit(edge);
 				} else {
 					//otherwise we pause this solver's edge and don't continue
+					
 					Set<PathEdge<N,AbstractionWithSourceStmt>> newPausedEdges = 
 							Collections.newSetFromMap(Maps.<PathEdge<N,AbstractionWithSourceStmt>, Boolean>newConcurrentMap()); 
 					Set<PathEdge<N,AbstractionWithSourceStmt>> existingPausedEdges = pausedPathEdges.putIfAbsent(sourceStmt, newPausedEdges);
@@ -180,7 +181,6 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 						super.processExit(pausedEdge);
 					}
 				}
-				pausedPathEdges.remove(sourceStmt);
 			}
 		}
 		
