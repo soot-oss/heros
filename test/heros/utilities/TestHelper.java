@@ -17,15 +17,11 @@ import heros.IFDSTabulationProblem;
 import heros.InterproceduralCFG;
 import heros.solver.BiDiIFDSSolver;
 import heros.solver.IFDSSolver;
-import heros.solver.Pair;
-
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.HashMultimap;

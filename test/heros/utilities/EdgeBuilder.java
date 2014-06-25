@@ -17,7 +17,6 @@ import com.google.common.collect.Lists;
 
 import heros.utilities.TestHelper.Edge;
 import heros.utilities.TestHelper.ExpectedFlowFunction;
-import heros.utilities.TestHelper.ReturnEdge;
 
 public abstract class EdgeBuilder {
 	
