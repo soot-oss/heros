@@ -54,7 +54,6 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 			logger.error("Worker thread execution failed: " + t.getMessage(), t);
 			
 			shutdownNow();
-			numRunningTasks.decrement();
             numRunningTasks.resetAndInterrupt();
 		}
 		else {
