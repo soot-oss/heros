@@ -104,6 +104,56 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 			this.relatedCallSite = relatedCallSite;
 		}
 	}
+
+	/**
+	 *  Data structure used to identify which edges can be unpaused by a {@link SingleDirectionSolver}. Each {@link SingleDirectionSolver} stores 
+	 *  its leaks using this structure. A leak always requires a flow from some {@link #sourceStmt} (this is either the statement used as initial seed
+	 *  or a call site of an unbalanced return) to a return site. This return site is always different for the forward and backward solvers,
+	 *  but, the related call site of these return sites must be the same, if two entangled flows exist. 
+	 *  Moreover, this structure represents the pair of such a {@link #sourceStmt} and the {@link #relatedCallSite}.
+	 *
+	 */
+	private static class LeakKey<N> {
+		private N sourceStmt;
+		private N relatedCallSite;
+		
+		public LeakKey(N sourceStmt, N relatedCallSite) {
+			this.sourceStmt = sourceStmt;
+			this.relatedCallSite = relatedCallSite;
+		}
+		
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((relatedCallSite == null) ? 0 : relatedCallSite.hashCode());
+			result = prime * result + ((sourceStmt == null) ? 0 : sourceStmt.hashCode());
+			return result;
+		}
+		
+		@SuppressWarnings("rawtypes")
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (!(obj instanceof LeakKey))
+				return false;
+			LeakKey other = (LeakKey) obj;
+			if (relatedCallSite == null) {
+				if (other.relatedCallSite != null)
+					return false;
+			} else if (!relatedCallSite.equals(other.relatedCallSite))
+				return false;
+			if (sourceStmt == null) {
+				if (other.sourceStmt != null)
+					return false;
+			} else if (!sourceStmt.equals(other.sourceStmt))
+				return false;
+			return true;
+		}
+	}
 	
 	/**
 	 * This is a modified IFDS solver that is capable of pausing and unpausing return-flow edges.
@@ -111,8 +161,8 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 	protected class SingleDirectionSolver extends PathTrackingIFDSSolver<N, AbstractionWithSourceStmt, M, I> {
 		private final String debugName;
 		private SingleDirectionSolver otherSolver;
-		private Set<N> leakedSources = Collections.newSetFromMap(Maps.<N, Boolean>newConcurrentMap());
-		private ConcurrentMap<N,Set<PausedEdge>> pausedPathEdges =
+		private Set<LeakKey<N>> leakedSources = Collections.newSetFromMap(Maps.<LeakKey<N>, Boolean>newConcurrentMap());
+		private ConcurrentMap<LeakKey<N>,Set<PausedEdge>> pausedPathEdges =
 				Maps.newConcurrentMap();
 
 		public SingleDirectionSolver(IFDSTabulationProblem<N, AbstractionWithSourceStmt, M, I> ifdsProblem, String debugName) {
@@ -126,16 +176,17 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 			//if an edge is originating from ZERO then to us this signifies an unbalanced return edge
 			N sourceStmt = targetVal.getSourceStmt();
 			//we mark the fact that this solver would like to "leak" this edge to the caller
-			leakedSources.add(sourceStmt);
-			if(otherSolver.hasLeaked(sourceStmt)) {
+			LeakKey<N> leakKey = new LeakKey<N>(sourceStmt, relatedCallSite);
+			leakedSources.add(leakKey);
+			if(otherSolver.hasLeaked(leakKey)) {
 				//if the other solver has leaked already then unpause its edges and continue
-				otherSolver.unpausePathEdgesForSource(sourceStmt);
+				otherSolver.unpausePathEdgesForSource(leakKey);
 				super.propagateUnbalancedReturnFlow(retSiteC, targetVal, edgeFunction, relatedCallSite);
 			} else {
 				//otherwise we pause this solver's edge and don't continue
 				Set<PausedEdge> newPausedEdges = 
 						Collections.newSetFromMap(Maps.<PausedEdge, Boolean>newConcurrentMap()); 
-				Set<PausedEdge> existingPausedEdges = pausedPathEdges.putIfAbsent(sourceStmt, newPausedEdges);
+				Set<PausedEdge> existingPausedEdges = pausedPathEdges.putIfAbsent(leakKey, newPausedEdges);
 				if(existingPausedEdges==null)
 					existingPausedEdges=newPausedEdges;
 				
@@ -143,7 +194,7 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 				existingPausedEdges.add(edge);
 				
 				//if the other solver has leaked in the meantime, we have to make sure that the paused edge is unpaused
-				if(otherSolver.hasLeaked(sourceStmt) && existingPausedEdges.remove(edge)) {
+				if(otherSolver.hasLeaked(leakKey) && existingPausedEdges.remove(edge)) {
 					super.propagateUnbalancedReturnFlow(retSiteC, targetVal, edgeFunction, relatedCallSite);
 				}
 						
@@ -175,15 +226,15 @@ public class BiDiIFDSSolver<N, D extends LinkedNode<D>, M, I extends Interproced
 		 * Returns <code>true</code> if this solver has tried to leak an edge originating from the given source
 		 * to its caller.
 		 */
-		private boolean hasLeaked(N sourceStmt) {
-			return leakedSources.contains(sourceStmt);
+		private boolean hasLeaked(LeakKey<N> leakKey) {
+			return leakedSources.contains(leakKey);
 		}
 		
 		/**
 		 * Unpauses all edges associated with the given source statement.
 		 */
-		private void unpausePathEdgesForSource(N sourceStmt) {
-			Set<PausedEdge> pausedEdges = pausedPathEdges.get(sourceStmt);
+		private void unpausePathEdgesForSource(LeakKey<N> leakKey) {
+			Set<PausedEdge> pausedEdges = pausedPathEdges.get(leakKey);
 			if(pausedEdges!=null) {
 				for(PausedEdge edge: pausedEdges) {
 					if(pausedEdges.remove(edge)) {
