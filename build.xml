@@ -9,12 +9,21 @@
         />
     </target>
 	
-	<target name="jar" depends="compile">
-    	<jar destfile="./heros-${heros.version}.jar" manifest="META-INF/MANIFEST.MF">
+	<target name="classesjar" depends="compile">
+    	<jar destfile="./herosclasses-${heros.version}.jar" manifest="META-INF/MANIFEST.MF">
             <manifest>
                <attribute name="Implementation-Version" value="${heros.version}"/> 
             </manifest>
             <fileset dir="./build/classes"/>
+        </jar>
+    </target>
+    	
+	<target name="jar" depends="classesjar">
+    	<jar destfile="./heros-${heros.version}.jar" manifest="META-INF/MANIFEST.MF">
+            <manifest>
+               <attribute name="Implementation-Version" value="${heros.version}"/> 
+            </manifest>
+            <zipfileset src="./herosclasses-${heros.version}.jar"/>
             <zipfileset src="${guava.jar}"/>
             <zipfileset src="${slf4j-api.jar}"/>
             <zipfileset src="${slf4j-simple.jar}"/>
