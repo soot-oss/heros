@@ -14,7 +14,7 @@
             <manifest>
                <attribute name="Implementation-Version" value="${heros.version}"/> 
             </manifest>
-            <fileset dir="bin"/>
+            <fileset dir="./build/classes"/>
             <zipfileset src="${guava.jar}"/>
             <zipfileset src="${slf4j-api.jar}"/>
             <zipfileset src="${slf4j-simple.jar}"/>
@@ -22,9 +22,9 @@
     </target>
 
 	<target name="compile">
-    	<mkdir dir="bin"/>
+    	<mkdir dir="build/classes"/>
         <javac
-            destdir="bin"
+            destdir="build/classes"
             debug="true"
 	    includeantruntime="true"
             deprecation="on"
@@ -40,6 +40,70 @@
         	</classpath>
             <src path="src"/>
         </javac>
+	</target>
+
+	<target name="compiletests" depends="settings,compile">
+		<mkdir dir="build/testclasses" />
+		<javac srcdir="test" includeantruntime="true" source="1.7" target="1.7" destdir="build/testclasses" debug="true">
+			<classpath>
+				<pathelement location="build/classes" />
+	       		<pathelement location="${guava.jar}"/>
+        		<pathelement location="${junit.jar}"/>
+	       		<pathelement location="${hamcrest.jar}"/>
+	       		<pathelement location="${slf4j-api.jar}"/>
+	       		<pathelement location="${slf4j-simple.jar}"/>
+			</classpath>
+		</javac>
+	</target>
+
+	<target name="testjar" depends="settings,compiletests">
+
+	    	<jar destfile="./herostests-${heros.version}.jar" >
+	            <fileset dir="build/testclasses"/>
+	        </jar>
+
+	</target>
+
+	<target name="runtests" depends="compiletests">
+		<mkdir dir="reports" />
+		<junit printsummary="yes" fork="true" maxmemory="4G">
+			<classpath>
+        		<pathelement location="${guava.jar}"/>
+        		<pathelement location="${junit.jar}"/>
+	       		<pathelement location="${hamcrest.jar}"/>
+	       		<pathelement location="${slf4j-api.jar}"/>
+	       		<pathelement location="${slf4j-simple.jar}"/>
+	       		
+	       		<pathelement location="build/classes" />
+				<pathelement location="build/testclasses" />
+			</classpath>
+			
+			<jvmarg value="-ea" />
+			
+			<!-- Make stuff debuggable -->
+			<!--
+			<jvmarg value="-Xdebug" />
+			<jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5432" />
+			-->
+
+			<formatter type="xml" usefile="true" />
+			<batchtest todir="reports">
+				<!--
+					We only run our own tests. SecuriBench Micro relies on too much stuff
+					we exclude.
+				-->
+				<fileset dir="build/testclasses" includes="heros/**/*Test.class" />
+			</batchtest>
+		</junit>
+	</target>
+
+	<target name="reporttests" depends="runtests">
+		<junitreport tofile="TESTS-TestSuites.xml" todir="reports">
+			<fileset dir="reports">
+				<include name="TEST-*.xml" />
+			</fileset>
+			<report format="frames" todir="reports" />
+		</junitreport>
 	</target>
 
 </project>
