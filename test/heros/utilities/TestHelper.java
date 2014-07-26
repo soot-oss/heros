@@ -486,7 +486,8 @@ public class TestHelper {
 	}
 
 	public void runSolver(final boolean followReturnsPastSeeds, final String...initialSeeds) {
-		IFDSSolver<Statement, Fact, Method, InterproceduralCFG<Statement, Method>> solver = new IFDSSolver<>(
+		IFDSSolver<Statement, Fact, Method, InterproceduralCFG<Statement, Method>> solver =
+				new IFDSSolver<Statement, Fact, Method, InterproceduralCFG<Statement, Method>>(
 				createTabulationProblem(followReturnsPastSeeds, initialSeeds));
 
 		solver.solve();
@@ -498,9 +499,9 @@ public class TestHelper {
 	public void runBiDiSolver(TestHelper backwardHelper, TabulationProblemExchange direction, final String...initialSeeds) {
 		BiDiIFDSSolver<Statement, Fact, Method, InterproceduralCFG<Statement, Method>> solver =
 				direction == TabulationProblemExchange.AsSpecified ? 
-				new BiDiIFDSSolver<>(createTabulationProblem(true, initialSeeds), 
+				new BiDiIFDSSolver<Statement, Fact, Method, InterproceduralCFG<Statement, Method>>(createTabulationProblem(true, initialSeeds), 
 									backwardHelper.createTabulationProblem(true, initialSeeds)) :
-				new BiDiIFDSSolver<>(backwardHelper.createTabulationProblem(true, initialSeeds), 
+				new BiDiIFDSSolver<Statement, Fact, Method, InterproceduralCFG<Statement, Method>>(backwardHelper.createTabulationProblem(true, initialSeeds), 
 									createTabulationProblem(true, initialSeeds));
 		
 		solver.solve();
