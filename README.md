@@ -50,6 +50,11 @@ Under what License can I use Heros?
 -----------------------------------
 Heros is released under LGPL - see [LICENSE.txt][7] for details.
 
+How can I obtain Heros?
+------------------------
+
+Pre-compiled versions of Heros are available on our [nightly build server](http://ssebuild.cased.de/nightly/heros/). "heros-trunk.jar" is a complete build containing sallall required libraries. "herosclasses-trunk.jar" only contains the Heros classes and lets you provide the required libraries on your own.
+
 [1]: http://www.sable.mcgill.ca/soot/
 [2]: http://bodden.de/
 [3]: http://dx.doi.org/10.1145/199448.199462
