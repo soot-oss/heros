@@ -22,7 +22,7 @@ import java.util.Set;
  */
 public class DefaultSeeds {
 	
-	public static <N,D> Map<N,Set<D>> make(Set<N> units, D zeroNode) {
+	public static <N,D> Map<N,Set<D>> make(Iterable<N> units, D zeroNode) {
 		Map<N,Set<D>> res = new HashMap<N, Set<D>>();
 		for (N n : units) {
 			res.put(n, Collections.singleton(zeroNode));
