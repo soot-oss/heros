@@ -132,7 +132,7 @@
 	</target>
 	
 	<target name="sourcejar">
-        <jar destfile="${release.loc}/herossources-${heros.version}.jar">
+        <jar destfile="herossources-${heros.version}.jar">
             <fileset dir="src"/>
         </jar>
 	</target>
