@@ -131,4 +131,10 @@
 		<jar basedir="javadoc" destfile="herosjavadoc-${heros.version}.jar" />
 	</target>
 	
+	<target name="sourcejar">
+        <jar destfile="${release.loc}/herossources-${heros.version}.jar">
+            <fileset dir="src"/>
+        </jar>
+	</target>
+
 </project>
