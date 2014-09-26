@@ -10,9 +10,11 @@
  ******************************************************************************/
 package heros.utilities;
 
+import heros.solver.JoinHandlingNode;
 import heros.solver.LinkedNode;
+import heros.solver.JoinHandlingNode.JoinKey;
 
-public class Fact implements LinkedNode<Fact> {
+public class Fact implements JoinHandlingNode<Fact> {
 
 	public final String name;
 	
@@ -51,12 +53,37 @@ public class Fact implements LinkedNode<Fact> {
 	}
 
 	@Override
-	public void addNeighbor(Fact originalAbstraction) {
+	public void setCallingContext(Fact callingContext) {
 		
 	}
 
 	@Override
-	public void setCallingContext(Fact callingContext) {
-		
+	public heros.solver.JoinHandlingNode.JoinKey createJoinKey() {
+		return new TestJoinKey();
+	}
+
+	@Override
+	public boolean handleJoin(Fact joiningNode) {
+		return true;
+	}
+
+	private class TestJoinKey extends JoinKey {
+
+		private Fact getFact() {
+			return Fact.this;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (obj instanceof TestJoinKey) {
+				return getFact().equals(((TestJoinKey) obj).getFact());
+			}
+			throw new IllegalArgumentException();
+		}
+
+		@Override
+		public int hashCode() {
+			return Fact.this.hashCode();
+		}
 	}
 }

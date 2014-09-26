@@ -521,6 +521,9 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		if (d5 instanceof LinkedNode) {
 			((LinkedNode<D>) d5).setCallingContext(d4);
 		}
+		if(d5 instanceof JoinHandlingNode) {
+			((JoinHandlingNode<D>) d5).setCallingContext(d4);
+		}			
 		return d5;
 	}
 	
