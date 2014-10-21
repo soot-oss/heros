@@ -44,6 +44,7 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 		catch (RejectedExecutionException ex) {
 			// If we were unable to submit the task, we may not count it!
 			numRunningTasks.decrement();
+			throw ex;
 		}
 	}
 	
