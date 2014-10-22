@@ -53,11 +53,31 @@ public class FieldSensitiveSolverTest {
 	}
 	
 	@Test
-	public void hold() {
+	public void reuseSummaryForBaseValue() {
 		helper.method("bar", 
 				startPoints("a"),
 				normalStmt("a").succ("b", flow("0", "1")),
 				writeFieldStmt("b", "3").succ("c", flow("1", "2.field")),
+				callSite("c").calls("foo", flow("2.field", "3.field")).retSite("retC", flow("2.field", "2.field")));
+		
+		helper.method("foo",startPoints("d"),
+				normalStmt("d").succ("e", flow("3", "4")),
+				normalStmt("e").succ("f", flow("4","4")),
+				exitStmt("f").returns(over("c"), to("retC"), flow("4.field", "5.field")).returns(over("g"), to("retG"), flow("4.anotherField", "6.anotherField")));
+
+		helper.method("xyz", 
+				startPoints("g"),
+				callSite("g").calls("foo", flow("0", "3.anotherField")).retSite("retG", kill("0")));
+		
+		helper.runSolver(false, "a", "g");
+	}
+	
+	@Test
+	public void hold() {
+		helper.method("bar", 
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				writeFieldStmt("b", "field").succ("c", flow("1", "2.field")),
 				callSite("c").calls("foo", flow("2.field", "3.field")));
 		
 		helper.method("foo",startPoints("d"),
@@ -71,11 +91,11 @@ public class FieldSensitiveSolverTest {
 		helper.method("bar", 
 				startPoints("a"),
 				normalStmt("a").succ("b", flow("0", "1")),
-				writeFieldStmt("b", "3").succ("c", flow("1", "2.field")),
+				writeFieldStmt("b", "field").succ("c", flow("1", "2.field")),
 				callSite("c").calls("foo", flow("2.field", "3.field")));
 		
 		helper.method("foo",startPoints("d"),
-				readFieldStmt("d", "notfield").succ("e", flow("3", "3"), flow("3.notfield")),
+				readFieldStmt("d", "notfield").succ("e", flow("3", "3"), kill("3.notfield")),
 				normalStmt("e").succ("f", flow("3","4")));
 		
 		helper.method("xyz",

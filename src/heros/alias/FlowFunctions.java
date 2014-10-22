@@ -7,6 +7,7 @@
  * 
  * Contributors:
  *     Eric Bodden - initial API and implementation
+ *     Johannes Lerch, Johannes Späth - extension for field sensitivity
  ******************************************************************************/
 package heros.alias;
 

@@ -1,12 +1,12 @@
 /*******************************************************************************
- * Copyright (c) 2014 Eric Bodden.
+ * Copyright (c) 2014 Johannes Lerch, Johannes Späth.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the GNU Lesser Public License v2.1
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  * 
  * Contributors:
- *     Eric Bodden - initial API and implementation
+ *     Johannes Lerch, Johannes Späth - initial API and implementation
  ******************************************************************************/
 package heros.alias;
 
@@ -24,7 +24,9 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Predicate;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.Sets;
 
 import heros.DontSynchronize;
 import heros.FlowFunction;
@@ -63,14 +65,14 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 	//stores summaries that were queried before they were computed
 	//see CC 2010 paper by Naeem, Lhotak and Rodriguez
 	@SynchronizedBy("consistent lock on 'incoming'")
-	protected final MyConcurrentHashMap<Pair<M,D>,Set<Pair<N,D>>> endSummary =
-			new MyConcurrentHashMap<Pair<M,D>, Set<Pair<N,D>>>();
+	protected final MyConcurrentHashMap<M,Set<SummaryEdge<D, N>>> endSummary =
+			new MyConcurrentHashMap<M, Set<SummaryEdge<D, N>>>();
 	
 	//edges going along calls
 	//see CC 2010 paper by Naeem, Lhotak and Rodriguez
 	@SynchronizedBy("consistent lock on field")
-	protected final MyConcurrentHashMap<M, MyConcurrentHashMap<D,MyConcurrentHashMap<N,Map<D, D>>>> incoming =
-			new MyConcurrentHashMap<M, MyConcurrentHashMap<D,MyConcurrentHashMap<N,Map<D, D>>>>();
+	protected final MyConcurrentHashMap<M, Set<IncomingEdge<D, N>>> incoming =
+			new MyConcurrentHashMap<M, Set<IncomingEdge<D, N>>>();
 	
 	@DontSynchronize("stateless")
 	protected final FlowFunctions<N, D, M> flowFunctions;
@@ -229,36 +231,34 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 				//for each callee's start point(s)
 				for(N sP: startPointsOf) {
 					//create initial self-loop
-					D abstractStartPointFact = d3.cloneWithAccessPath(new FieldReference.Any());
+					D abstractStartPointFact = d3.cloneWithAccessPath();
 					propagate(abstractStartPointFact, sP, abstractStartPointFact, n, false); //line 15
 				}
 				
 				//register the fact that <sp,d3> has an incoming edge from <n,d2>
 				//line 15.1 of Naeem/Lhotak/Rodriguez
-				if (!addIncoming(sCalledProcN,d3,n,d1,d2))
+				if (!addIncoming(sCalledProcN, new IncomingEdge<D, N>(d3,n,d1,d2)))
 					continue;
 				
 				//TODO: Resume edges that are on hold and match this d3
 				
 				//line 15.2
-				//TODO: include more abstract d3 summaries as well
-				Set<Pair<N, D>> endSumm = endSummary(sCalledProcN, d3);
+				Set<SummaryEdge<D, N>> endSumm = endSummary(sCalledProcN, d3);
 					
 				//still line 15.2 of Naeem/Lhotak/Rodriguez
 				//for each already-queried exit value <eP,d4> reachable from <sP,d3>,
 				//create new caller-side jump functions to the return sites
 				//because we have observed a potentially new incoming edge into <sP,d3>
 				if (endSumm != null)
-					for(Pair<N, D> entry: endSumm) {
-						N eP = entry.getO1();
-						D d4 = entry.getO2();
+					for(SummaryEdge<D, N> summary: endSumm) {
+						D d4 = AccessPathUtil.applyAbstractedSummary(d3, summary);
+						
 						//for each return site
 						for(N retSiteN: returnSiteNs) {
 							//compute return-flow function
-							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
+							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, summary.getTargetStmt(), retSiteN);
 							//for each target value of the function
-							//TODO: Map abstracted d4 back (using the summary)
-							for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2))) {
+							for(D d5: computeReturnFlowFunction(retFunction, d4, n)) {
 								// If we have not changed anything in the callee, we do not need the facts
 								// from there. Even if we change something: If we don't need the concrete
 								// path, we can skip the callee in the predecessor chain
@@ -332,42 +332,30 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 		
 		//line 21.1 of Naeem/Lhotak/Rodriguez
 		//register end-summary
-		if (!addEndSummary(methodThatNeedsSummary, d1, n, d2))
+		SummaryEdge<D, N> summaryEdge = new SummaryEdge<D, N>(d1, n, d2);
+		if (!addEndSummary(methodThatNeedsSummary, summaryEdge))
 			return;
 		
-		//TODO: include more abstract d1 values in incoming set
-		Map<N,Map<D, D>> inc = incoming(d1, methodThatNeedsSummary);
+		Set<IncomingEdge<D, N>> inc = incoming(methodThatNeedsSummary, d1);
 		
 		//for each incoming call edge already processed
 		//(see processCall(..))
 		if (inc != null)
-			for (Entry<N,Map<D, D>> entry: inc.entrySet()) {
-				//line 22
-				N c = entry.getKey();
-				//for each return site
-				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
-					//compute return-flow function
-					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
-					//TODO: create concrete d2, this d2 is currently an abstracted version
-					Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, entry.getValue().keySet());
-					//for each incoming-call value
-					for(D d4: entry.getValue().keySet())
-						for(D d5: targets) {
-							// If we have not changed anything in the callee, we do not need the facts
-							// from there. Even if we change something: If we don't need the concrete
-							// path, we can skip the callee in the predecessor chain
-							D d5p = d5;
-						/*	D predVal = entry.getValue().get(d4);
-							if (d5.equals(predVal))
-								d5p = predVal;
-							else if (setJumpPredecessors)
-								d5.setPredecessor(predVal);*/
-							
-							// Set the calling context
-							D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5p);
-							
-							propagate(d4, retSiteC, d5p_restoredCtx, c, false);
-						}
+			for (IncomingEdge<D, N> incomingEdge : inc) {
+				// line 22
+				N callSite = incomingEdge.getCallSite();
+				// for each return site
+				for (N retSiteC : icfg.getReturnSitesOfCallAt(callSite)) {
+					// compute return-flow function
+					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(callSite, methodThatNeedsSummary, n, retSiteC);
+					D concreteCalleeExitFact = AccessPathUtil.applyAbstractedSummary(incomingEdge.getCalleeSourceFact(), summaryEdge);
+					Set<D> callerTargetFacts = computeReturnFlowFunction(retFunction, concreteCalleeExitFact, callSite);
+
+					// for each incoming-call value
+					for (D callerTargetFact : callerTargetFacts) {
+						callerTargetFact = restoreContextOnReturnedFact(incomingEdge.getCallerCallSiteFact(), callerTargetFact);
+						propagate(incomingEdge.getCallerSourceFact(), retSiteC, callerTargetFact, callSite, false);
+					}
 				}
 			}
 		
@@ -379,7 +367,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 			for(N c: callers) {
 				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
 					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
-					Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, Collections.singleton(zeroValue));
+					Set<D> targets = computeReturnFlowFunction(retFunction, d2, c);
 					for(D d5: targets)
 						propagate(zeroValue, retSiteC, d5, c, true);
 				}
@@ -400,11 +388,10 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 	 * @param retFunction The return flow function to compute
 	 * @param d2 The abstraction at the exit node in the callee
 	 * @param callSite The call site
-	 * @param callerSideDs The abstractions at the call site
 	 * @return The set of caller-side abstractions at the return site
 	 */
 	protected Set<D> computeReturnFlowFunction
-			(FlowFunction<D> retFunction, D d2, N callSite, Collection<D> callerSideDs) {
+			(FlowFunction<D> retFunction, D d2, N callSite) {
 		return retFunction.computeTargets(d2);
 	}
 
@@ -501,40 +488,47 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 				logger.trace("EDGE: <{},{}> -> <{},{}>", icfg.getMethodOf(target), sourceVal, target, targetVal);
 		}
 	}
-	
-	
 
-	private Set<Pair<N, D>> endSummary(M m, D d3) {
-		Set<Pair<N, D>> map = endSummary.get(new Pair<M, D>(m, d3));
-		return map;
+	private Set<SummaryEdge<D, N>> endSummary(M m, final D d3) {
+		Set<SummaryEdge<D, N>> map = endSummary.get(m);
+		if(map == null)
+			return null;
+		
+		return Sets.filter(map, new Predicate<SummaryEdge<D,N>>() {
+			@Override
+			public boolean apply(SummaryEdge<D, N> edge) {
+				return AccessPathUtil.isPrefixOf(edge.getSourceFact(), d3);
+			}
+		});
 	}
 
-	private boolean addEndSummary(M m, D d1, N eP, D d2) {
-		Set<Pair<N, D>> summaries = endSummary.putIfAbsentElseGet
-				(new Pair<M, D>(m, d1), new ConcurrentHashSet<Pair<N, D>>());
-		return summaries.add(new Pair<N, D>(eP, d2));
+	private boolean addEndSummary(M m, SummaryEdge<D,N> summaryEdge) {
+		Set<SummaryEdge<D, N>> summaries = endSummary.putIfAbsentElseGet
+				(m, new ConcurrentHashSet<SummaryEdge<D, N>>());
+		return summaries.add(summaryEdge);
 	}	
 
-	protected Map<D, MyConcurrentHashMap<N, Map<D, D>>> incoming(M m) {
-		MyConcurrentHashMap<D, MyConcurrentHashMap<N, Map<D, D>>> result = incoming.get(m);
+	protected Set<IncomingEdge<D, N>> incoming(M m) {
+		Set<IncomingEdge<D, N>> result = incoming.get(m);
 		if(result == null)
-			return new HashMap<>();
+			return Collections.emptySet();
 		else
 			return result;
 	}
 	
-	protected Map<N, Map<D, D>> incoming(D d1, M m) {
-		Map<D, MyConcurrentHashMap<N, Map<D, D>>> summariesPerMethod = incoming(m);
-		Map<N, Map<D, D>> map = summariesPerMethod.get(d1);
-		return map;
+	protected Set<IncomingEdge<D, N>> incoming(M m, final D abstractCalleeSourceFact) {
+		Set<IncomingEdge<D, N>> result = incoming(m);
+		return Sets.filter(result, new Predicate<IncomingEdge<D,N>>() {
+			@Override
+			public boolean apply(IncomingEdge<D, N> edge) {
+				return AccessPathUtil.isPrefixOf(abstractCalleeSourceFact, edge.getCalleeSourceFact());
+			}
+		});
 	}
 	
-	protected boolean addIncoming(M m, D d3, N n, D d1, D d2) {
-		MyConcurrentHashMap<D, MyConcurrentHashMap<N, Map<D, D>>> summaries = incoming.putIfAbsentElseGet
-				(m, new MyConcurrentHashMap<D, MyConcurrentHashMap<N, Map<D, D>>>());
-		MyConcurrentHashMap<N, Map<D, D>> summariesPerCallSite = summaries.putIfAbsentElseGet(d3, new MyConcurrentHashMap<N, Map<D,D>>());
-		Map<D, D> set = summariesPerCallSite.putIfAbsentElseGet(n, new ConcurrentHashMap<D, D>());
-		return set.put(d1, d2) == null;
+	protected boolean addIncoming(M m, IncomingEdge<D, N> incomingEdge) {
+		Set<IncomingEdge<D,N>> set = incoming.putIfAbsentElseGet(m, new ConcurrentHashSet<IncomingEdge<D,N>>());
+		return set.add(incomingEdge);
 	}
 	
 	/**
