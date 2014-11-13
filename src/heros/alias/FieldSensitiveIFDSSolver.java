@@ -29,9 +29,9 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Sets;
 
 import heros.DontSynchronize;
-import heros.FlowFunction;
 import heros.FlowFunctionCache;
-import heros.alias.FlowFunctions;
+import heros.alias.FieldReference.SpecificFieldReference;
+import heros.alias.FlowFunction.AnnotatedFact;
 import heros.alias.IFDSTabulationProblem;
 import heros.InterproceduralCFG;
 import heros.SynchronizedBy;
@@ -223,27 +223,27 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 		for(M sCalledProcN: callees) { //still line 14
 			//compute the call-flow function
 			FlowFunction<D> function = flowFunctions.getCallFlowFunction(n, sCalledProcN);
-			Set<D> res = computeCallFlowFunction(function, d1, d2);
+			Set<AnnotatedFact<D>> res = computeCallFlowFunction(function, d1, d2);
 			
 			Collection<N> startPointsOf = icfg.getStartPointsOf(sCalledProcN);
 			//for each result node of the call-flow function
-			for(D d3: res) {
+			for(AnnotatedFact<D> d3: res) {
 				//for each callee's start point(s)
 				for(N sP: startPointsOf) {
 					//create initial self-loop
-					D abstractStartPointFact = d3.cloneWithAccessPath();
+					D abstractStartPointFact = d3.getFact().cloneWithAccessPath();
 					propagate(abstractStartPointFact, sP, abstractStartPointFact, n, false); //line 15
 				}
 				
 				//register the fact that <sp,d3> has an incoming edge from <n,d2>
 				//line 15.1 of Naeem/Lhotak/Rodriguez
-				if (!addIncoming(sCalledProcN, new IncomingEdge<D, N>(d3,n,d1,d2)))
+				if (!addIncoming(sCalledProcN, new IncomingEdge<D, N>(d3.getFact(),n,d1,d2)))
 					continue;
 				
 				//TODO: Resume edges that are on hold and match this d3
 				
 				//line 15.2
-				Set<SummaryEdge<D, N>> endSumm = endSummary(sCalledProcN, d3);
+				Set<SummaryEdge<D, N>> endSumm = endSummary(sCalledProcN, d3.getFact());
 					
 				//still line 15.2 of Naeem/Lhotak/Rodriguez
 				//for each already-queried exit value <eP,d4> reachable from <sP,d3>,
@@ -251,26 +251,15 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 				//because we have observed a potentially new incoming edge into <sP,d3>
 				if (endSumm != null)
 					for(SummaryEdge<D, N> summary: endSumm) {
-						D d4 = AccessPathUtil.applyAbstractedSummary(d3, summary);
+						D d4 = AccessPathUtil.applyAbstractedSummary(d3.getFact(), summary);
 						
 						//for each return site
 						for(N retSiteN: returnSiteNs) {
 							//compute return-flow function
 							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, summary.getTargetStmt(), retSiteN);
 							//for each target value of the function
-							for(D d5: computeReturnFlowFunction(retFunction, d4, n)) {
-								// If we have not changed anything in the callee, we do not need the facts
-								// from there. Even if we change something: If we don't need the concrete
-								// path, we can skip the callee in the predecessor chain
-								D d5p = d5;
-							//	if (d5.equals(d2))
-							//		d5p = d2;
-							//	else if (setJumpPredecessors)
-							//		d5.setPredecessor(d2);
-								
-								// Set the calling context
-								D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5p);
-								
+							for(AnnotatedFact<D> d5: computeReturnFlowFunction(retFunction, d4, n)) {
+								D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5.getFact());
 								propagate(d1, retSiteN, d5p_restoredCtx, n, false);
 							}
 						}
@@ -281,8 +270,8 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 		//process intra-procedural flows along call-to-return flow functions
 		for (N returnSiteN : returnSiteNs) {
 			FlowFunction<D> callToReturnFlowFunction = flowFunctions.getCallToReturnFlowFunction(n, returnSiteN);
-			for(D d3: computeCallToReturnFlowFunction(callToReturnFlowFunction, d1, d2))
-				propagate(d1, returnSiteN, d3, n, false);
+			for(AnnotatedFact<D> d3: computeCallToReturnFlowFunction(callToReturnFlowFunction, d1, d2))
+				propagate(d1, returnSiteN, d3.getFact(), n, false);
 		}
 	}
 
@@ -293,7 +282,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 	 * @param d2 The abstraction at the call site
 	 * @return The set of caller-side abstractions at the callee's start node
 	 */
-	protected Set<D> computeCallFlowFunction
+	protected Set<AnnotatedFact<D>> computeCallFlowFunction
 			(FlowFunction<D> callFlowFunction, D d1, D d2) {
 		return callFlowFunction.computeTargets(d2);
 	}
@@ -307,7 +296,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 	 * @param d2 The abstraction at the call site
 	 * @return The set of caller-side abstractions at the return site
 	 */
-	protected Set<D> computeCallToReturnFlowFunction
+	protected Set<AnnotatedFact<D>> computeCallToReturnFlowFunction
 			(FlowFunction<D> callToReturnFlowFunction, D d1, D d2) {
 		return callToReturnFlowFunction.computeTargets(d2);
 	}
@@ -349,11 +338,11 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 					// compute return-flow function
 					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(callSite, methodThatNeedsSummary, n, retSiteC);
 					D concreteCalleeExitFact = AccessPathUtil.applyAbstractedSummary(incomingEdge.getCalleeSourceFact(), summaryEdge);
-					Set<D> callerTargetFacts = computeReturnFlowFunction(retFunction, concreteCalleeExitFact, callSite);
+					Set<AnnotatedFact<D>> callerTargetFacts = computeReturnFlowFunction(retFunction, concreteCalleeExitFact, callSite);
 
 					// for each incoming-call value
-					for (D callerTargetFact : callerTargetFacts) {
-						callerTargetFact = restoreContextOnReturnedFact(incomingEdge.getCallerCallSiteFact(), callerTargetFact);
+					for (AnnotatedFact<D> callerTargetAnnotatedFact : callerTargetFacts) {
+						D callerTargetFact = restoreContextOnReturnedFact(incomingEdge.getCallerCallSiteFact(), callerTargetAnnotatedFact.getFact());
 						propagate(incomingEdge.getCallerSourceFact(), retSiteC, callerTargetFact, callSite, false);
 					}
 				}
@@ -367,9 +356,9 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 			for(N c: callers) {
 				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
 					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
-					Set<D> targets = computeReturnFlowFunction(retFunction, d2, c);
-					for(D d5: targets)
-						propagate(zeroValue, retSiteC, d5, c, true);
+					Set<AnnotatedFact<D>> targets = computeReturnFlowFunction(retFunction, d2, c);
+					for(AnnotatedFact<D> d5: targets)
+						propagate(zeroValue, retSiteC, d5.getFact(), c, true);
 				}
 			}
 			//in cases where there are no callers, the return statement would normally not be processed at all;
@@ -390,7 +379,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 	 * @param callSite The call site
 	 * @return The set of caller-side abstractions at the return site
 	 */
-	protected Set<D> computeReturnFlowFunction
+	protected Set<AnnotatedFact<D>> computeReturnFlowFunction
 			(FlowFunction<D> retFunction, D d2, N callSite) {
 		return retFunction.computeTargets(d2);
 	}
@@ -405,27 +394,43 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 		final N n = edge.getTarget(); 
 		final D d2 = edge.factAtTarget();
 		
-		//TODO: if reading field f
-		// if d1.f element of incoming edges:
-		//    create and propagate (d1.f, d2.f)
-		// else 
-		//	  create and set (d1.f, d2.f) on hold
-		//	  create for each incoming edge inc: (inc.call-d1.f, inc.call-d2.f) and put on hold
-		//always continue (d1, d2)
-		
-		//TODO: if writing field f
-		// create edge e = (d1, d2.*\{f})
-		// if d2.*\{f} element of incoming edges
-		// 		continue with e
-		// else 
-		//		put e on hold
-		// always kill (d1, d2)
-		
 		for (N m : icfg.getSuccsOf(n)) {
 			FlowFunction<D> flowFunction = flowFunctions.getNormalFlowFunction(n,m);
-			Set<D> res = computeNormalFlowFunction(flowFunction, d1, d2);
-			for (D d3 : res)
-				propagate(d1, m, d3, null, false); 
+			Set<AnnotatedFact<D>> res = computeNormalFlowFunction(flowFunction, d1, d2);
+			for (AnnotatedFact<D> d3 : res) {
+				//TODO: if reading field f
+				// if d1.f element of incoming edges:
+				//    create and propagate (d1.f, d2.f)
+				// else 
+				//	  create and set (d1.f, d2.f) on hold
+				//	  create for each incoming edge inc: (inc.call-d1.f, inc.call-d2.f) and put on hold
+				//always continue (d1, d2)
+				
+				if(d3.getReadField() instanceof SpecificFieldReference) {
+					SpecificFieldReference fieldRef = (SpecificFieldReference) d3.getReadField();
+					Set<IncomingEdge<D, N>> incomingEdges = incoming(icfg.getMethodOf(n), d3.getFact());
+					if(incomingEdges.isEmpty() && !d1.equals(zeroValue)) {
+						//no caller interested in d3.field -> put edge on hold
+						//TODO
+					} else {
+						//there is an incoming edge interested in d3.field
+						D concretizedSourceValue = AccessPathUtil.cloneWithConcatenatedAccessPath(d1, fieldRef);
+						propagate(concretizedSourceValue, m, d3.getFact(), null, false);
+					}
+				}
+				
+				
+				//TODO: if writing field f
+				// create edge e = (d1, d2.*\{f})
+				// if d2.*\{f} element of incoming edges
+				// 		continue with e
+				// else 
+				//		put e on hold
+				// always kill (d1, d2)
+				
+				propagate(d1, m, d3.getFact(), null, false);
+				
+			}
 		}
 	}
 	
@@ -437,7 +442,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 	 * @param d1 The abstraction at the current node
 	 * @return The set of abstractions at the successor node
 	 */
-	protected Set<D> computeNormalFlowFunction
+	protected Set<AnnotatedFact<D>> computeNormalFlowFunction
 			(FlowFunction<D> flowFunction, D d1, D d2) {
 		return flowFunction.computeTargets(d2);
 	}

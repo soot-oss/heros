@@ -11,7 +11,6 @@
  ******************************************************************************/
 package heros.alias;
 
-import heros.FlowFunction;
 
 /**
  * Classes implementing this interface provide a factory for a 
@@ -28,7 +27,7 @@ import heros.FlowFunction;
  *            The type of objects used to represent methods. Typically
  *            {@link SootMethod}.
  */
-public interface FlowFunctions<Stmt, F extends FieldSensitiveFact, Method> {
+public interface FlowFunctions<Stmt, F extends FieldSensitiveFact<?, F>, Method> {
 
 	/**
 	 * Returns the flow function that computes the flow for a normal statement,
@@ -43,9 +42,6 @@ public interface FlowFunctions<Stmt, F extends FieldSensitiveFact, Method> {
 	 */
 	public FlowFunction<F> getNormalFlowFunction(Stmt curr, Stmt succ);
 
-	public FieldReference getReadFieldReference(Stmt curr);
-	
-	public FieldReference getWrittenFieldReference(Stmt curr);
 	
 	/**
 	 * Returns the flow function that computes the flow for a call statement.

@@ -10,6 +10,8 @@
  ******************************************************************************/
 package heros.alias;
 
+import heros.alias.FieldReference.SpecificFieldReference;
+
 public class AccessPathUtil {
 
 	public static <D extends FieldSensitiveFact<?, D>> boolean isPrefixOf(D prefixCandidate, D fact) {
@@ -46,5 +48,12 @@ public class AccessPathUtil {
 		System.arraycopy(concreteAccessPath, abstractAccessPath.length, resultAccessPath, targetAccessPath.length, concreteAccessPath.length - abstractAccessPath.length);
 		
 		return summary.getTargetFact().cloneWithAccessPath(resultAccessPath);
+	}
+
+	public static <D extends FieldSensitiveFact<?, D>> D cloneWithConcatenatedAccessPath(D fact, FieldReference... fieldRefs) {
+		FieldReference[] accessPath = new FieldReference[fact.getAccessPath().length+fieldRefs.length];
+		System.arraycopy(fact.getAccessPath(), 0, accessPath, 0, fact.getAccessPath().length);
+		System.arraycopy(fieldRefs, 0, accessPath, fact.getAccessPath().length, fieldRefs.length);
+		return fact.cloneWithAccessPath(accessPath);
 	}
 }

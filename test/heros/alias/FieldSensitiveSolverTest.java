@@ -95,8 +95,8 @@ public class FieldSensitiveSolverTest {
 				callSite("c").calls("foo", flow("2.field", "3.field")));
 		
 		helper.method("foo",startPoints("d"),
-				readFieldStmt("d", "notfield").succ("e", flow("3", "3"), kill("3.notfield")),
-				normalStmt("e").succ("f", flow("3","4")));
+				readFieldStmt("d", "notfield").succ("e", flow("3", "3")),
+				normalStmt("e").succ("f", flow("3","4"), kill("3.notfield")));
 		
 		helper.method("xyz",
 				startPoints("g"),
