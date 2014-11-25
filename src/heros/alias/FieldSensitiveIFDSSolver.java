@@ -10,14 +10,22 @@
  ******************************************************************************/
 package heros.alias;
 
+import static heros.alias.AccessPathUtil.cloneWithConcatenatedAccessPath;
+import heros.DontSynchronize;
+import heros.FlowFunctionCache;
+import heros.InterproceduralCFG;
+import heros.SynchronizedBy;
+import heros.alias.FieldReference.SpecificFieldReference;
+import heros.alias.FlowFunction.AnnotatedFact;
+import heros.solver.CountingThreadPoolExecutor;
+import heros.solver.IFDSSolver;
+import heros.solver.PathEdge;
+
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -27,18 +35,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Predicate;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Sets;
-
-import heros.DontSynchronize;
-import heros.FlowFunctionCache;
-import heros.alias.FieldReference.SpecificFieldReference;
-import heros.alias.FlowFunction.AnnotatedFact;
-import heros.alias.IFDSTabulationProblem;
-import heros.InterproceduralCFG;
-import heros.SynchronizedBy;
-import heros.ZeroedFlowFunctions;
-import heros.solver.CountingThreadPoolExecutor;
-import heros.solver.Pair;
-import heros.solver.PathEdge;
 
 public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact<BaseValue, D>, M, I extends InterproceduralCFG<N, M>> {
 
@@ -73,6 +69,8 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 	@SynchronizedBy("consistent lock on field")
 	protected final MyConcurrentHashMap<M, Set<IncomingEdge<D, N>>> incoming =
 			new MyConcurrentHashMap<M, Set<IncomingEdge<D, N>>>();
+	
+	protected final MyConcurrentHashMap<M, Set<PathEdge<N,D>>> pausedEdges = new MyConcurrentHashMap<M, Set<PathEdge<N,D>>>();
 	
 	@DontSynchronize("stateless")
 	protected final FlowFunctions<N, D, M> flowFunctions;
@@ -240,7 +238,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 				if (!addIncoming(sCalledProcN, new IncomingEdge<D, N>(d3.getFact(),n,d1,d2)))
 					continue;
 				
-				//TODO: Resume edges that are on hold and match this d3
+				resumeEdges(sCalledProcN, d3.getFact());
 				
 				//line 15.2
 				Set<SummaryEdge<D, N>> endSumm = endSummary(sCalledProcN, d3.getFact());
@@ -272,6 +270,21 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 			FlowFunction<D> callToReturnFlowFunction = flowFunctions.getCallToReturnFlowFunction(n, returnSiteN);
 			for(AnnotatedFact<D> d3: computeCallToReturnFlowFunction(callToReturnFlowFunction, d1, d2))
 				propagate(d1, returnSiteN, d3.getFact(), n, false);
+		}
+	}
+
+	private void resumeEdges(M method, D factAtMethodStartPoint) {
+		//TODO: Check for concurrency issues
+		Set<PathEdge<N, D>> edges = pausedEdges.get(method);
+		if(edges != null) {
+			for(PathEdge<N, D> edge : edges) {
+				if(AccessPathUtil.isPrefixOf(edge.factAtSource(), factAtMethodStartPoint) || AccessPathUtil.isPrefixOf(factAtMethodStartPoint, edge.factAtSource())) {
+					if(edges.remove(edge))  {
+						logger.trace("RESUME-EDGE: {}", edge);
+						propagate(edge.factAtSource(), edge.getTarget(), edge.factAtTarget(), null, false);
+					}
+				}
+			}
 		}
 	}
 
@@ -325,18 +338,17 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 		if (!addEndSummary(methodThatNeedsSummary, summaryEdge))
 			return;
 		
-		Set<IncomingEdge<D, N>> inc = incoming(methodThatNeedsSummary, d1);
-		
 		//for each incoming call edge already processed
 		//(see processCall(..))
-		if (inc != null)
-			for (IncomingEdge<D, N> incomingEdge : inc) {
-				// line 22
-				N callSite = incomingEdge.getCallSite();
-				// for each return site
-				for (N retSiteC : icfg.getReturnSitesOfCallAt(callSite)) {
-					// compute return-flow function
-					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(callSite, methodThatNeedsSummary, n, retSiteC);
+		for (IncomingEdge<D, N> incomingEdge : incoming(methodThatNeedsSummary)) {
+			// line 22
+			N callSite = incomingEdge.getCallSite();
+			// for each return site
+			for (N retSiteC : icfg.getReturnSitesOfCallAt(callSite)) {
+				// compute return-flow function
+				FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(callSite, methodThatNeedsSummary, n, retSiteC);
+				
+				if(AccessPathUtil.isPrefixOf(d1, incomingEdge.getCalleeSourceFact())) {
 					D concreteCalleeExitFact = AccessPathUtil.applyAbstractedSummary(incomingEdge.getCalleeSourceFact(), summaryEdge);
 					Set<AnnotatedFact<D>> callerTargetFacts = computeReturnFlowFunction(retFunction, concreteCalleeExitFact, callSite);
 
@@ -346,12 +358,24 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 						propagate(incomingEdge.getCallerSourceFact(), retSiteC, callerTargetFact, callSite, false);
 					}
 				}
+				else if(AccessPathUtil.isPrefixOf(incomingEdge.getCalleeSourceFact(), d1)) {
+					Set<AnnotatedFact<D>> callerTargetFacts = computeReturnFlowFunction(retFunction, d2, callSite);
+
+					// for each incoming-call value
+					for (AnnotatedFact<D> callerTargetAnnotatedFact : callerTargetFacts) {
+						D callerTargetFact = restoreContextOnReturnedFact(incomingEdge.getCallerCallSiteFact(), callerTargetAnnotatedFact.getFact());
+						D callerSourceFact = AccessPathUtil.generalizeCallerSourceFact(incomingEdge, summaryEdge.getSourceFact());
+						propagate(callerSourceFact, retSiteC, callerTargetFact, callSite, false);
+					}
+				}				
 			}
+		}
+		
 		
 		//handling for unbalanced problems where we return out of a method with a fact for which we have no incoming flow
 		//note: we propagate that way only values that originate from ZERO, as conditionally generated values should only
 		//be propagated into callers that have an incoming edge for this condition
-		if(followReturnsPastSeeds && d1 == zeroValue && (inc == null || inc.isEmpty())) {
+		if(followReturnsPastSeeds && d1 == zeroValue && incoming(methodThatNeedsSummary).isEmpty()) {
 			Collection<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
 			for(N c: callers) {
 				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
@@ -398,27 +422,25 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 			FlowFunction<D> flowFunction = flowFunctions.getNormalFlowFunction(n,m);
 			Set<AnnotatedFact<D>> res = computeNormalFlowFunction(flowFunction, d1, d2);
 			for (AnnotatedFact<D> d3 : res) {
-				//TODO: if reading field f
+				//TODO: double check if concurrency issues may arise
+				
+				//if reading field f
 				// if d1.f element of incoming edges:
 				//    create and propagate (d1.f, d2.f)
 				// else 
 				//	  create and set (d1.f, d2.f) on hold
 				//	  create for each incoming edge inc: (inc.call-d1.f, inc.call-d2.f) and put on hold
-				//always continue (d1, d2)
 				
 				if(d3.getReadField() instanceof SpecificFieldReference) {
 					SpecificFieldReference fieldRef = (SpecificFieldReference) d3.getReadField();
-					Set<IncomingEdge<D, N>> incomingEdges = incoming(icfg.getMethodOf(n), d3.getFact());
-					if(incomingEdges.isEmpty() && !d1.equals(zeroValue)) {
-						//no caller interested in d3.field -> put edge on hold
-						//TODO
-					} else {
-						//there is an incoming edge interested in d3.field
-						D concretizedSourceValue = AccessPathUtil.cloneWithConcatenatedAccessPath(d1, fieldRef);
+					D concretizedSourceValue = AccessPathUtil.cloneWithConcatenatedAccessPath(d1, fieldRef);
+					if(checkForInterestedCallers(d1, n, fieldRef)) {
 						propagate(concretizedSourceValue, m, d3.getFact(), null, false);
+					} else {
+						pauseEdge(concretizedSourceValue, m, d3.getFact());
 					}
 				}
-				
+				else {
 				
 				//TODO: if writing field f
 				// create edge e = (d1, d2.*\{f})
@@ -428,10 +450,54 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 				//		put e on hold
 				// always kill (d1, d2)
 				
-				propagate(d1, m, d3.getFact(), null, false);
-				
+					propagate(d1, m, d3.getFact(), null, false);
+				}
 			}
 		}
+	}
+	
+	private void pauseEdge(D sourceValue, N targetStmt, D targetValue) {
+		M method = icfg.getMethodOf(targetStmt);
+		Set<PathEdge<N, D>> edges = pausedEdges.putIfAbsentElseGet(method, new ConcurrentHashSet<PathEdge<N,D>>());
+		edges.add(new PathEdge<N,D>(sourceValue, targetStmt, targetValue));
+		logger.trace("PAUSED: <{},{}> -> <{},{}>", method, sourceValue, targetStmt, targetValue);
+	}
+
+	private boolean checkForInterestedCallers(D calleeSourceFact, N targetStmt, SpecificFieldReference fieldRef) {
+		M calleeMethod = icfg.getMethodOf(targetStmt);
+		logger.trace("Checking interest at method {} in fact {} with field access {}", calleeMethod, calleeSourceFact, fieldRef);
+		
+		if(calleeSourceFact.equals(zeroValue))
+			return true;
+		
+		if(hasInterestedCallers(calleeSourceFact, calleeMethod, fieldRef)) {
+			return true;
+		}
+		
+		Set<IncomingEdge<D, N>> inc = incomingEdgesPrefixesOf(calleeMethod, calleeSourceFact); 
+		for (IncomingEdge<D, N> incomingEdge : inc) {
+			if(checkForInterestedCallers(incomingEdge.getCallerSourceFact(), incomingEdge.getCallSite(), fieldRef)) {
+				propagate(incomingEdge.getCallerSourceFact().equals(zeroValue) ? 
+							incomingEdge.getCallerSourceFact() : 
+							cloneWithConcatenatedAccessPath(incomingEdge.getCallerSourceFact(), fieldRef), 
+						incomingEdge.getCallSite(), 
+						cloneWithConcatenatedAccessPath(incomingEdge.getCallerCallSiteFact(), fieldRef), null, false); 
+				return true;
+			}
+			else {
+				pauseEdge(cloneWithConcatenatedAccessPath(incomingEdge.getCallerSourceFact(), fieldRef), 
+						incomingEdge.getCallSite(), 
+						cloneWithConcatenatedAccessPath(incomingEdge.getCallerCallSiteFact(), fieldRef));
+			}
+		}
+		
+		return false;
+	}
+	
+	private boolean hasInterestedCallers(D calleeSourceFact, M calleeMethod, SpecificFieldReference fieldRef) {
+		D concretizedSourceValue = AccessPathUtil.cloneWithConcatenatedAccessPath(calleeSourceFact, fieldRef);
+		Set<IncomingEdge<D, N>> incomingEdges = incomingEdgesPrefixedWith(calleeMethod, concretizedSourceValue);
+		return !incomingEdges.isEmpty();
 	}
 	
 	/**
@@ -521,17 +587,28 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 			return result;
 	}
 	
-	protected Set<IncomingEdge<D, N>> incoming(M m, final D abstractCalleeSourceFact) {
+	protected Set<IncomingEdge<D, N>> incomingEdgesPrefixedWith(M m, final D fact) {
 		Set<IncomingEdge<D, N>> result = incoming(m);
 		return Sets.filter(result, new Predicate<IncomingEdge<D,N>>() {
 			@Override
 			public boolean apply(IncomingEdge<D, N> edge) {
-				return AccessPathUtil.isPrefixOf(abstractCalleeSourceFact, edge.getCalleeSourceFact());
+				return AccessPathUtil.isPrefixOf(fact, edge.getCalleeSourceFact());
+			}
+		});
+	}
+	
+	protected Set<IncomingEdge<D, N>> incomingEdgesPrefixesOf(M m, final D fact) {
+		Set<IncomingEdge<D, N>> result = incoming(m);
+		return Sets.filter(result, new Predicate<IncomingEdge<D,N>>() {
+			@Override
+			public boolean apply(IncomingEdge<D, N> edge) {
+				return AccessPathUtil.isPrefixOf(edge.getCalleeSourceFact(), fact);
 			}
 		});
 	}
 	
 	protected boolean addIncoming(M m, IncomingEdge<D, N> incomingEdge) {
+		logger.trace("Incoming Edge for method {}: {}", m, incomingEdge);
 		Set<IncomingEdge<D,N>> set = incoming.putIfAbsentElseGet(m, new ConcurrentHashSet<IncomingEdge<D,N>>());
 		return set.add(incomingEdge);
 	}

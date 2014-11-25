@@ -11,10 +11,11 @@
 package heros.alias;
 
 import static org.junit.Assert.assertTrue;
-import heros.FlowFunction;
+import heros.alias.FlowFunction.AnnotatedFact;
 import heros.alias.IFDSTabulationProblem;
 import heros.InterproceduralCFG;
 import heros.solver.IFDSSolver;
+import heros.solver.Pair;
 
 import java.util.Collection;
 import java.util.LinkedList;
@@ -61,15 +62,7 @@ public class TestHelper {
 	}
 
 	public static EdgeBuilder.NormalStmtBuilder normalStmt(String stmt) {
-		return new EdgeBuilder.NormalStmtBuilder(new Statement(stmt), new FieldReference.Any(),new FieldReference.Any());
-	}
-	
-	public static EdgeBuilder.NormalStmtBuilder writeFieldStmt(String stmt, String fieldName) {
-		return new EdgeBuilder.NormalStmtBuilder(new Statement(stmt), new FieldReference.Any(), new FieldReference.SpecificFieldReference(fieldName));
-	}
-	
-	public static EdgeBuilder.NormalStmtBuilder readFieldStmt(String stmt, String fieldName) {
-		return new EdgeBuilder.NormalStmtBuilder(new Statement(stmt), new FieldReference.SpecificFieldReference(fieldName), new FieldReference.Any());
+		return new EdgeBuilder.NormalStmtBuilder(new Statement(stmt));
 	}
 	
 	public static EdgeBuilder.CallSiteBuilder callSite(String callSite) {
@@ -96,16 +89,32 @@ public class TestHelper {
 		return new ExpectedFlowFunction(times, new Fact(source));
 	}
 
+	public static Pair<FieldReference, FieldReference> readField(String fieldName) {
+		return new Pair<FieldReference, FieldReference>(new FieldReference.SpecificFieldReference(fieldName), new FieldReference.Any());
+	}
+	
+	public static Pair<FieldReference, FieldReference> writeField(String fieldName) {
+		return new Pair<FieldReference, FieldReference>(new FieldReference.Any(), new FieldReference.SpecificFieldReference(fieldName));
+	}
+	
+	public static ExpectedFlowFunction flow(String source, Pair<FieldReference, FieldReference> fieldAccess, String... targets) {
+		return flow(1, source, fieldAccess, targets);
+	}
+	
+	public static ExpectedFlowFunction flow(int times, String source, Pair<FieldReference, FieldReference> fieldAccess, String... targets) {
+		AnnotatedFact<Fact>[] targetFacts = new AnnotatedFact[targets.length];
+		for(int i=0; i<targets.length; i++) {
+			targetFacts[i] = new AnnotatedFact<Fact>(new Fact(targets[i]), fieldAccess.getO1(), fieldAccess.getO2());
+		}
+		return new ExpectedFlowFunction(times, new Fact(source), targetFacts);
+	}
+	
 	public static ExpectedFlowFunction flow(String source, String... targets) {
 		return flow(1, source, targets);
 	}
 	
 	public static ExpectedFlowFunction flow(int times, String source, String... targets) {
-		Fact[] targetFacts = new Fact[targets.length];
-		for(int i=0; i<targets.length; i++) {
-			targetFacts[i] = new Fact(targets[i]);
-		}
-		return new ExpectedFlowFunction(times, new Fact(source), targetFacts);
+		return flow(times, source, new Pair<FieldReference, FieldReference>(new FieldReference.Any(), new FieldReference.Any()), targets);
 	}
 	
 	public static int times(int times) {
@@ -292,11 +301,11 @@ public class TestHelper {
 	public static class ExpectedFlowFunction {
 
 		public final Fact source;
-		public final Fact[] targets;
+		public final AnnotatedFact<Fact>[] targets;
 		public Edge edge;
 		private int times;
 
-		public ExpectedFlowFunction(int times, Fact source, Fact... targets) {
+		public ExpectedFlowFunction(int times, Fact source, AnnotatedFact<Fact>... targets) {
 			this.times = times;
 			this.source = source;
 			this.targets = targets;
@@ -333,14 +342,10 @@ public class TestHelper {
 
 		private Statement unit;
 		private Statement succUnit;
-		private FieldReference readFieldName;
-		private FieldReference writtenFieldName;
 
-		public NormalEdge(Statement unit, FieldReference readFieldName, FieldReference writtenFieldName, Statement succUnit, ExpectedFlowFunction...flowFunctions) {
+		public NormalEdge(Statement unit, Statement succUnit, ExpectedFlowFunction...flowFunctions) {
 			super(flowFunctions);
 			this.unit = unit;
-			this.readFieldName = readFieldName;
-			this.writtenFieldName = writtenFieldName;
 			this.succUnit = succUnit;
 		}
 
@@ -352,14 +357,6 @@ public class TestHelper {
 		@Override
 		public void accept(EdgeVisitor visitor) {
 			visitor.visit(this);
-		}
-
-		public FieldReference getReadFieldReference() {
-			return readFieldName;
-		}
-
-		public FieldReference getWrittenFieldReference() {
-			return writtenFieldName;
 		}
 	}
 
@@ -464,26 +461,6 @@ public class TestHelper {
 				}
 				throw new AssertionError(String.format("No Flow Function expected for %s -> %s", curr, succ));
 			}
-			
-			@Override
-			public FieldReference getReadFieldReference(Statement curr) {
-				for (final NormalEdge edge : normalEdges) {
-					if (edge.unit.equals(curr)) {
-						return edge.getReadFieldReference();
-					}
-				}
-				throw new AssertionError(String.format("No NormalEdge for %s", curr));
-			}
-
-			@Override
-			public FieldReference getWrittenFieldReference(Statement curr) {
-				for (final NormalEdge edge : normalEdges) {
-					if (edge.unit.equals(curr)) {
-						return edge.getWrittenFieldReference();
-					}
-				}
-				throw new AssertionError(String.format("No NormalEdge for %s", curr));
-			}
 
 			@Override
 			public FlowFunction<Fact> getCallToReturnFlowFunction(Statement callSite, Statement returnSite) {
@@ -508,17 +485,23 @@ public class TestHelper {
 			private FlowFunction<Fact> createFlowFunction(final Edge edge) {
 				return new FlowFunction<Fact>() {
 					@Override
-					public Set<Fact> computeTargets(Fact source) {
+					public Set<AnnotatedFact<Fact>> computeTargets(Fact source) {
+						Set<AnnotatedFact<Fact>> result = Sets.newHashSet();
+						boolean found = false;
 						for (ExpectedFlowFunction ff : edge.flowFunctions) {
 							if (ff.source.equals(source)) {
 								if (remainingFlowFunctions.remove(ff)) {
-									return Sets.newHashSet(ff.targets);
+									result.addAll(Sets.newHashSet(ff.targets));
+									found = true;
 								} else {
 									throw new AssertionError(String.format("Flow Function '%s' was used multiple times on edge '%s'", ff, edge));
 								}
 							}
 						}
-						throw new AssertionError(String.format("Fact '%s' was not expected at edge '%s'", source, edge));
+						if(found)
+							return result;
+						else
+							throw new AssertionError(String.format("Fact '%s' was not expected at edge '%s'", source, edge));
 					}
 				};
 			}

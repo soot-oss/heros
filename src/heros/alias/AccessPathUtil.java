@@ -56,4 +56,23 @@ public class AccessPathUtil {
 		System.arraycopy(fieldRefs, 0, accessPath, fact.getAccessPath().length, fieldRefs.length);
 		return fact.cloneWithAccessPath(accessPath);
 	}
+	
+	public static <D extends FieldSensitiveFact<?, D>> D generalizeCallerSourceFact(IncomingEdge<D, ?> incomingEdge, D calleeSourceFact) {
+		if(!isPrefixOf(incomingEdge.getCalleeSourceFact(), calleeSourceFact))
+			throw new IllegalArgumentException(String.format("Callee Source Fact in IncomingEdge '%s' is not a prefix of the given fact '%s'.", incomingEdge, calleeSourceFact));
+		
+		FieldReference[] abstractAccessPath = incomingEdge.getCalleeSourceFact().getAccessPath();
+		FieldReference[] concreteAccessPath = calleeSourceFact.getAccessPath();
+		FieldReference[] targetAccessPath = incomingEdge.getCallerSourceFact().getAccessPath();
+		
+		FieldReference[] resultAccessPath = new FieldReference[targetAccessPath.length + concreteAccessPath.length - abstractAccessPath.length];
+
+		//copy old access path
+		System.arraycopy(targetAccessPath, 0, resultAccessPath, 0, targetAccessPath.length);
+		
+		//copy delta access path that was omitted while creating the abstracted source fact
+		System.arraycopy(concreteAccessPath, abstractAccessPath.length, resultAccessPath, targetAccessPath.length, concreteAccessPath.length - abstractAccessPath.length);
+		
+		return incomingEdge.getCallerSourceFact().cloneWithAccessPath(resultAccessPath);
+	}
 }

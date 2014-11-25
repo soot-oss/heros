@@ -107,5 +107,10 @@ public interface FlowFunction<D extends FieldSensitiveFact<?, D>> {
 				return false;
 			return true;
 		}
+		
+		@Override
+		public String toString() {
+			return fact.toString()+"<"+readField+","+writtenField+">";
+		}
 	}
 }

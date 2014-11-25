@@ -52,17 +52,13 @@ public abstract class EdgeBuilder {
 	public static class NormalStmtBuilder extends EdgeBuilder {
 
 		private Statement stmt;
-		private FieldReference readFieldReference;
-		private FieldReference writtenFieldReference;
 
-		public NormalStmtBuilder(Statement stmt, FieldReference readFieldReference, FieldReference writtenFieldReference) {
+		public NormalStmtBuilder(Statement stmt) {
 			this.stmt = stmt;
-			this.readFieldReference = readFieldReference;
-			this.writtenFieldReference = writtenFieldReference;
 		}
 
 		public NormalStmtBuilder succ(String succ, ExpectedFlowFunction... flows) {
-			edges.add(new TestHelper.NormalEdge(stmt, readFieldReference, writtenFieldReference, new Statement(succ), flows));
+			edges.add(new TestHelper.NormalEdge(stmt, new Statement(succ), flows));
 			return this;
 		}
 		

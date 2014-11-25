@@ -31,9 +31,9 @@ public class FieldSensitiveSolverTest {
 		helper.method("bar", 
 				startPoints("a"),
 				normalStmt("a").succ("b", flow("0", "1")),
-				writeFieldStmt("b", "3").succ("c", flow("1", "2.3")),
-				normalStmt("c").succ("d", flow("2.3", "2.3")),
-				readFieldStmt("d", "3").succ("e", flow("2.3", "4")));
+				normalStmt("b").succ("c", flow("1", writeField("f"), "2.f")),
+				normalStmt("c").succ("d", flow("2.f", "2.f")),
+				normalStmt("d").succ("e", flow("2.f", readField("f"), "4")));
 		
 		helper.runSolver(false, "a");
 	}
@@ -43,7 +43,7 @@ public class FieldSensitiveSolverTest {
 		helper.method("bar", 
 				startPoints("a"),
 				normalStmt("a").succ("b", flow("0", "1")),
-				writeFieldStmt("b", "3").succ("c", flow("1", "2.field")),
+				normalStmt("b").succ("c", flow("1", writeField("field"), "2.field")),
 				callSite("c").calls("foo", flow("2.field", "3.field")));
 		
 		helper.method("foo",startPoints("d"),
@@ -57,7 +57,7 @@ public class FieldSensitiveSolverTest {
 		helper.method("bar", 
 				startPoints("a"),
 				normalStmt("a").succ("b", flow("0", "1")),
-				writeFieldStmt("b", "3").succ("c", flow("1", "2.field")),
+				normalStmt("b").succ("c", flow("1", writeField("field"), "2.field")),
 				callSite("c").calls("foo", flow("2.field", "3.field")).retSite("retC", flow("2.field", "2.field")));
 		
 		helper.method("foo",startPoints("d"),
@@ -77,11 +77,12 @@ public class FieldSensitiveSolverTest {
 		helper.method("bar", 
 				startPoints("a"),
 				normalStmt("a").succ("b", flow("0", "1")),
-				writeFieldStmt("b", "field").succ("c", flow("1", "2.field")),
+				normalStmt("b").succ("c", flow("1", readField("field"), "2.field")),
 				callSite("c").calls("foo", flow("2.field", "3.field")));
 		
-		helper.method("foo",startPoints("d"),
-				readFieldStmt("d", "notfield").succ("e", flow("3", "3")),
+		helper.method("foo",
+				startPoints("d"),
+				normalStmt("d").succ("e", flow("3", readField("notfield"), "5"), flow("3", "3")),
 				normalStmt("e").succ("f", flow("3","4")));
 		helper.runSolver(false, "a");
 	}
@@ -91,17 +92,61 @@ public class FieldSensitiveSolverTest {
 		helper.method("bar", 
 				startPoints("a"),
 				normalStmt("a").succ("b", flow("0", "1")),
-				writeFieldStmt("b", "field").succ("c", flow("1", "2.field")),
-				callSite("c").calls("foo", flow("2.field", "3.field")));
+				normalStmt("b").succ("c", flow("1", writeField("field"), "2.field")),
+				callSite("c").calls("foo", flow("2.field", "3.field")).retSite("rs", kill("2.field")),
+				callSite("rs").calls("foo", flow("5", "3.notfield")));
 		
 		helper.method("foo",startPoints("d"),
-				readFieldStmt("d", "notfield").succ("e", flow("3", "3")),
-				normalStmt("e").succ("f", flow("3","4"), kill("3.notfield")));
+				normalStmt("d").succ("e", flow("3", "3"), flow("3", readField("notfield"), "6")),
+				normalStmt("e").succ("f", flow("3","4"), kill("6")),
+				exitStmt("f").returns(over("c"), to("rs"), flow("4.field", "5")));
 		
-		helper.method("xyz",
-				startPoints("g"),
-				callSite("g").calls("foo", flow("0", "3.notfield")));
 		helper.runSolver(false, "a", "g");
+	}
+
+	@Test
+	public void doNotHoldIfInterestedTransitiveCallerExists() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", readField("f"), "1.f")),
+				callSite("b").calls("bar", flow("1.f", "2.f")));
+		
+		helper.method("bar",
+				startPoints("c"),
+				callSite("c").calls("xyz", flow("2", "3"), flow("2.f", "3.f")));
+		
+		helper.method("xyz", 
+				startPoints("d"),
+				normalStmt("d").succ("e", flow("3", readField("f"), "4")),
+				normalStmt("e").succ("f"	, kill("4")));
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void prefixFactOfOnHoldFactIncoming() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				callSite("b").calls("bar", flow("1", "2.f")).retSite("e", kill("1")),
+				callSite("e").calls("bar", flow("2", "2")).retSite("g", kill("2")));
+		
+		helper.method("bar", 
+				startPoints("c"),
+				normalStmt("c").succ("d", flow("2", readField("g"), "3"), flow("2", "2")),
+				exitStmt("d").returns(over("b"), to("e"), flow("2.f", "2")).returns(over("e"), to("g"),  kill("2"), kill("3")));
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void doNotPauseZeroSources() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", readField("f"), "1.f")),
+				normalStmt("b").succ("c", kill("1.f")));
+		
+		helper.runSolver(false, "a");
 	}
 	
 	@Test

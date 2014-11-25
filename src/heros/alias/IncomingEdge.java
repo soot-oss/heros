@@ -40,6 +40,11 @@ public class IncomingEdge<D, N> {
 	public N getCallSite() {
 		return callSite;
 	}
+	
+	@Override
+	public String toString() {
+		return "[IncEdge CSite:"+callSite+", Caller-Edge: "+callerSourceFact+"->"+callerCallSiteFact+",  CalleeFact: "+calleeSourceFact+"]";
+	}
 
 	@Override
 	public int hashCode() {
