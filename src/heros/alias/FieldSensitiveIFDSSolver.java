@@ -235,7 +235,8 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 				
 				//register the fact that <sp,d3> has an incoming edge from <n,d2>
 				//line 15.1 of Naeem/Lhotak/Rodriguez
-				if (!addIncoming(sCalledProcN, new IncomingEdge<D, N>(d3.getFact(),n,d1,d2)))
+				IncomingEdge<D, N> incomingEdge = new IncomingEdge<D, N>(d3.getFact(),n,d1,d2);
+				if (!addIncoming(sCalledProcN, incomingEdge))
 					continue;
 				
 				resumeEdges(sCalledProcN, d3.getFact());
@@ -249,16 +250,31 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 				//because we have observed a potentially new incoming edge into <sP,d3>
 				if (endSumm != null)
 					for(SummaryEdge<D, N> summary: endSumm) {
-						D d4 = AccessPathUtil.applyAbstractedSummary(d3.getFact(), summary);
-						
-						//for each return site
-						for(N retSiteN: returnSiteNs) {
-							//compute return-flow function
-							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, summary.getTargetStmt(), retSiteN);
-							//for each target value of the function
-							for(AnnotatedFact<D> d5: computeReturnFlowFunction(retFunction, d4, n)) {
-								D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5.getFact());
-								propagate(d1, retSiteN, d5p_restoredCtx, n, false);
+						if(AccessPathUtil.isPrefixOf(summary.getSourceFact(), d3.getFact())) {
+							D d4 = AccessPathUtil.applyAbstractedSummary(d3.getFact(), summary);
+							
+							//for each return site
+							for(N retSiteN: returnSiteNs) {
+								//compute return-flow function
+								FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, summary.getTargetStmt(), retSiteN);
+								//for each target value of the function
+								for(AnnotatedFact<D> d5: computeReturnFlowFunction(retFunction, d4, n)) {
+									D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5.getFact());
+									propagate(d1, retSiteN, d5p_restoredCtx, n, false);
+								}
+							}
+						} else {
+							// incoming fact is prefix of summary: create new edge on caller side with complemented access path 
+							D d1_concretized = AccessPathUtil.concretizeCallerSourceFact(incomingEdge, d3.getFact());
+							//for each return site
+							for(N retSiteN: returnSiteNs) {
+								//compute return-flow function
+								FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, summary.getTargetStmt(), retSiteN);
+								//for each target value of the function
+								for(AnnotatedFact<D> d5: computeReturnFlowFunction(retFunction, summary.getTargetFact(), n)) {
+									D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5.getFact());
+									propagate(d1_concretized, retSiteN, d5p_restoredCtx, n, false);
+								}
 							}
 						}
 					}
@@ -364,7 +380,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 					// for each incoming-call value
 					for (AnnotatedFact<D> callerTargetAnnotatedFact : callerTargetFacts) {
 						D callerTargetFact = restoreContextOnReturnedFact(incomingEdge.getCallerCallSiteFact(), callerTargetAnnotatedFact.getFact());
-						D callerSourceFact = AccessPathUtil.generalizeCallerSourceFact(incomingEdge, summaryEdge.getSourceFact());
+						D callerSourceFact = AccessPathUtil.concretizeCallerSourceFact(incomingEdge, summaryEdge.getSourceFact());
 						propagate(callerSourceFact, retSiteC, callerTargetFact, callSite, false);
 					}
 				}				
@@ -568,7 +584,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 		return Sets.filter(map, new Predicate<SummaryEdge<D,N>>() {
 			@Override
 			public boolean apply(SummaryEdge<D, N> edge) {
-				return AccessPathUtil.isPrefixOf(edge.getSourceFact(), d3);
+				return AccessPathUtil.isPrefixOf(edge.getSourceFact(), d3) || AccessPathUtil.isPrefixOf(d3, edge.getSourceFact());
 			}
 		});
 	}

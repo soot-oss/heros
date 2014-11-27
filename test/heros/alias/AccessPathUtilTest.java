@@ -61,17 +61,17 @@ public class AccessPathUtilTest {
 	}
 	
 	@Test
-	public void testGeneralizeCallerSourceFact() {
-		assertEquals(new Fact("0.f"), AccessPathUtil.generalizeCallerSourceFact(new IncomingEdge<>(new Fact("2"), null, new Fact("0"), null), new Fact("2.f")));
+	public void testConcretizeCallerSourceFact() {
+		assertEquals(new Fact("0.f"), AccessPathUtil.concretizeCallerSourceFact(new IncomingEdge<>(new Fact("2"), null, new Fact("0"), null), new Fact("2.f")));
 	}
 	
 	@Test
-	public void testGeneralizeCallerSourceFactIdentity() {
-		assertEquals(new Fact("0.f"), AccessPathUtil.generalizeCallerSourceFact(new IncomingEdge<>(new Fact("2.f"), null, new Fact("0.f"), null), new Fact("2.f")));
+	public void testConcretizeCallerSourceFactIdentity() {
+		assertEquals(new Fact("0.f"), AccessPathUtil.concretizeCallerSourceFact(new IncomingEdge<>(new Fact("2.f"), null, new Fact("0.f"), null), new Fact("2.f")));
 	}
 	
 	@Test(expected=IllegalArgumentException.class)
-	public void testGeneralizeCallerSourceFactNoPrefix() {
-		AccessPathUtil.generalizeCallerSourceFact(new IncomingEdge<>(new Fact("2.f"), null, new Fact("0.f"), null), new Fact("2"));
+	public void testConcretizeCallerSourceFactNoPrefix() {
+		AccessPathUtil.concretizeCallerSourceFact(new IncomingEdge<>(new Fact("2.f"), null, new Fact("0.f"), null), new Fact("2"));
 	}
 }

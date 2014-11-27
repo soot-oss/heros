@@ -57,7 +57,7 @@ public class AccessPathUtil {
 		return fact.cloneWithAccessPath(accessPath);
 	}
 	
-	public static <D extends FieldSensitiveFact<?, D>> D generalizeCallerSourceFact(IncomingEdge<D, ?> incomingEdge, D calleeSourceFact) {
+	public static <D extends FieldSensitiveFact<?, D>> D concretizeCallerSourceFact(IncomingEdge<D, ?> incomingEdge, D calleeSourceFact) {
 		if(!isPrefixOf(incomingEdge.getCalleeSourceFact(), calleeSourceFact))
 			throw new IllegalArgumentException(String.format("Callee Source Fact in IncomingEdge '%s' is not a prefix of the given fact '%s'.", incomingEdge, calleeSourceFact));
 		

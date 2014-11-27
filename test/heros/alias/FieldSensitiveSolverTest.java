@@ -124,7 +124,7 @@ public class FieldSensitiveSolverTest {
 	}
 	
 	@Test
-	public void prefixFactOfOnHoldFactIncoming() {
+	public void prefixFactOfOnHoldFactIncoming_ProcessExitCase() {
 		helper.method("foo",
 				startPoints("a"),
 				normalStmt("a").succ("b", flow("0", "1")),
@@ -135,6 +135,23 @@ public class FieldSensitiveSolverTest {
 				startPoints("c"),
 				normalStmt("c").succ("d", flow("2", readField("g"), "3"), flow("2", "2")),
 				exitStmt("d").returns(over("b"), to("e"), flow("2.f", "2")).returns(over("e"), to("g"),  kill("2"), kill("3")));
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void prefixFactOfSummaryIncoming_ProcessCallCase() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0","1")),
+				callSite("b").calls("bar", flow("1", "2.f")).retSite("e", kill("1")),
+				callSite("e").calls("bar", flow("4", "2")).retSite("f", kill("4")),
+				normalStmt("f").succ("g", kill("5")));
+		
+		helper.method("bar",
+				startPoints("c"),
+				normalStmt("c").succ("d", flow("2", readField("f"), "3")),
+				exitStmt("d").returns(over("b"), to("e"), flow("3", "4")).returns(over("e"), to("f"), flow("3", "5")));
 		
 		helper.runSolver(false, "a");
 	}
