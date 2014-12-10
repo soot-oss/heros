@@ -13,6 +13,7 @@ package heros.alias;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
 
 public interface FieldReference {
@@ -20,9 +21,20 @@ public interface FieldReference {
 	public static class Any implements FieldReference {
 		Set<String> excludedFieldNames = Sets.newHashSet();
 		
+		public Any(String...excludedFieldNames) {
+			for (int i = 0; i < excludedFieldNames.length; i++) {
+				this.excludedFieldNames.add(excludedFieldNames[i]);
+			}
+		}
+		
 		@Override
 		public String toString() {
-			return "*" +(excludedFieldNames.isEmpty() ?"" : "\\{" + excludedFieldNames.toString() +"}");
+			if(excludedFieldNames.size() == 0)
+				return "";
+			else if (excludedFieldNames.size() == 1)
+				return "^" + excludedFieldNames.iterator().next();
+			else
+				return "^{" + Joiner.on(",").join(excludedFieldNames) +"}";
 		}
 
 		@Override

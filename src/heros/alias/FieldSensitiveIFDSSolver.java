@@ -240,6 +240,8 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 					continue;
 				
 				resumeEdges(sCalledProcN, d3.getFact());
+				registerInterestedCaller(sCalledProcN, incomingEdge);
+				
 				
 				//line 15.2
 				Set<SummaryEdge<D, N>> endSumm = endSummary(sCalledProcN, d3.getFact());
@@ -263,20 +265,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 									propagate(d1, retSiteN, d5p_restoredCtx, n, false);
 								}
 							}
-						} else {
-							// incoming fact is prefix of summary: create new edge on caller side with complemented access path 
-							D d1_concretized = AccessPathUtil.concretizeCallerSourceFact(incomingEdge, d3.getFact());
-							//for each return site
-							for(N retSiteN: returnSiteNs) {
-								//compute return-flow function
-								FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, summary.getTargetStmt(), retSiteN);
-								//for each target value of the function
-								for(AnnotatedFact<D> d5: computeReturnFlowFunction(retFunction, summary.getTargetFact(), n)) {
-									D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5.getFact());
-									propagate(d1_concretized, retSiteN, d5p_restoredCtx, n, false);
-								}
-							}
-						}
+						} 
 					}
 			}
 		}
@@ -294,10 +283,32 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 		Set<PathEdge<N, D>> edges = pausedEdges.get(method);
 		if(edges != null) {
 			for(PathEdge<N, D> edge : edges) {
-				if(AccessPathUtil.isPrefixOf(edge.factAtSource(), factAtMethodStartPoint) || AccessPathUtil.isPrefixOf(factAtMethodStartPoint, edge.factAtSource())) {
+				if(AccessPathUtil.isPrefixOf(edge.factAtSource(), factAtMethodStartPoint)) {
 					if(edges.remove(edge))  {
 						logger.trace("RESUME-EDGE: {}", edge);
 						propagate(edge.factAtSource(), edge.getTarget(), edge.factAtTarget(), null, false);
+					}
+				}
+			}
+		}
+	}
+	
+	private void registerInterestedCaller(M method, IncomingEdge<D, N> incomingEdge) {
+		Set<PathEdge<N, D>> edges = pausedEdges.get(method);
+		if(edges != null) {
+			for(PathEdge<N, D> edge : edges) {
+				if(AccessPathUtil.isPrefixOf(incomingEdge.getCalleeSourceFact(), edge.factAtSource())) {
+					logger.trace("RECHECKING-PAUSED-EDGE: {} for new incoming edge {}", edge, incomingEdge);
+					
+					FieldReference[] accessPathDelta = AccessPathUtil.getAccessPathDelta(
+							incomingEdge.getCalleeSourceFact().getAccessPath(), edge.factAtSource().getAccessPath());
+				
+					if(checkForInterestedCallers(incomingEdge.getCallerSourceFact(), incomingEdge.getCallSite(), accessPathDelta)) {
+						propagate(zeroValue.equals(incomingEdge.getCallerSourceFact()) ? zeroValue : AccessPathUtil.cloneWithConcatenatedAccessPath(incomingEdge.getCallerSourceFact(), accessPathDelta), 
+								incomingEdge.getCallSite(), AccessPathUtil.cloneWithConcatenatedAccessPath(incomingEdge.getCallerCallSiteFact(), accessPathDelta), null, false);
+					} else {
+						pauseEdge(AccessPathUtil.cloneWithConcatenatedAccessPath(incomingEdge.getCallerSourceFact(), accessPathDelta), 
+								incomingEdge.getCallSite(), AccessPathUtil.cloneWithConcatenatedAccessPath(incomingEdge.getCallerCallSiteFact(), accessPathDelta));
 					}
 				}
 			}
@@ -374,16 +385,6 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 						propagate(incomingEdge.getCallerSourceFact(), retSiteC, callerTargetFact, callSite, false);
 					}
 				}
-				else if(AccessPathUtil.isPrefixOf(incomingEdge.getCalleeSourceFact(), d1)) {
-					Set<AnnotatedFact<D>> callerTargetFacts = computeReturnFlowFunction(retFunction, d2, callSite);
-
-					// for each incoming-call value
-					for (AnnotatedFact<D> callerTargetAnnotatedFact : callerTargetFacts) {
-						D callerTargetFact = restoreContextOnReturnedFact(incomingEdge.getCallerCallSiteFact(), callerTargetAnnotatedFact.getFact());
-						D callerSourceFact = AccessPathUtil.concretizeCallerSourceFact(incomingEdge, summaryEdge.getSourceFact());
-						propagate(callerSourceFact, retSiteC, callerTargetFact, callSite, false);
-					}
-				}				
 			}
 		}
 		
@@ -475,11 +476,12 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 	private void pauseEdge(D sourceValue, N targetStmt, D targetValue) {
 		M method = icfg.getMethodOf(targetStmt);
 		Set<PathEdge<N, D>> edges = pausedEdges.putIfAbsentElseGet(method, new ConcurrentHashSet<PathEdge<N,D>>());
-		edges.add(new PathEdge<N,D>(sourceValue, targetStmt, targetValue));
-		logger.trace("PAUSED: <{},{}> -> <{},{}>", method, sourceValue, targetStmt, targetValue);
+		if(edges.add(new PathEdge<N,D>(sourceValue, targetStmt, targetValue))) {
+			logger.trace("PAUSED: <{},{}> -> <{},{}>", method, sourceValue, targetStmt, targetValue);
+		}
 	}
 
-	private boolean checkForInterestedCallers(D calleeSourceFact, N targetStmt, SpecificFieldReference fieldRef) {
+	private boolean checkForInterestedCallers(D calleeSourceFact, N targetStmt, FieldReference... fieldRef) {
 		M calleeMethod = icfg.getMethodOf(targetStmt);
 		logger.trace("Checking interest at method {} in fact {} with field access {}", calleeMethod, calleeSourceFact, fieldRef);
 		
@@ -510,7 +512,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 		return false;
 	}
 	
-	private boolean hasInterestedCallers(D calleeSourceFact, M calleeMethod, SpecificFieldReference fieldRef) {
+	private boolean hasInterestedCallers(D calleeSourceFact, M calleeMethod, FieldReference... fieldRef) {
 		D concretizedSourceValue = AccessPathUtil.cloneWithConcatenatedAccessPath(calleeSourceFact, fieldRef);
 		Set<IncomingEdge<D, N>> incomingEdges = incomingEdgesPrefixedWith(calleeMethod, concretizedSourceValue);
 		return !incomingEdges.isEmpty();
@@ -562,9 +564,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, D extends FieldSensitiveFact
 			/* deliberately exposed to clients */ boolean isUnbalancedReturn) {
 		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
 		final D existingVal = jumpFn.addFunction(edge);
-		//TODO: Merge d.* and d.x for arbitrary x as d.*
 		//TODO: Merge d.* and d.*\{x} as d.*
-		//TODO: Merge d.*\{a} and d.*/{b} as d.*
 		if (existingVal != null) {
 			if (existingVal != targetVal)
 				existingVal.addNeighbor(targetVal);

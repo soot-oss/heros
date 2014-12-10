@@ -11,9 +11,13 @@
 package heros.alias;
 
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 
 
 public class Fact implements FieldSensitiveFact<String, Fact> {
@@ -22,12 +26,25 @@ public class Fact implements FieldSensitiveFact<String, Fact> {
 	public final FieldReference[] accessPath;
 	
 	public Fact(String name) {
-		String[] split = name.split("\\.");
-		baseValue = split[0];
-		accessPath = new FieldReference[split.length-1];
-		for (int i = 1; i < split.length; i++) {
-			accessPath[i-1] = new FieldReference.SpecificFieldReference(split[i]);
+		Pattern pattern = Pattern.compile("(\\.|\\^)([^\\.\\^]+)");
+		Matcher matcher = pattern.matcher(name);
+		ArrayList<FieldReference> accessPath = Lists.newArrayList();
+		
+		int firstSeparator = matcher.find() ? matcher.start() : name.length();
+		baseValue = name.substring(0, firstSeparator);
+		matcher.reset();
+		
+		while(matcher.find()) {
+			String separator = matcher.group(1);
+			String identifier = matcher.group(2);
+			
+			if(separator.equals(".")) {
+				accessPath.add(new FieldReference.SpecificFieldReference(identifier));
+			} else {
+				accessPath.add(new FieldReference.Any(identifier));
+			}
 		}
+		this.accessPath = accessPath.toArray(new FieldReference[accessPath.size()]);
 	}
 	
 	public Fact(String baseValue, FieldReference[] accessPath) {

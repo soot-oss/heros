@@ -13,7 +13,10 @@ package heros.alias;
 
 
 import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestWatcher;
 
 import static heros.alias.TestHelper.*;
 
@@ -23,7 +26,38 @@ public class FieldSensitiveSolverTest {
 
 	@Before
 	public void before() {
+		System.err.println("-----");
 		helper = new TestHelper();
+	}
+	
+	@Rule
+	public TestWatcher watcher = new TestWatcher() {
+		protected void failed(Throwable e, org.junit.runner.Description description) {
+			System.err.println("---failed: "+description.getMethodName()+" ----");
+		};
+	};
+	
+	@Test
+	@Ignore("assumes k-limiting not used")
+	public void mergeWithExistingPrefixFacts() {
+		helper.method("foo", 
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				normalStmt("b").succ("b", flow("1", "1.f")).succ("c", flow("1", "2")),
+				normalStmt("c").succ("d", kill("2")));
+				
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void dontMergeWithExistingNonPrefixFacts() {
+		helper.method("foo", 
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1.f")),
+				normalStmt("b").succ("b", flow("1.f", "1"), kill("1")).succ("c", flow("1.f", "2"), kill("1")),
+				normalStmt("c").succ("d", kill("2")));
+				
+		helper.runSolver(false, "a");
 	}
 	
 	@Test
@@ -124,34 +158,18 @@ public class FieldSensitiveSolverTest {
 	}
 	
 	@Test
-	public void prefixFactOfOnHoldFactIncoming_ProcessExitCase() {
-		helper.method("foo",
-				startPoints("a"),
-				normalStmt("a").succ("b", flow("0", "1")),
-				callSite("b").calls("bar", flow("1", "2.f")).retSite("e", kill("1")),
-				callSite("e").calls("bar", flow("2", "2")).retSite("g", kill("2")));
-		
-		helper.method("bar", 
-				startPoints("c"),
-				normalStmt("c").succ("d", flow("2", readField("g"), "3"), flow("2", "2")),
-				exitStmt("d").returns(over("b"), to("e"), flow("2.f", "2")).returns(over("e"), to("g"),  kill("2"), kill("3")));
-		
-		helper.runSolver(false, "a");
-	}
-	
-	@Test
-	public void prefixFactOfSummaryIncoming_ProcessCallCase() {
+	public void prefixFactOfSummaryIgnored() {
 		helper.method("foo",
 				startPoints("a"),
 				normalStmt("a").succ("b", flow("0","1")),
 				callSite("b").calls("bar", flow("1", "2.f")).retSite("e", kill("1")),
 				callSite("e").calls("bar", flow("4", "2")).retSite("f", kill("4")),
-				normalStmt("f").succ("g", kill("5")));
+				normalStmt("f").succ("g"));
 		
 		helper.method("bar",
 				startPoints("c"),
 				normalStmt("c").succ("d", flow("2", readField("f"), "3")),
-				exitStmt("d").returns(over("b"), to("e"), flow("3", "4")).returns(over("e"), to("f"), flow("3", "5")));
+				exitStmt("d").returns(over("b"), to("e"), flow("3", "4")).returns(over("e"), to("f")));
 		
 		helper.runSolver(false, "a");
 	}
@@ -164,6 +182,159 @@ public class FieldSensitiveSolverTest {
 				normalStmt("b").succ("c", kill("1.f")));
 		
 		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	@Ignore("assumes k-limiting not used")
+	public void loopAndMerge() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				normalStmt("b").succ("c", flow("1", readField("f"), "2"), flow("1", "1"), flow("2", "2")),
+				normalStmt("c").succ("d", flow("1", "1", "1.f"), flow("2", "2")),
+				normalStmt("d").succ("e", flow("1", "1"), flow("2", "2")).succ("b", flow("1", "1"), flow("2", "2")),
+				normalStmt("e").succ("f", kill("1"), kill("2")));
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void doNotMergePrefixFacts() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b1", flow("0", "1")).succ("b2", flow("0", "1")),
+				normalStmt("b1").succ("c", flow("1", "1")),
+				normalStmt("b2").succ("c", flow("1", "1.f")),
+				normalStmt("c").succ("d", kill("1"), kill("1.f")));
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void pauseOnOverwrittenFieldOfInterest() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1.f")),
+				callSite("b").calls("bar", flow("1.f", "2.f")));
+		
+		helper.method("bar",
+				startPoints("c"),
+				normalStmt("c").succ("d", flow("2", writeField("f"), "2^f")),
+				normalStmt("d").succ("e")); //only interested in 2.f, but f excluded so this should not be reached
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void pauseOnOverwrittenFieldOfInterest2() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1.f")),
+				callSite("b").calls("bar", flow("1.f", "2.f.g")));
+		
+		helper.method("bar",
+				startPoints("c"),
+				normalStmt("c").succ("d", flow("2", writeField("f"), "2^f")),
+				normalStmt("d").succ("e")); //only interested in 2.f.g, but f excluded so this should not be reached
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void doNotPauseOnOverwrittenFieldOfInterestedPrefix() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1.f")),
+				callSite("b").calls("bar", flow("1.f", "2")));
+		
+		helper.method("bar",
+				startPoints("c"),
+				normalStmt("c").succ("d", flow("2", writeField("f"), "2^f")),
+				normalStmt("d").succ("e", kill("2^f"))); 
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void resumeEdgePausedOnOverwrittenField() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1.f")),
+				callSite("b").calls("bar", flow("1.f", "2.f")).retSite("e", kill("1.f")),
+				callSite("e").calls("bar", flow("4", "2.g")).retSite("f", kill("4")));
+		
+		helper.method("bar",
+				startPoints("c"),
+				normalStmt("c").succ("d", flow("2", writeField("f"), "2^f"), flow("2", "3")),
+				exitStmt("d").returns(over("b"), to("e"), flow("3", "4")).returns(over("e"), to("f"), kill("2^f"))); 
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void resumeEdgePausedOnOverwrittenFieldForPrefixes() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1.f")),
+				callSite("b").calls("bar", flow("1.f", "2.f")).retSite("e", kill("1.f")),
+				callSite("e").calls("bar", flow("4", "2")).retSite("f", kill("4")));
+		
+		helper.method("bar",
+				startPoints("c"),
+				normalStmt("c").succ("d", flow("2", writeField("f"), "2^f"), flow("2", "3")),
+				exitStmt("d").returns(over("b"), to("e"), flow("3", "4")).returns(over("e"), to("f"), kill("2^f"))); 
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void registerPausedEdgeInLateCallers() {
+		helper.method("foo", 
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1.g")),
+				callSite("b").calls("bar", flow("1.g", "1.g")).retSite("e", kill("1.g")),
+				normalStmt("e").succ("f", flow("1.g", "3")),
+				callSite("f").calls("bar", flow("3", "1"), flow("3.f", "1.f")).retSite("g", kill("3"), kill("3.f") /* TODO: we want to get rid of kill(3.f) */)); //0->3 at f, should generate 0->3.f as well, because 1.f is paused on caller side
+		
+		helper.method("bar",
+				startPoints("c"),
+				normalStmt("c").succ("d", flow("1", readField("f"), "2"), flow("1", "1")),
+				exitStmt("d").returns(over("b"), to("e"), flow("1.g", "1.g") /* ignore fact 2, not possible with this caller ctx*/).returns(over("f"), to("g"), kill("1"), kill("1.f"), kill("2")));
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void mergeExcludedField() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				normalStmt("b").succ("c", flow("1", "2", "2^f")),
+				normalStmt("c").succ("d", kill("2")));
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void resumeOnTransitiveInterestedCaller() {
+		helper.method("foo",
+				startPoints("sp"),
+				normalStmt("sp").succ("a", flow("0", "1.f")),
+				callSite("a").calls("bar", flow("1.f", "1.f")).retSite("f", kill("1.f")),
+				callSite("f").calls("bar", flow("2", "1.g")));
+				
+		helper.method("bar",
+				startPoints("b"),
+				callSite("b").calls("xyz", flow("1", "1"), flow("1.f", "1.f"), flow("1.g", "1.g")).retSite("e", kill("1"), kill("1.f"), kill("1.g")),
+				exitStmt("e").returns(over("a"), to("f"), flow("2", "2")));
+		
+		helper.method("xyz",
+				startPoints("c"),
+				normalStmt("c").succ("d", flow("1", readField("g"), "3"), flow("1", readField("f"), "2")),
+				exitStmt("d").returns(over("b"), to("e"), flow("2", "2"), kill("3")));
+		
+				
+		helper.runSolver(false, "sp");
 	}
 	
 	@Test

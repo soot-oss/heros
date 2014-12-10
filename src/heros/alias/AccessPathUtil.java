@@ -75,4 +75,10 @@ public class AccessPathUtil {
 		
 		return incomingEdge.getCallerSourceFact().cloneWithAccessPath(resultAccessPath);
 	}
+	
+	public static FieldReference[] getAccessPathDelta(FieldReference[] prefixAccessPath, FieldReference[] accessPath) {
+		FieldReference[] result = new FieldReference[accessPath.length - prefixAccessPath.length];
+		System.arraycopy(accessPath, prefixAccessPath.length, result, 0, result.length);
+		return result;
+	}
 }
