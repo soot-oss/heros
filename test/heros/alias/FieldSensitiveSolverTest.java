@@ -266,7 +266,7 @@ public class FieldSensitiveSolverTest {
 		helper.method("bar",
 				startPoints("c"),
 				normalStmt("c").succ("d", flow("2", writeField("f"), "2^f"), flow("2", "3")),
-				exitStmt("d").returns(over("b"), to("e"), flow("3", "4")).returns(over("e"), to("f"), kill("2^f"))); 
+				exitStmt("d").returns(over("b"), to("e"), flow("3.f", "4")).returns(over("e"), to("f"), kill("3.g"), kill("2.g" /* 2^f is back substituted to 2.g*/))); 
 		
 		helper.runSolver(false, "a");
 	}
@@ -282,9 +282,24 @@ public class FieldSensitiveSolverTest {
 		helper.method("bar",
 				startPoints("c"),
 				normalStmt("c").succ("d", flow("2", writeField("f"), "2^f"), flow("2", "3")),
-				exitStmt("d").returns(over("b"), to("e"), flow("3", "4")).returns(over("e"), to("f"), kill("2^f"))); 
+				exitStmt("d").returns(over("b"), to("e"), flow("3.f", "4")).returns(over("e"), to("f"), kill("3"), kill("2^f"))); 
 		
 		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void exclusionOnPotentiallyInterestedCaller() {
+		helper.method("foo",
+				startPoints("sp"),
+				normalStmt("sp").succ("a", flow("0", "1")),
+				callSite("a").calls("bar", flow("1", "1^f")).retSite("d", kill("1")));
+		
+		helper.method("bar",
+				startPoints("b"),
+				normalStmt("b").succ("c", flow("1", readField("f"), "2.f")),
+				exitStmt("c").returns(over("a"), to("d")));
+		
+		helper.runSolver(false, "sp");
 	}
 	
 	@Test

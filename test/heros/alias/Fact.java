@@ -41,7 +41,7 @@ public class Fact implements FieldSensitiveFact<String, Fact> {
 			if(separator.equals(".")) {
 				accessPath.add(new FieldReference.SpecificFieldReference(identifier));
 			} else {
-				accessPath.add(new FieldReference.Any(identifier));
+				accessPath.add(new FieldReference.Any(identifier.split(",")));
 			}
 		}
 		this.accessPath = accessPath.toArray(new FieldReference[accessPath.size()]);
@@ -90,7 +90,6 @@ public class Fact implements FieldSensitiveFact<String, Fact> {
 				+ ((baseValue == null) ? 0 : baseValue.hashCode());
 		return result;
 	}
-
 
 	@Override
 	public boolean equals(Object obj) {

@@ -10,6 +10,11 @@
  ******************************************************************************/
 package heros.alias;
 
+import java.util.ArrayList;
+
+import com.google.common.base.Optional;
+
+import heros.alias.FieldReference.Any;
 import heros.alias.FieldReference.SpecificFieldReference;
 
 public class AccessPathUtil {
@@ -20,34 +25,49 @@ public class AccessPathUtil {
 		
 		FieldReference[] prefixAccessPath = prefixCandidate.getAccessPath();
 		FieldReference[] factAccessPath = fact.getAccessPath();
-		if(prefixAccessPath.length > factAccessPath.length)
-			return false;
 		
 		for(int i=0; i<prefixAccessPath.length; i++) {
-			if(!prefixAccessPath[i].equals(factAccessPath[i]))
-				return false;
+			if(i < factAccessPath.length) {
+				if(!prefixAccessPath[i].includes(factAccessPath[i]))
+					return false;
+			}
+			else if(!(prefixAccessPath[i] instanceof Any))
+				return false;	
 		}
 		
 		return true;
 	}
 	
-	public static <D extends FieldSensitiveFact<?, D>> D applyAbstractedSummary(D sourceFact, SummaryEdge<D, ?> summary) {
+	public static <D extends FieldSensitiveFact<?, D>> Optional<D> applyAbstractedSummary(D sourceFact, SummaryEdge<D, ?> summary) {
 		if(!isPrefixOf(summary.getSourceFact(), sourceFact))
 			throw new IllegalArgumentException(String.format("Source fact in given summary edge '%s' is not a prefix of the given source fact '%s'", summary, sourceFact));
 		
-		FieldReference[] abstractAccessPath = summary.getSourceFact().getAccessPath();
 		FieldReference[] concreteAccessPath = sourceFact.getAccessPath();
+		FieldReference[] abstractAccessPath = summary.getSourceFact().getAccessPath();
 		FieldReference[] targetAccessPath = summary.getTargetFact().getAccessPath();
 		
-		FieldReference[] resultAccessPath = new FieldReference[targetAccessPath.length + concreteAccessPath.length - abstractAccessPath.length];
-
-		//copy old access path
-		System.arraycopy(targetAccessPath, 0, resultAccessPath, 0, targetAccessPath.length);
 		
-		//copy delta access path that was omitted while creating the abstracted source fact
-		System.arraycopy(concreteAccessPath, abstractAccessPath.length, resultAccessPath, targetAccessPath.length, concreteAccessPath.length - abstractAccessPath.length);
+		ArrayList<FieldReference> result = new ArrayList<>(targetAccessPath.length + concreteAccessPath.length - abstractAccessPath.length);
+		int lastSpecificField = -1;
+		for(int i=0; i< targetAccessPath.length; i++) {
+			result.add(targetAccessPath[i]);
+			if(targetAccessPath[i] instanceof SpecificFieldReference)
+				lastSpecificField = i;
+		}
 		
-		return summary.getTargetFact().cloneWithAccessPath(resultAccessPath);
+		for(int i=abstractAccessPath.length; i<concreteAccessPath.length; i++) {
+			if(lastSpecificField+1 < result.size()) {
+				Optional<? extends FieldReference> mergedFieldRef = concreteAccessPath[i].merge((Any) result.get(lastSpecificField+1));
+				if(!mergedFieldRef.isPresent())
+					return Optional.absent();
+				
+				result.set(lastSpecificField+1, mergedFieldRef.get());
+				lastSpecificField++;
+			} else {
+				result.add(concreteAccessPath[i]);
+			}
+		}
+		return Optional.of(summary.getTargetFact().cloneWithAccessPath(result.toArray(new FieldReference[result.size()])));
 	}
 
 	public static <D extends FieldSensitiveFact<?, D>> D cloneWithConcatenatedAccessPath(D fact, FieldReference... fieldRefs) {

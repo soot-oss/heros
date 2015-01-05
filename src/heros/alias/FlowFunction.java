@@ -43,8 +43,8 @@ public interface FlowFunction<D extends FieldSensitiveFact<?, D>> {
 	public static class AnnotatedFact<D extends FieldSensitiveFact<?, D>> {
 		
 		private D fact;
-		private FieldReference readField;
-		private FieldReference writtenField;
+		private String readField;
+		private String writtenField;
 		
 		//TODO: Refactor API to make things more intuitive
 		/**
@@ -53,7 +53,7 @@ public interface FlowFunction<D extends FieldSensitiveFact<?, D>> {
 		 * @param readField Giving a field reference here means the base value of a field access was tainted, i.e., we have to concretize the source value
 		 * @param writtenField
 		 */
-		public AnnotatedFact(D fact, FieldReference readField, FieldReference writtenField) {
+		public AnnotatedFact(D fact, String readField, String writtenField) {
 			this.fact = fact;
 			this.readField = readField;
 			this.writtenField = writtenField;
@@ -63,11 +63,11 @@ public interface FlowFunction<D extends FieldSensitiveFact<?, D>> {
 			return fact;
 		}
 		
-		public FieldReference getReadField() {
+		public String getReadField() {
 			return readField;
 		}
 		
-		public FieldReference getWrittenField() {
+		public String getWrittenField() {
 			return writtenField;
 		}
 

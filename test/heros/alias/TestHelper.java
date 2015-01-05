@@ -89,19 +89,19 @@ public class TestHelper {
 		return new ExpectedFlowFunction(times, new Fact(source));
 	}
 
-	public static Pair<FieldReference, FieldReference> readField(String fieldName) {
-		return new Pair<FieldReference, FieldReference>(new FieldReference.SpecificFieldReference(fieldName), new FieldReference.Any());
+	public static Pair<String, String> readField(String fieldName) {
+		return new Pair<String, String>(fieldName, null);
 	}
 	
-	public static Pair<FieldReference, FieldReference> writeField(String fieldName) {
-		return new Pair<FieldReference, FieldReference>(new FieldReference.Any(), new FieldReference.SpecificFieldReference(fieldName));
+	public static Pair<String, String> writeField(String fieldName) {
+		return new Pair<String, String>(null, fieldName);
 	}
 	
-	public static ExpectedFlowFunction flow(String source, Pair<FieldReference, FieldReference> fieldAccess, String... targets) {
+	public static ExpectedFlowFunction flow(String source, Pair<String, String> fieldAccess, String... targets) {
 		return flow(1, source, fieldAccess, targets);
 	}
 	
-	public static ExpectedFlowFunction flow(int times, String source, Pair<FieldReference, FieldReference> fieldAccess, String... targets) {
+	public static ExpectedFlowFunction flow(int times, String source, Pair<String, String> fieldAccess, String... targets) {
 		AnnotatedFact<Fact>[] targetFacts = new AnnotatedFact[targets.length];
 		for(int i=0; i<targets.length; i++) {
 			targetFacts[i] = new AnnotatedFact<Fact>(new Fact(targets[i]), fieldAccess.getO1(), fieldAccess.getO2());
@@ -114,7 +114,7 @@ public class TestHelper {
 	}
 	
 	public static ExpectedFlowFunction flow(int times, String source, String... targets) {
-		return flow(times, source, new Pair<FieldReference, FieldReference>(new FieldReference.Any(), new FieldReference.Any()), targets);
+		return flow(times, source, new Pair<String, String>(null, null), targets);
 	}
 	
 	public static int times(int times) {
