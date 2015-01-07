@@ -147,7 +147,7 @@ public class FieldSensitiveSolverTest {
 		
 		helper.method("bar",
 				startPoints("c"),
-				callSite("c").calls("xyz", flow("2", "3"), flow("2.f", "3.f")));
+				callSite("c").calls("xyz", flow("2", "3")));
 		
 		helper.method("xyz", 
 				startPoints("d"),
@@ -245,7 +245,7 @@ public class FieldSensitiveSolverTest {
 		helper.method("foo",
 				startPoints("a"),
 				normalStmt("a").succ("b", flow("0", "1.f")),
-				callSite("b").calls("bar", flow("1.f", "2"), flow("1.f^f", "2^f")));
+				callSite("b").calls("bar", flow("1.f", "2")));
 		
 		helper.method("bar",
 				startPoints("c"),
@@ -283,7 +283,7 @@ public class FieldSensitiveSolverTest {
 		
 		helper.method("bar",
 				startPoints("c"),
-				callSite("c").calls("xyz", flow("2", "3"), flow("2^f", "3^f")));
+				callSite("c").calls("xyz", flow("2", "3")));
 		
 		helper.method("xyz",
 				startPoints("d"),
@@ -315,12 +315,12 @@ public class FieldSensitiveSolverTest {
 				startPoints("a"),
 				normalStmt("a").succ("b", flow("0", "1.f")),
 				callSite("b").calls("bar", flow("1.f", "2.f")).retSite("e", kill("1.f")),
-				callSite("e").calls("bar", flow("4", "2"), flow("4^f", "2^f")).retSite("f", kill("4"), kill("4^f") /*unwanted call2ret*/));
+				callSite("e").calls("bar", flow("4", "2")).retSite("f", kill("4")));
 		
 		helper.method("bar",
 				startPoints("c"),
 				normalStmt("c").succ("d", flow("2", writeField("f"), "2^f"), flow("2", "3")),
-				exitStmt("d").returns(over("b"), to("e"), flow("3.f", "4")).returns(over("e"), to("f"), kill("3"), kill("3^f"), kill("2^f"))); 
+				exitStmt("d").returns(over("b"), to("e"), flow("3.f", "4")).returns(over("e"), to("f"), kill("3"), kill("2^f"))); 
 		
 		helper.runSolver(false, "a");
 	}
@@ -347,12 +347,12 @@ public class FieldSensitiveSolverTest {
 				normalStmt("a").succ("b", flow("0", "1.g")),
 				callSite("b").calls("bar", flow("1.g", "1.g")).retSite("e", kill("1.g")),
 				normalStmt("e").succ("f", flow("1.g", "3")),
-				callSite("f").calls("bar", flow("3", "1"), flow("3.f", "1.f")).retSite("g", kill("3"), kill("3.f") /* TODO: we want to get rid of kill(3.f) */)); //0->3 at f, should generate 0->3.f as well, because 1.f is paused on caller side
+				callSite("f").calls("bar", flow("3", "1")).retSite("g", kill("3"))); 
 		
 		helper.method("bar",
 				startPoints("c"),
 				normalStmt("c").succ("d", flow("1", readField("f"), "2"), flow("1", "1")),
-				exitStmt("d").returns(over("b"), to("e"), flow("1.g", "1.g") /* ignore fact 2, not possible with this caller ctx*/).returns(over("f"), to("g"), kill("1"), kill("1.f"), kill("2")));
+				exitStmt("d").returns(over("b"), to("e"), flow("1.g", "1.g") /* ignore fact 2, not possible with this caller ctx*/).returns(over("f"), to("g"), kill("1"), kill("2")));
 		
 		helper.runSolver(false, "a");
 	}
@@ -378,7 +378,7 @@ public class FieldSensitiveSolverTest {
 				
 		helper.method("bar",
 				startPoints("b"),
-				callSite("b").calls("xyz", flow("1", "1"), flow("1.f", "1.f"), flow("1.g", "1.g")).retSite("e", kill("1"), kill("1.f"), kill("1.g")),
+				callSite("b").calls("xyz", flow("1", "1")).retSite("e", kill("1")),
 				exitStmt("e").returns(over("a"), to("f"), flow("2", "2")));
 		
 		helper.method("xyz",

@@ -144,7 +144,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		for(Entry<N, Set<D>> seed: initialSeeds.entrySet()) {
 			N startPoint = seed.getKey();
 			for(D val: seed.getValue())
-				propagate(zeroValue, startPoint, val, null, false);
+				propagate(new PathEdge<>(zeroValue, startPoint, val), null, false);
 			jumpFn.addFunction(new PathEdge<N, D>(zeroValue, startPoint, zeroValue));
 		}
 	}
@@ -230,7 +230,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 				for(N sP: startPointsOf) {
 					//create initial self-loop
 					D abstractStartPointFact = d3.getFact().cloneWithAccessPath(new AccessPath<FieldRef>());
-					propagate(abstractStartPointFact, sP, abstractStartPointFact, n, false); //line 15
+					propagate(new PathEdge<>(abstractStartPointFact, sP, abstractStartPointFact), n, false); //line 15
 				}
 				
 				//register the fact that <sp,d3> has an incoming edge from <n,d2>
@@ -262,7 +262,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 									//for each target value of the function
 									for(AnnotatedFact<FieldRef, D> d5: computeReturnFlowFunction(retFunction, d4.get(), n)) {
 										D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5.getFact());
-										propagate(d1, retSiteN, d5p_restoredCtx, n, false);
+										propagate(new PathEdge<>(d1, retSiteN, d5p_restoredCtx), n, false);
 									}
 								}
 							}
@@ -275,7 +275,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		for (N returnSiteN : returnSiteNs) {
 			FlowFunction<FieldRef, D> callToReturnFlowFunction = flowFunctions.getCallToReturnFlowFunction(n, returnSiteN);
 			for(AnnotatedFact<FieldRef, D> d3: computeCallToReturnFlowFunction(callToReturnFlowFunction, d1, d2))
-				propagate(d1, returnSiteN, d3.getFact(), n, false);
+				propagate(new PathEdge<>(d1, returnSiteN, d3.getFact()), n, false);
 		}
 	}
 
@@ -287,7 +287,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 				if(AccessPathUtil.isPrefixOf(edge.factAtSource(), factAtMethodStartPoint)) {
 					if(edges.remove(edge))  {
 						logger.trace("RESUME-EDGE: {}", edge);
-						propagate(edge.factAtSource(), edge.getTarget(), edge.factAtTarget(), null, false);
+						propagate(edge, edge instanceof ConcretizationPathEdge ? edge.getTarget() : null, false);
 					}
 				}
 			}
@@ -309,10 +309,12 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 						}
 					};
 					
-					propagateConstrained(constraint, new PathEdge<N,D>(
+					propagateConstrained(constraint, new ConcretizationPathEdge<>(
 							applyConstraint(constraint, incomingEdge.getCallerSourceFact()), 
 							incomingEdge.getCallSite(), 
-							applyConstraint(constraint, incomingEdge.getCallerCallSiteFact())));
+							applyConstraint(constraint, incomingEdge.getCallerCallSiteFact()),
+							method,
+							edge.factAtSource()));
 				}
 			}
 		}
@@ -386,7 +388,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 						// for each incoming-call value
 						for (AnnotatedFact<FieldRef, D> callerTargetAnnotatedFact : callerTargetFacts) {
 							D callerTargetFact = restoreContextOnReturnedFact(incomingEdge.getCallerCallSiteFact(), callerTargetAnnotatedFact.getFact());
-							propagate(incomingEdge.getCallerSourceFact(), retSiteC, callerTargetFact, callSite, false);
+							propagate(new PathEdge<>(incomingEdge.getCallerSourceFact(), retSiteC, callerTargetFact), callSite, false);
 						}
 					}
 				}
@@ -404,7 +406,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 					FlowFunction<FieldRef, D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
 					Set<AnnotatedFact<FieldRef, D>> targets = computeReturnFlowFunction(retFunction, d2, c);
 					for(AnnotatedFact<FieldRef, D> d5: targets)
-						propagate(zeroValue, retSiteC, d5.getFact(), c, true);
+						propagate(new PathEdge<>(zeroValue, retSiteC, d5.getFact()), c, true);
 				}
 			}
 			//in cases where there are no callers, the return statement would normally not be processed at all;
@@ -448,7 +450,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 					propagateConstrained(d3.getConstraint(), new PathEdge<>(applyConstraint(d3.getConstraint(), d1), m, d3.getFact()));
 				}
 				else
-					propagate(d1, m, d3.getFact(), null, false);
+					propagate(new PathEdge<>(d1, m, d3.getFact()), null, false);
 			}
 		}
 	}
@@ -477,17 +479,19 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 			for(IncomingEdge<D, N> incEdge : incomingEdgesPrefixesOf(calleeMethod, pathEdge.factAtSource())) {
 				boolean equal = incEdge.getCalleeSourceFact().equals(pathEdge.factAtSource()); //TODO: write test case for this
 				if(!equal && !callSitesWithInterest.contains(incEdge.getCallSite())) {
-					PathEdge<N,D> callerEdge = new PathEdge<>(
+					PathEdge<N,D> callerEdge = new ConcretizationPathEdge<>(
 							applyConstraint(constraint, incEdge.getCallerSourceFact()), 
 							incEdge.getCallSite(), 
-							applyConstraint(constraint, incEdge.getCallerCallSiteFact()));
+							applyConstraint(constraint, incEdge.getCallerCallSiteFact()),
+							calleeMethod,
+							pathEdge.factAtSource());
 					propagate |= propagateConstrained(constraint, callerEdge);
 				}
 			}
 		}
 		
 		if(propagate) {
-			propagate(pathEdge.factAtSource(), pathEdge.getTarget(), pathEdge.factAtTarget(), null, false);
+			propagate(pathEdge, pathEdge instanceof ConcretizationPathEdge ? pathEdge.getTarget() : null, false);
 			return true;
 		} else {
 			pauseEdge(pathEdge);
@@ -536,28 +540,40 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 	
 	/**
 	 * Propagates the flow further down the exploded super graph. 
-	 * @param sourceVal the source value of the propagated summary edge
-	 * @param target the target statement
-	 * @param targetVal the target value at the target statement
+	 * @param edge the PathEdge that should be propagated
 	 * @param relatedCallSite for call and return flows the related call statement, <code>null</code> otherwise
 	 *        (this value is not used within this implementation but may be useful for subclasses of {@link IFDSSolver}) 
 	 * @param isUnbalancedReturn <code>true</code> if this edge is propagating an unbalanced return
 	 *        (this value is not used within this implementation but may be useful for subclasses of {@link IFDSSolver})
 	 */
-	protected void propagate(D sourceVal, N target, D targetVal,
+	protected void propagate(PathEdge<N,D> edge,
 			/* deliberately exposed to clients */ N relatedCallSite,
 			/* deliberately exposed to clients */ boolean isUnbalancedReturn) {
-		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
+		
 		final D existingVal = jumpFn.addFunction(edge);
-		//TODO: Merge d.* and d.*\{x} as d.*
-		if (existingVal != null) {
-			if (existingVal != targetVal)
-				existingVal.addNeighbor(targetVal);
-		}
-		else {
-			scheduleEdgeProcessing(edge);
-			if(targetVal!=zeroValue)
-				logger.trace("EDGE: <{},{}> -> <{},{}>", icfg.getMethodOf(target), sourceVal, target, targetVal);
+		
+		if(edge instanceof ConcretizationPathEdge) {
+			ConcretizationPathEdge<M, N, D> concEdge = (ConcretizationPathEdge<M,N,D>) edge;
+			jumpFn.addFunction(concEdge);
+			
+			IncomingEdge<D, N> incomingEdge = new IncomingEdge<D, N>(concEdge.getCalleeSourceFact(), 
+					concEdge.getTarget(), concEdge.factAtSource(), concEdge.factAtTarget());
+			if (!addIncoming(concEdge.getCalleeMethod(), incomingEdge))
+				return;
+			
+			resumeEdges(concEdge.getCalleeMethod(), concEdge.getCalleeSourceFact());
+			registerInterestedCaller(concEdge.getCalleeMethod(), incomingEdge);
+		} else {
+			//TODO: Merge d.* and d.*\{x} as d.*
+			if (existingVal != null) {
+				if (existingVal != edge.factAtTarget())
+					existingVal.addNeighbor(edge.factAtTarget());
+			}
+			else {
+				scheduleEdgeProcessing(edge);
+				if(edge.factAtTarget()!=zeroValue)
+					logger.trace("EDGE: {}: {}", icfg.getMethodOf(edge.getTarget()), edge);
+			}
 		}
 	}
 
