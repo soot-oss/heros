@@ -72,7 +72,7 @@ public class CountLatch {
 	}
 
 	public void awaitZero() throws InterruptedException {
-		sync.acquireSharedInterruptibly(1);
+		sync.acquireShared(1);
 	}
 
 	public boolean awaitZero(long timeout, TimeUnit unit) throws InterruptedException {

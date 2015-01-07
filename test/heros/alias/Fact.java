@@ -20,15 +20,16 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 
 
-public class Fact implements FieldSensitiveFact<String, Fact> {
+public class Fact implements FieldSensitiveFact<String, String, Fact> {
 
 	public final String baseValue;
-	public final FieldReference[] accessPath;
+	public final AccessPath<String> accessPath;
 	
 	public Fact(String name) {
 		Pattern pattern = Pattern.compile("(\\.|\\^)([^\\.\\^]+)");
 		Matcher matcher = pattern.matcher(name);
-		ArrayList<FieldReference> accessPath = Lists.newArrayList();
+		AccessPath<String> accessPath = new AccessPath<>();
+		boolean addedExclusions = false;
 		
 		int firstSeparator = matcher.find() ? matcher.start() : name.length();
 		baseValue = name.substring(0, firstSeparator);
@@ -39,23 +40,25 @@ public class Fact implements FieldSensitiveFact<String, Fact> {
 			String identifier = matcher.group(2);
 			
 			if(separator.equals(".")) {
-				accessPath.add(new FieldReference.SpecificFieldReference(identifier));
+				if(addedExclusions)
+					throw new IllegalArgumentException("Access path contains field references after exclusions.");
+				accessPath = accessPath.addFieldReference(identifier);
 			} else {
-				accessPath.add(new FieldReference.Any(identifier.split(",")));
+				addedExclusions=true;
+				accessPath = accessPath.appendExcludedFieldReference(identifier.split(","));
 			}
 		}
-		this.accessPath = accessPath.toArray(new FieldReference[accessPath.size()]);
+		this.accessPath = accessPath;
 	}
 	
-	public Fact(String baseValue, FieldReference[] accessPath) {
+	public Fact(String baseValue, AccessPath<String> accessPath) {
 		this.baseValue = baseValue;
 		this.accessPath = accessPath;
 	}
-
 	
 	@Override
 	public String toString() {
-		return "[Fact "+baseValue+(accessPath.length>0 ? "."+Joiner.on(".").join(accessPath) : "" )+"]";
+		return "[Fact "+baseValue+(accessPath.isEmpty() ? "" : accessPath)+"]";
 	}
 
 	@Override
@@ -64,30 +67,26 @@ public class Fact implements FieldSensitiveFact<String, Fact> {
 	}
 
 	@Override
-	public FieldReference[] getAccessPath() {
+	public AccessPath<String> getAccessPath() {
 		return accessPath;
 	}
 
-
 	@Override
-	public void addNeighbor(FieldSensitiveFact<String, Fact> originalAbstraction) {
+	public void addNeighbor(Fact originalAbstraction) {
 		
 	}
 
-
 	@Override
-	public void setCallingContext(FieldSensitiveFact<String, Fact> callingContext) {
+	public void setCallingContext(Fact callingContext) {
 		
 	}
-
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + Arrays.hashCode(accessPath);
-		result = prime * result
-				+ ((baseValue == null) ? 0 : baseValue.hashCode());
+		result = prime * result + ((accessPath == null) ? 0 : accessPath.hashCode());
+		result = prime * result + ((baseValue == null) ? 0 : baseValue.hashCode());
 		return result;
 	}
 
@@ -97,10 +96,13 @@ public class Fact implements FieldSensitiveFact<String, Fact> {
 			return true;
 		if (obj == null)
 			return false;
-		if (getClass() != obj.getClass())
+		if (!(obj instanceof Fact))
 			return false;
 		Fact other = (Fact) obj;
-		if (!Arrays.equals(accessPath, other.accessPath))
+		if (accessPath == null) {
+			if (other.accessPath != null)
+				return false;
+		} else if (!accessPath.equals(other.accessPath))
 			return false;
 		if (baseValue == null) {
 			if (other.baseValue != null)
@@ -110,11 +112,8 @@ public class Fact implements FieldSensitiveFact<String, Fact> {
 		return true;
 	}
 
-
-
-
 	@Override
-	public Fact cloneWithAccessPath(FieldReference... accessPath) {
+	public Fact cloneWithAccessPath(AccessPath<String> accessPath) {
 		return new Fact(baseValue, accessPath);
 	}
 	

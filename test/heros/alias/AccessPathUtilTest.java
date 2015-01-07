@@ -53,21 +53,22 @@ public class AccessPathUtilTest {
 	
 	@Test
 	public void testDifferentExclusions() {
-		assertTrue(isPrefixOf(new Fact("a^f"), new Fact("a^g")));
+		assertFalse(isPrefixOf(new Fact("a^f"), new Fact("a^g")));
 	}
 	
 	@Test
 	public void testMixedFieldAccess() {
-		assertTrue(isPrefixOf(new Fact("a^f.g"), new Fact("a.g.g")));
-		assertFalse(isPrefixOf(new Fact("a^f.g"), new Fact("a.g.h")));
-		assertFalse(isPrefixOf(new Fact("a^f.g"), new Fact("a.f.g")));
+		assertTrue(isPrefixOf(new Fact("a^f"), new Fact("a.g.g")));
+		assertFalse(isPrefixOf(new Fact("a^f"), new Fact("a.f.h")));
 		assertTrue(isPrefixOf(new Fact("a.f"), new Fact("a.f^g")));
 	}
 	
 	@Test
 	public void testMultipleExclusions() {
 		assertTrue(isPrefixOf(new Fact("a^f,g"), new Fact("a^f")));
-		assertTrue(isPrefixOf(new Fact("a^f"), new Fact("a^f,g")));
+		assertFalse(isPrefixOf(new Fact("a^f"), new Fact("a^f,g")));
+		assertTrue(isPrefixOf(new Fact("a^f,g"), new Fact("a^f")));
+		assertTrue(isPrefixOf(new Fact("a^f,g"), new Fact("a^g")));
 	}
 
 	@Test
@@ -76,10 +77,15 @@ public class AccessPathUtilTest {
 	}
 	
 	@Test
-	public void testExclusionDoesNotRequireFieldAccess() {
-		assertTrue(isPrefixOf(new Fact("a^f"), new Fact("a")));
-		assertTrue(isPrefixOf(new Fact("a.f^g"), new Fact("a.f")));
-		assertTrue(isPrefixOf(new Fact("a.f^g^h"), new Fact("a.f")));
+	public void testExclusionRequiresFieldAccess() {
+		assertTrue(isPrefixOf(new Fact("a"), new Fact("a^f")));
+		assertFalse(isPrefixOf(new Fact("a^f"), new Fact("a")));
+		
+		assertTrue(isPrefixOf(new Fact("a.f"), new Fact("a.f^g")));
+		assertFalse(isPrefixOf(new Fact("a.f^g"), new Fact("a.f")));
+		
+		assertTrue(isPrefixOf(new Fact("a.f"), new Fact("a.f^g^h")));
+		assertFalse(isPrefixOf(new Fact("a.f^g^h"), new Fact("a.f")));
 	}
 	
 	@Test
@@ -132,20 +138,5 @@ public class AccessPathUtilTest {
 	@Test
 	public void testNullOnImpossibleSubsumption() {
 		assertFalse(applyAbstractedSummary(new Fact("a.f"), new SummaryEdge<>(new Fact("a"), null, new Fact("a^f"))).isPresent());
-	}
-	
-	@Test
-	public void testConcretizeCallerSourceFact() {
-		assertEquals(new Fact("0.f"), AccessPathUtil.concretizeCallerSourceFact(new IncomingEdge<>(new Fact("2"), null, new Fact("0"), null), new Fact("2.f")));
-	}
-	
-	@Test
-	public void testConcretizeCallerSourceFactIdentity() {
-		assertEquals(new Fact("0.f"), AccessPathUtil.concretizeCallerSourceFact(new IncomingEdge<>(new Fact("2.f"), null, new Fact("0.f"), null), new Fact("2.f")));
-	}
-	
-	@Test(expected=IllegalArgumentException.class)
-	public void testConcretizeCallerSourceFactNoPrefix() {
-		AccessPathUtil.concretizeCallerSourceFact(new IncomingEdge<>(new Fact("2.f"), null, new Fact("0.f"), null), new Fact("2"));
 	}
 }

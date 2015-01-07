@@ -12,12 +12,12 @@ package heros.alias;
 
 import heros.solver.LinkedNode;
 
-public interface FieldSensitiveFact<BaseValue, D> extends LinkedNode<FieldSensitiveFact<BaseValue, D>>{
+public interface FieldSensitiveFact<BaseValue, FieldRef, D> extends LinkedNode<D>{
 
 	BaseValue getBaseValue();
 	
-	FieldReference[] getAccessPath();
+	AccessPath<FieldRef> getAccessPath();
 	
-	D cloneWithAccessPath(FieldReference... accessPath);
+	D cloneWithAccessPath(AccessPath<FieldRef> accessPath);
 	
 }

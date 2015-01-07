@@ -27,7 +27,7 @@ package heros.alias;
  *            The type of objects used to represent methods. Typically
  *            {@link SootMethod}.
  */
-public interface FlowFunctions<Stmt, F extends FieldSensitiveFact<?, F>, Method> {
+public interface FlowFunctions<Stmt, FieldRef, F extends FieldSensitiveFact<?, FieldRef, F>, Method> {
 
 	/**
 	 * Returns the flow function that computes the flow for a normal statement,
@@ -40,7 +40,7 @@ public interface FlowFunctions<Stmt, F extends FieldSensitiveFact<?, F>, Method>
 	 *            be used to compute a branched analysis that propagates
 	 *            different values depending on where control0flow branches.
 	 */
-	public FlowFunction<F> getNormalFlowFunction(Stmt curr, Stmt succ);
+	public FlowFunction<FieldRef, F> getNormalFlowFunction(Stmt curr, Stmt succ);
 
 	
 	/**
@@ -52,7 +52,7 @@ public interface FlowFunctions<Stmt, F extends FieldSensitiveFact<?, F>, Method>
 	 * @param destinationMethod
 	 *            The concrete target method for which the flow is computed.
 	 */
-	public FlowFunction<F> getCallFlowFunction(Stmt callStmt, Method destinationMethod);
+	public FlowFunction<FieldRef, F> getCallFlowFunction(Stmt callStmt, Method destinationMethod);
 
 	/**
 	 * Returns the flow function that computes the flow for a an exit from a
@@ -82,7 +82,7 @@ public interface FlowFunctions<Stmt, F extends FieldSensitiveFact<?, F>, Method>
 	 *            does not contain a caller for the method that is returned from.
 	 * @return
 	 */
-	public FlowFunction<F> getReturnFlowFunction(Stmt callSite, Method calleeMethod, Stmt exitStmt, Stmt returnSite);
+	public FlowFunction<FieldRef, F> getReturnFlowFunction(Stmt callSite, Method calleeMethod, Stmt exitStmt, Stmt returnSite);
 
 	/**
 	 * Returns the flow function that computes the flow from a call site to a
@@ -102,7 +102,7 @@ public interface FlowFunctions<Stmt, F extends FieldSensitiveFact<?, F>, Method>
 	 *            exceptional flow, this may actually be the start of an
 	 *            exception handler.
 	 */
-	public FlowFunction<F> getCallToReturnFlowFunction(Stmt callSite, Stmt returnSite);
+	public FlowFunction<FieldRef, F> getCallToReturnFlowFunction(Stmt callSite, Stmt returnSite);
 
 	
 	

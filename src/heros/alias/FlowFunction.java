@@ -10,8 +10,6 @@
  ******************************************************************************/
 package heros.alias;
 
-import heros.alias.FieldReference.SpecificFieldReference;
-
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -33,18 +31,18 @@ import java.util.Set;
  * 
  * @param <D> The type of data-flow facts to be computed by the tabulation problem.
  */
-public interface FlowFunction<D extends FieldSensitiveFact<?, D>> {
+public interface FlowFunction<FieldRef, D extends FieldSensitiveFact<?, FieldRef, D>> {
 
 	/**
 	 * Returns the target values reachable from the source.
 	 */
-	Set<AnnotatedFact<D>> computeTargets(D source);
+	Set<AnnotatedFact<FieldRef, D>> computeTargets(D source);
 	
-	public static class AnnotatedFact<D extends FieldSensitiveFact<?, D>> {
+	//TODO: rename to ConstrainedFact
+	public static class AnnotatedFact<FieldRef, D extends FieldSensitiveFact<?, FieldRef, D>> {
 		
 		private D fact;
-		private String readField;
-		private String writtenField;
+		private Constraint<FieldRef> constraint;
 		
 		//TODO: Refactor API to make things more intuitive
 		/**
@@ -53,31 +51,25 @@ public interface FlowFunction<D extends FieldSensitiveFact<?, D>> {
 		 * @param readField Giving a field reference here means the base value of a field access was tainted, i.e., we have to concretize the source value
 		 * @param writtenField
 		 */
-		public AnnotatedFact(D fact, String readField, String writtenField) {
+		public AnnotatedFact(D fact, Constraint<FieldRef> constraint) {
 			this.fact = fact;
-			this.readField = readField;
-			this.writtenField = writtenField;
+			this.constraint = constraint;
 		}
 		
 		public D getFact() {
 			return fact;
 		}
 		
-		public String getReadField() {
-			return readField;
-		}
-		
-		public String getWrittenField() {
-			return writtenField;
+		public Constraint<FieldRef> getConstraint() {
+			return constraint;
 		}
 
 		@Override
 		public int hashCode() {
 			final int prime = 31;
 			int result = 1;
+			result = prime * result + ((constraint == null) ? 0 : constraint.hashCode());
 			result = prime * result + ((fact == null) ? 0 : fact.hashCode());
-			result = prime * result + ((readField == null) ? 0 : readField.hashCode());
-			result = prime * result + ((writtenField == null) ? 0 : writtenField.hashCode());
 			return result;
 		}
 
@@ -90,27 +82,66 @@ public interface FlowFunction<D extends FieldSensitiveFact<?, D>> {
 			if (!(obj instanceof AnnotatedFact))
 				return false;
 			AnnotatedFact other = (AnnotatedFact) obj;
+			if (constraint == null) {
+				if (other.constraint != null)
+					return false;
+			} else if (!constraint.equals(other.constraint))
+				return false;
 			if (fact == null) {
 				if (other.fact != null)
 					return false;
 			} else if (!fact.equals(other.fact))
-				return false;
-			if (readField == null) {
-				if (other.readField != null)
-					return false;
-			} else if (!readField.equals(other.readField))
-				return false;
-			if (writtenField == null) {
-				if (other.writtenField != null)
-					return false;
-			} else if (!writtenField.equals(other.writtenField))
 				return false;
 			return true;
 		}
 		
 		@Override
 		public String toString() {
-			return fact.toString()+"<"+readField+","+writtenField+">";
+			return fact.toString()+"<"+constraint+">";
+		}
+	}
+	
+	public interface Constraint<FieldRef> {
+		AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath);
+	}
+	
+	public class WriteFieldConstraint<FieldRef> implements Constraint<FieldRef> {
+		private FieldRef fieldRef;
+
+		public WriteFieldConstraint(FieldRef fieldRef) {
+			this.fieldRef = fieldRef;
+		}
+
+		@Override
+		public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath) {
+			if(accPath.hasExclusions())
+				return accPath.getExclusions(0).addExclusion(fieldRef);
+			else
+				return accPath.appendExcludedFieldReference(fieldRef);
+		}
+		
+		@Override
+		public String toString() {
+			return "^"+fieldRef.toString();
+		}
+	}
+	
+	public class ReadFieldConstraint<FieldRef> implements Constraint<FieldRef> {
+
+		private FieldRef fieldRef;
+
+		public ReadFieldConstraint(FieldRef fieldRef) {
+			this.fieldRef = fieldRef;
+		}
+		
+		@Override
+		public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath) {
+			return accPath.addFieldReference(fieldRef);
+		}
+		
+		@Override
+		public String toString() {
+			return fieldRef.toString();
 		}
 	}
 }

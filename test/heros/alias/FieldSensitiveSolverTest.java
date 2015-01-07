@@ -245,12 +245,50 @@ public class FieldSensitiveSolverTest {
 		helper.method("foo",
 				startPoints("a"),
 				normalStmt("a").succ("b", flow("0", "1.f")),
-				callSite("b").calls("bar", flow("1.f", "2")));
+				callSite("b").calls("bar", flow("1.f", "2"), flow("1.f^f", "2^f")));
 		
 		helper.method("bar",
 				startPoints("c"),
 				normalStmt("c").succ("d", flow("2", writeField("f"), "2^f")),
 				normalStmt("d").succ("e", kill("2^f"))); 
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void pauseOnTransitiveExclusion() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1.f")),
+				callSite("b").calls("bar", flow("1.f", "2.f")));
+		
+		helper.method("bar",
+				startPoints("c"),
+				callSite("c").calls("xyz", flow("2", "3")));
+		
+		helper.method("xyz",
+				startPoints("d"),
+				normalStmt("d").succ("e", flow("3", writeField("f"), "3^f")),
+				normalStmt("e").succ("f")); 
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void resumePausedOnTransitiveExclusion() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1.f")),
+				callSite("b").calls("bar", flow("1.f", "2.f")));
+		
+		helper.method("bar",
+				startPoints("c"),
+				callSite("c").calls("xyz", flow("2", "3"), flow("2^f", "3^f")));
+		
+		helper.method("xyz",
+				startPoints("d"),
+				normalStmt("d").succ("e", flow("3", writeField("f"), "3^f"), flow("3", "4")),
+				callSite("e").calls("bar", flow("4", "2.g"), kill("3^f"))); 
 		
 		helper.runSolver(false, "a");
 	}
@@ -277,12 +315,12 @@ public class FieldSensitiveSolverTest {
 				startPoints("a"),
 				normalStmt("a").succ("b", flow("0", "1.f")),
 				callSite("b").calls("bar", flow("1.f", "2.f")).retSite("e", kill("1.f")),
-				callSite("e").calls("bar", flow("4", "2")).retSite("f", kill("4")));
+				callSite("e").calls("bar", flow("4", "2"), flow("4^f", "2^f")).retSite("f", kill("4"), kill("4^f") /*unwanted call2ret*/));
 		
 		helper.method("bar",
 				startPoints("c"),
 				normalStmt("c").succ("d", flow("2", writeField("f"), "2^f"), flow("2", "3")),
-				exitStmt("d").returns(over("b"), to("e"), flow("3.f", "4")).returns(over("e"), to("f"), kill("3"), kill("2^f"))); 
+				exitStmt("d").returns(over("b"), to("e"), flow("3.f", "4")).returns(over("e"), to("f"), kill("3"), kill("3^f"), kill("2^f"))); 
 		
 		helper.runSolver(false, "a");
 	}
