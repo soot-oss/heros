@@ -14,7 +14,7 @@ import heros.DontSynchronize;
 import heros.FlowFunctionCache;
 import heros.InterproceduralCFG;
 import heros.SynchronizedBy;
-import heros.alias.FlowFunction.AnnotatedFact;
+import heros.alias.FlowFunction.ConstrainedFact;
 import heros.alias.FlowFunction.Constraint;
 import heros.solver.CountingThreadPoolExecutor;
 import heros.solver.IFDSSolver;
@@ -221,11 +221,11 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		for(M sCalledProcN: callees) { //still line 14
 			//compute the call-flow function
 			FlowFunction<FieldRef, D> function = flowFunctions.getCallFlowFunction(n, sCalledProcN);
-			Set<AnnotatedFact<FieldRef, D>> res = computeCallFlowFunction(function, d1, d2);
+			Set<ConstrainedFact<FieldRef, D>> res = computeCallFlowFunction(function, d1, d2);
 			
 			Collection<N> startPointsOf = icfg.getStartPointsOf(sCalledProcN);
 			//for each result node of the call-flow function
-			for(AnnotatedFact<FieldRef, D> d3: res) {
+			for(ConstrainedFact<FieldRef, D> d3: res) {
 				//for each callee's start point(s)
 				for(N sP: startPointsOf) {
 					//create initial self-loop
@@ -260,7 +260,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 									//compute return-flow function
 									FlowFunction<FieldRef, D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, summary.getTargetStmt(), retSiteN);
 									//for each target value of the function
-									for(AnnotatedFact<FieldRef, D> d5: computeReturnFlowFunction(retFunction, d4.get(), n)) {
+									for(ConstrainedFact<FieldRef, D> d5: computeReturnFlowFunction(retFunction, d4.get(), n)) {
 										D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5.getFact());
 										propagate(new PathEdge<>(d1, retSiteN, d5p_restoredCtx), n, false);
 									}
@@ -274,7 +274,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		//process intra-procedural flows along call-to-return flow functions
 		for (N returnSiteN : returnSiteNs) {
 			FlowFunction<FieldRef, D> callToReturnFlowFunction = flowFunctions.getCallToReturnFlowFunction(n, returnSiteN);
-			for(AnnotatedFact<FieldRef, D> d3: computeCallToReturnFlowFunction(callToReturnFlowFunction, d1, d2))
+			for(ConstrainedFact<FieldRef, D> d3: computeCallToReturnFlowFunction(callToReturnFlowFunction, d1, d2))
 				propagate(new PathEdge<>(d1, returnSiteN, d3.getFact()), n, false);
 		}
 	}
@@ -327,7 +327,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 	 * @param d2 The abstraction at the call site
 	 * @return The set of caller-side abstractions at the callee's start node
 	 */
-	protected Set<AnnotatedFact<FieldRef, D>> computeCallFlowFunction
+	protected Set<ConstrainedFact<FieldRef, D>> computeCallFlowFunction
 			(FlowFunction<FieldRef, D> callFlowFunction, D d1, D d2) {
 		return callFlowFunction.computeTargets(d2);
 	}
@@ -341,7 +341,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 	 * @param d2 The abstraction at the call site
 	 * @return The set of caller-side abstractions at the return site
 	 */
-	protected Set<AnnotatedFact<FieldRef, D>> computeCallToReturnFlowFunction
+	protected Set<ConstrainedFact<FieldRef, D>> computeCallToReturnFlowFunction
 			(FlowFunction<FieldRef, D> callToReturnFlowFunction, D d1, D d2) {
 		return callToReturnFlowFunction.computeTargets(d2);
 	}
@@ -383,10 +383,10 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 				if(AccessPathUtil.isPrefixOf(d1, incomingEdge.getCalleeSourceFact())) {
 					Optional<D> concreteCalleeExitFact = AccessPathUtil.applyAbstractedSummary(incomingEdge.getCalleeSourceFact(), summaryEdge);
 					if(concreteCalleeExitFact.isPresent()) {
-						Set<AnnotatedFact<FieldRef, D>> callerTargetFacts = computeReturnFlowFunction(retFunction, concreteCalleeExitFact.get(), callSite);
+						Set<ConstrainedFact<FieldRef, D>> callerTargetFacts = computeReturnFlowFunction(retFunction, concreteCalleeExitFact.get(), callSite);
 	
 						// for each incoming-call value
-						for (AnnotatedFact<FieldRef, D> callerTargetAnnotatedFact : callerTargetFacts) {
+						for (ConstrainedFact<FieldRef, D> callerTargetAnnotatedFact : callerTargetFacts) {
 							D callerTargetFact = restoreContextOnReturnedFact(incomingEdge.getCallerCallSiteFact(), callerTargetAnnotatedFact.getFact());
 							propagate(new PathEdge<>(incomingEdge.getCallerSourceFact(), retSiteC, callerTargetFact), callSite, false);
 						}
@@ -404,8 +404,8 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 			for(N c: callers) {
 				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
 					FlowFunction<FieldRef, D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
-					Set<AnnotatedFact<FieldRef, D>> targets = computeReturnFlowFunction(retFunction, d2, c);
-					for(AnnotatedFact<FieldRef, D> d5: targets)
+					Set<ConstrainedFact<FieldRef, D>> targets = computeReturnFlowFunction(retFunction, d2, c);
+					for(ConstrainedFact<FieldRef, D> d5: targets)
 						propagate(new PathEdge<>(zeroValue, retSiteC, d5.getFact()), c, true);
 				}
 			}
@@ -427,7 +427,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 	 * @param callSite The call site
 	 * @return The set of caller-side abstractions at the return site
 	 */
-	protected Set<AnnotatedFact<FieldRef, D>> computeReturnFlowFunction
+	protected Set<ConstrainedFact<FieldRef, D>> computeReturnFlowFunction
 			(FlowFunction<FieldRef, D> retFunction, D d2, N callSite) {
 		return retFunction.computeTargets(d2);
 	}
@@ -444,8 +444,8 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		
 		for (N m : icfg.getSuccsOf(n)) {
 			FlowFunction<FieldRef, D> flowFunction = flowFunctions.getNormalFlowFunction(n,m);
-			Set<AnnotatedFact<FieldRef, D>> res = computeNormalFlowFunction(flowFunction, d1, d2);
-			for (AnnotatedFact<FieldRef, D> d3 : res) {
+			Set<ConstrainedFact<FieldRef, D>> res = computeNormalFlowFunction(flowFunction, d1, d2);
+			for (ConstrainedFact<FieldRef, D> d3 : res) {
 				if(d3.getConstraint() != null) {
 					propagateConstrained(d3.getConstraint(), new PathEdge<>(applyConstraint(d3.getConstraint(), d1), m, d3.getFact()));
 				}
@@ -515,7 +515,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 	 * @param d1 The abstraction at the current node
 	 * @return The set of abstractions at the successor node
 	 */
-	protected Set<AnnotatedFact<FieldRef, D>> computeNormalFlowFunction
+	protected Set<ConstrainedFact<FieldRef, D>> computeNormalFlowFunction
 			(FlowFunction<FieldRef, D> flowFunction, D d1, D d2) {
 		return flowFunction.computeTargets(d2);
 	}

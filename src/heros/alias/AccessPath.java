@@ -20,8 +20,8 @@ import com.google.common.collect.Sets;
 @SuppressWarnings("unchecked")
 public class AccessPath<FieldRef> {
 
-	private FieldRef[] accesses;
-	private Set<FieldRef>[] exclusions;
+	private final FieldRef[] accesses;
+	private final Set<FieldRef>[] exclusions;
 	
 	public AccessPath() {
 		accesses = (FieldRef[]) new Object[0];
@@ -57,6 +57,31 @@ public class AccessPath<FieldRef> {
 
 	public ExclusionSet getExclusions(int index) {
 		return new ExclusionSet(index);
+	}
+	
+	public AccessPath<FieldRef> append(AccessPath<FieldRef> accessPath) {
+		if(exclusions.length > 0) 
+			throw new IllegalStateException();
+		
+		FieldRef[] newAccesses = Arrays.copyOf(accesses, accesses.length + accessPath.accesses.length);
+		System.arraycopy(accessPath.accesses, 0, newAccesses, accesses.length, accessPath.accesses.length);
+		return new AccessPath<FieldRef>(newAccesses, accessPath.exclusions);
+	}
+
+	public AccessPath<FieldRef> removeFirstAccessIfAvailable() {
+		if(accesses.length > 0)
+			return new AccessPath<FieldRef>(Arrays.copyOfRange(accesses, 1, accesses.length), exclusions);
+		else if(exclusions.length > 0)
+			return new AccessPath<FieldRef>(accesses, Arrays.copyOfRange(exclusions, 1, exclusions.length));
+		else
+			return this;
+	}
+
+	public AccessPath<FieldRef> mergeExcludedFieldReference(FieldRef... fieldRef) {
+		if(hasExclusions())
+			return getExclusions(0).addExclusion(fieldRef);
+		else
+			return appendExcludedFieldReference(fieldRef);
 	}
 	
 	public AccessPath<FieldRef> appendExcludedFieldReference(FieldRef... fieldReferences) {
@@ -155,9 +180,10 @@ public class AccessPath<FieldRef> {
 			this.index = index;
 		}
 		
-		public AccessPath<FieldRef> addExclusion(FieldRef exclusion) {
+		public AccessPath<FieldRef> addExclusion(FieldRef... exclusion) {
 			HashSet<FieldRef> newExclusions = Sets.newHashSet(exclusions[index]);
-			newExclusions.add(exclusion);
+			for(FieldRef excl : exclusion)
+				newExclusions.add(excl);
 			Set<FieldRef>[] newExclusionsArray = exclusions.clone();
 			newExclusionsArray[index] = newExclusions;
 			return new AccessPath<FieldRef>(accesses, newExclusionsArray);

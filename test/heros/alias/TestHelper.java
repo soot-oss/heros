@@ -11,7 +11,7 @@
 package heros.alias;
 
 import static org.junit.Assert.assertTrue;
-import heros.alias.FlowFunction.AnnotatedFact;
+import heros.alias.FlowFunction.ConstrainedFact;
 import heros.alias.FlowFunction.Constraint;
 import heros.alias.IFDSTabulationProblem;
 import heros.InterproceduralCFG;
@@ -103,9 +103,9 @@ public class TestHelper {
 	}
 	
 	public static ExpectedFlowFunction flow(int times, String source, Constraint<String> constraint, String... targets) {
-		AnnotatedFact<String, Fact>[] targetFacts = new AnnotatedFact[targets.length];
+		ConstrainedFact<String, Fact>[] targetFacts = new ConstrainedFact[targets.length];
 		for(int i=0; i<targets.length; i++) {
-			targetFacts[i] = new AnnotatedFact<String, Fact>(new Fact(targets[i]), constraint);
+			targetFacts[i] = new ConstrainedFact<String, Fact>(new Fact(targets[i]), constraint);
 		}
 		return new ExpectedFlowFunction(times, new Fact(source), targetFacts);
 	}
@@ -302,11 +302,11 @@ public class TestHelper {
 	public static class ExpectedFlowFunction {
 
 		public final Fact source;
-		public final AnnotatedFact<String, Fact>[] targets;
+		public final ConstrainedFact<String, Fact>[] targets;
 		public Edge edge;
 		private int times;
 
-		public ExpectedFlowFunction(int times, Fact source, AnnotatedFact<String, Fact>... targets) {
+		public ExpectedFlowFunction(int times, Fact source, ConstrainedFact<String, Fact>... targets) {
 			this.times = times;
 			this.source = source;
 			this.targets = targets;
@@ -486,8 +486,8 @@ public class TestHelper {
 			private FlowFunction<String, Fact> createFlowFunction(final Edge edge) {
 				return new FlowFunction<String, Fact>() {
 					@Override
-					public Set<AnnotatedFact<String, Fact>> computeTargets(Fact source) {
-						Set<AnnotatedFact<String, Fact>> result = Sets.newHashSet();
+					public Set<ConstrainedFact<String, Fact>> computeTargets(Fact source) {
+						Set<ConstrainedFact<String, Fact>> result = Sets.newHashSet();
 						boolean found = false;
 						for (ExpectedFlowFunction ff : edge.flowFunctions) {
 							if (ff.source.equals(source)) {

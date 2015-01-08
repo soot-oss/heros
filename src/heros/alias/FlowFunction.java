@@ -36,22 +36,19 @@ public interface FlowFunction<FieldRef, D extends FieldSensitiveFact<?, FieldRef
 	/**
 	 * Returns the target values reachable from the source.
 	 */
-	Set<AnnotatedFact<FieldRef, D>> computeTargets(D source);
+	Set<ConstrainedFact<FieldRef, D>> computeTargets(D source);
 	
-	//TODO: rename to ConstrainedFact
-	public static class AnnotatedFact<FieldRef, D extends FieldSensitiveFact<?, FieldRef, D>> {
+	public static class ConstrainedFact<FieldRef, D extends FieldSensitiveFact<?, FieldRef, D>> {
 		
 		private D fact;
 		private Constraint<FieldRef> constraint;
 		
-		//TODO: Refactor API to make things more intuitive
-		/**
-		 * 
-		 * @param fact
-		 * @param readField Giving a field reference here means the base value of a field access was tainted, i.e., we have to concretize the source value
-		 * @param writtenField
-		 */
-		public AnnotatedFact(D fact, Constraint<FieldRef> constraint) {
+		public ConstrainedFact(D fact) {
+			this.fact = fact;
+			this.constraint = null;
+		}
+		
+		public ConstrainedFact(D fact, Constraint<FieldRef> constraint) {
 			this.fact = fact;
 			this.constraint = constraint;
 		}
@@ -79,9 +76,9 @@ public interface FlowFunction<FieldRef, D extends FieldSensitiveFact<?, FieldRef
 				return true;
 			if (obj == null)
 				return false;
-			if (!(obj instanceof AnnotatedFact))
+			if (!(obj instanceof ConstrainedFact))
 				return false;
-			AnnotatedFact other = (AnnotatedFact) obj;
+			ConstrainedFact other = (ConstrainedFact) obj;
 			if (constraint == null) {
 				if (other.constraint != null)
 					return false;
@@ -114,10 +111,7 @@ public interface FlowFunction<FieldRef, D extends FieldSensitiveFact<?, FieldRef
 
 		@Override
 		public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath) {
-			if(accPath.hasExclusions())
-				return accPath.getExclusions(0).addExclusion(fieldRef);
-			else
-				return accPath.appendExcludedFieldReference(fieldRef);
+			return accPath.mergeExcludedFieldReference(fieldRef);
 		}
 		
 		@Override

@@ -18,7 +18,10 @@ import com.google.common.base.Optional;
 public class AccessPathUtil {
 
 	public static <FieldRef, D extends FieldSensitiveFact<?, FieldRef,  D>> boolean isPrefixOf(D prefixCandidate, D fact) {
-		if(!prefixCandidate.getBaseValue().equals(fact.getBaseValue()))
+		if(prefixCandidate.getBaseValue() == null) {
+			if(fact.getBaseValue() != null)
+				return false;
+		} else if(!prefixCandidate.getBaseValue().equals(fact.getBaseValue()))
 			return false;
 		
 		return prefixCandidate.getAccessPath().isPrefixOf(fact.getAccessPath());
