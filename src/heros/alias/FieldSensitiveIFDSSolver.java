@@ -229,7 +229,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 				//for each callee's start point(s)
 				for(N sP: startPointsOf) {
 					//create initial self-loop
-					D abstractStartPointFact = d3.getFact().cloneWithAccessPath(new AccessPath<FieldRef>());
+					D abstractStartPointFact = AccessPathUtil.cloneWithAccessPath(d3.getFact(), new AccessPath<FieldRef>());
 					propagate(new PathEdge<>(abstractStartPointFact, sP, abstractStartPointFact), n, false); //line 15
 				}
 				

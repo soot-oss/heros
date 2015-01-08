@@ -10,8 +10,6 @@
  ******************************************************************************/
 package heros.alias;
 
-import java.util.ArrayList;
-
 import com.google.common.base.Optional;
 
 
@@ -34,6 +32,9 @@ public class AccessPathUtil {
 		AccessPath<FieldRef> concreteAccessPath = sourceFact.getAccessPath();
 		AccessPath<FieldRef> abstractAccessPath = summary.getSourceFact().getAccessPath();
 		AccessPath<FieldRef> targetAccessPath = summary.getTargetFact().getAccessPath();
+
+		if(abstractAccessPath.equals(concreteAccessPath))
+			return Optional.of(summary.getTargetFact());
 		
 		FieldRef[] delta = abstractAccessPath.getDeltaTo(concreteAccessPath);
 		if(targetAccessPath.isAccessInExclusions(delta))
@@ -45,29 +46,10 @@ public class AccessPathUtil {
 		return Optional.of(summary.getTargetFact().cloneWithAccessPath(result));
 	}
 
-//	public static <FieldRef, D extends FieldSensitiveFact<?, FieldRef, D>> D cloneWithConcatenatedAccessPath(D fact, FieldReference... fieldRefs) {
-//		FieldReference[] accessPath = new FieldReference[fact.getAccessPath().length+fieldRefs.length];
-//		System.arraycopy(fact.getAccessPath(), 0, accessPath, 0, fact.getAccessPath().length);
-//		System.arraycopy(fieldRefs, 0, accessPath, fact.getAccessPath().length, fieldRefs.length);
-//		return fact.cloneWithAccessPath(accessPath);
-//	}
-	
-//	public static <FieldRef, D extends FieldSensitiveFact<?, FieldRef, D>> D concretizeCallerSourceFact(IncomingEdge<D, ?> incomingEdge, D calleeSourceFact) {
-//		if(!isPrefixOf(incomingEdge.getCalleeSourceFact(), calleeSourceFact))
-//			throw new IllegalArgumentException(String.format("Callee Source Fact in IncomingEdge '%s' is not a prefix of the given fact '%s'.", incomingEdge, calleeSourceFact));
-//		
-//		FieldReference[] abstractAccessPath = incomingEdge.getCalleeSourceFact().getAccessPath();
-//		FieldReference[] concreteAccessPath = calleeSourceFact.getAccessPath();
-//		FieldReference[] targetAccessPath = incomingEdge.getCallerSourceFact().getAccessPath();
-//		
-//		FieldReference[] resultAccessPath = new FieldReference[targetAccessPath.length + concreteAccessPath.length - abstractAccessPath.length];
-//
-//		//copy old access path
-//		System.arraycopy(targetAccessPath, 0, resultAccessPath, 0, targetAccessPath.length);
-//		
-//		//copy delta access path that was omitted while creating the abstracted source fact
-//		System.arraycopy(concreteAccessPath, abstractAccessPath.length, resultAccessPath, targetAccessPath.length, concreteAccessPath.length - abstractAccessPath.length);
-//		
-//		return incomingEdge.getCallerSourceFact().cloneWithAccessPath(resultAccessPath);
-//	}
+	public static <FieldRef, D extends FieldSensitiveFact<?, FieldRef,  D>> D cloneWithAccessPath(D fact, AccessPath<FieldRef> accPath) {
+		if(fact.getAccessPath().equals(accPath))
+			return fact;
+		else
+			return fact.cloneWithAccessPath(accPath);
+	}
 }
