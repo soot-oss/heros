@@ -477,4 +477,92 @@ public class FieldSensitiveSolverTest {
 		helper.runSolver(true, "a");
 	}
 	
+	@Test
+	public void pauseEdgeMutuallyRecursiveCallers() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1.x")),
+				callSite("b").calls("bar",flow("1.x", "2.x")));
+		
+		helper.method("bar",
+				startPoints("c"),
+				callSite("c").calls("xyz", flow("2", "3")));
+		
+		helper.method("xyz",
+				startPoints("d"),
+				callSite("d").calls("bar", flow("3", "2")).retSite("e", flow("3", "3")),
+				normalStmt("e").succ("f", flow("3", readField("f"), "4")));
+				
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void pauseDiamondShapedCallerChain() {
+		helper.method("bar",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1.x")),
+				callSite("b").calls("foo1", flow("1.x", "2.x")).calls("foo2", flow("1.x", "2.x")));
+		
+		helper.method("foo1",
+				startPoints("c1"),
+				callSite("c1").calls("xyz", flow("2", "3")));
+		
+		helper.method("foo2",
+				startPoints("c2"),
+				callSite("c2").calls("xyz", flow("2", "3")));
+		
+		helper.method("xyz",
+				startPoints("d"),
+				normalStmt("d").succ("e", flow("3", readField("f"), "4")),
+				normalStmt("e").succ("f"));
+		
+		helper.runSolver(false, "a");
+	}
+
+	@Test
+	public void dontPauseDiamondShapedCallerChain() {
+		helper.method("bar",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1.x")),
+				callSite("b").calls("foo1", flow("1.x", "2.f")).calls("foo2", flow("1.x", "2.f")));
+		
+		helper.method("foo1",
+				startPoints("c1"),
+				callSite("c1").calls("xyz", flow("2", "3")));
+		
+		helper.method("foo2",
+				startPoints("c2"),
+				callSite("c2").calls("xyz", flow("2", "3")));
+		
+		helper.method("xyz",
+				startPoints("d"),
+				normalStmt("d").succ("e", flow("3", readField("f"), "4")),
+				normalStmt("e").succ("f", kill("4")));
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void correctDeltaConstraintApplication() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				callSite("b").calls("bar", flow("1", "1")));
+		
+		helper.method("bar",
+				startPoints("c"),
+				normalStmt("c").succ("d", flow("1", writeField("a"), "1^a")),
+				callSite("d").calls("xyz", flow("1^a", "1^a")));
+		
+		helper.method("xyz",
+				startPoints("e"),
+				normalStmt("e").succ("f", flow("1", readField("f"), "2")),
+				callSite("f").calls("baz", flow("2", "3")));
+		
+		helper.method("baz",
+				startPoints("g"),
+				normalStmt("g").succ("h", flow("3", readField("a"), "4")));
+		
+		helper.runSolver(false, "a");
+	}
 }

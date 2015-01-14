@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
 
@@ -29,8 +30,18 @@ public class AccessPath<FieldRef> {
 	}
 	
 	AccessPath(FieldRef[] accesses, Set<FieldRef>[] exclusions) {
-		this.accesses = accesses;
-		this.exclusions = exclusions;
+		int k = 3;
+		if(accesses.length > k) {
+			this.accesses = Arrays.copyOf(accesses, k);
+			this.exclusions = new Set[0];
+		}
+		else {
+			this.accesses = accesses;
+			if(exclusions.length > k - accesses.length)
+				this.exclusions = Arrays.copyOf(exclusions, k - accesses.length);
+			else
+				this.exclusions = exclusions;
+		}
 	}
 
 	public boolean hasExclusions() {
@@ -47,7 +58,7 @@ public class AccessPath<FieldRef> {
 	
 	public AccessPath<FieldRef> addFieldReference(FieldRef... fieldReferences) {
 		if(isAccessInExclusions(fieldReferences))
-			throw new IllegalArgumentException();
+			throw new IllegalArgumentException("FieldRef "+Arrays.toString(fieldReferences)+" cannot be added to "+toString());
 
 		FieldRef[] newAccesses = Arrays.copyOf(accesses, accesses.length+fieldReferences.length);
 		System.arraycopy(fieldReferences, 0, newAccesses, accesses.length, fieldReferences.length);
@@ -171,6 +182,21 @@ public class AccessPath<FieldRef> {
 			result += "^" + Joiner.on(",").join(exclusion);
 		}
 		return result;
+	}
+	
+	public <T> AccessPath<T> map(Function<FieldRef, T> function) {
+		T[] newAccesses = (T[]) new Object[accesses.length];
+		for(int i=0; i<accesses.length; i++) {
+			newAccesses[i] = function.apply(accesses[i]);
+		}
+		Set<T>[] newExclusions = new Set[exclusions.length];
+		for(int i=0; i<exclusions.length; i++) {
+			newExclusions[i] = Sets.newHashSet();
+			for(FieldRef excl : exclusions[i]) {
+				newExclusions[i].add(function.apply(excl));
+			}
+		}
+		return new AccessPath<T>(newAccesses, newExclusions);
 	}
 	
 	public class ExclusionSet {

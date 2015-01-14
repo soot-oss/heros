@@ -22,6 +22,7 @@ import heros.solver.PathEdge;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -301,15 +302,8 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 				if(AccessPathUtil.isPrefixOf(incomingEdge.getCalleeSourceFact(), edge.factAtSource())) {
 					logger.trace("RECHECKING-PAUSED-EDGE: {} for new incoming edge {}", edge, incomingEdge);
 					
-					final FieldRef[] delta = incomingEdge.getCalleeSourceFact().getAccessPath().getDeltaTo(edge.factAtSource().getAccessPath());					
-					Constraint<FieldRef> constraint = new Constraint<FieldRef>() {
-						@Override
-						public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath) {
-							return accPath.addFieldReference(delta).mergeExcludedFieldReferences(edge.factAtSource().getAccessPath());
-						}
-					};
-					
-					propagateConstrained(constraint, new ConcretizationPathEdge<>(
+					Constraint<FieldRef> constraint = new DeltaConstraint<FieldRef>(incomingEdge.getCalleeSourceFact().getAccessPath(), edge.factAtSource().getAccessPath());
+					propagateConstrained(new ConcretizationPathEdge<>(
 							applyConstraint(constraint, incomingEdge.getCallerSourceFact()), 
 							incomingEdge.getCallSite(), 
 							applyConstraint(constraint, incomingEdge.getCallerCallSiteFact()),
@@ -447,7 +441,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 			Set<ConstrainedFact<FieldRef, D>> res = computeNormalFlowFunction(flowFunction, d1, d2);
 			for (ConstrainedFact<FieldRef, D> d3 : res) {
 				if(d3.getConstraint() != null) {
-					propagateConstrained(d3.getConstraint(), new PathEdge<>(applyConstraint(d3.getConstraint(), d1), m, d3.getFact()));
+					propagateConstrained(new PathEdge<>(applyConstraint(d3.getConstraint(), d1), m, d3.getFact()));
 				}
 				else
 					propagate(new PathEdge<>(d1, m, d3.getFact()), null, false);
@@ -462,9 +456,13 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 			return fact.cloneWithAccessPath(constraint.applyToAccessPath(fact.getAccessPath()));
 	}
 	
-	private boolean propagateConstrained(Constraint<FieldRef> constraint, PathEdge<N, D> pathEdge) {
+	private boolean propagateConstrained(PathEdge<N, D> pathEdge) {
+		return propagateConstrained(pathEdge, new HashMap<N, Boolean>());
+	}
+	
+	private boolean propagateConstrained(PathEdge<N, D> pathEdge, Map<N, Boolean> visited) {
 		M calleeMethod = icfg.getMethodOf(pathEdge.getTarget());
-		logger.trace("Checking interest at method {} in fact {} with field access {}", calleeMethod, pathEdge.factAtSource(), constraint);
+		logger.trace("Checking interest at method {} in fact {}", calleeMethod, pathEdge.factAtSource());
 
 		boolean propagate = false;
 		if(pathEdge.factAtSource().equals(zeroValue))
@@ -477,15 +475,25 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 			propagate = !callSitesWithInterest.isEmpty();
 			
 			for(IncomingEdge<D, N> incEdge : incomingEdgesPrefixesOf(calleeMethod, pathEdge.factAtSource())) {
-				boolean equal = incEdge.getCalleeSourceFact().equals(pathEdge.factAtSource()); //TODO: write test case for this
-				if(!equal && !callSitesWithInterest.contains(incEdge.getCallSite())) {
-					PathEdge<N,D> callerEdge = new ConcretizationPathEdge<>(
-							applyConstraint(constraint, incEdge.getCallerSourceFact()), 
-							incEdge.getCallSite(), 
-							applyConstraint(constraint, incEdge.getCallerCallSiteFact()),
-							calleeMethod,
-							pathEdge.factAtSource());
-					propagate |= propagateConstrained(constraint, callerEdge);
+				if(visited.containsKey(incEdge.getCallSite())) {
+					if(visited.get(incEdge.getCallSite()) != null)
+						propagate |= visited.get(incEdge.getCallSite());
+				}
+				else {
+					boolean equal = incEdge.getCalleeSourceFact().equals(pathEdge.factAtSource()); //TODO: write test case for this
+					if(!equal && !callSitesWithInterest.contains(incEdge.getCallSite())) {
+						Constraint<FieldRef> callerConstraint = new DeltaConstraint<FieldRef>(incEdge.getCalleeSourceFact().getAccessPath(), pathEdge.factAtSource().getAccessPath());
+						PathEdge<N,D> callerEdge = new ConcretizationPathEdge<>(
+								applyConstraint(callerConstraint, incEdge.getCallerSourceFact()), 
+								incEdge.getCallSite(), 
+								applyConstraint(callerConstraint, incEdge.getCallerCallSiteFact()),
+								calleeMethod,
+								pathEdge.factAtSource());
+						visited.put(incEdge.getCallSite(), null);
+						boolean result = propagateConstrained(callerEdge, visited);
+						visited.put(incEdge.getCallSite(), result);
+						propagate |= result;
+					}
 				}
 			}
 		}

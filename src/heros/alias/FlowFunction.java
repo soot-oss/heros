@@ -118,6 +118,31 @@ public interface FlowFunction<FieldRef, D extends FieldSensitiveFact<?, FieldRef
 		public String toString() {
 			return "^"+fieldRef.toString();
 		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((fieldRef == null) ? 0 : fieldRef.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (!(obj instanceof WriteFieldConstraint))
+				return false;
+			WriteFieldConstraint other = (WriteFieldConstraint) obj;
+			if (fieldRef == null) {
+				if (other.fieldRef != null)
+					return false;
+			} else if (!fieldRef.equals(other.fieldRef))
+				return false;
+			return true;
+		}
 	}
 	
 	public class ReadFieldConstraint<FieldRef> implements Constraint<FieldRef> {
@@ -136,6 +161,31 @@ public interface FlowFunction<FieldRef, D extends FieldSensitiveFact<?, FieldRef
 		@Override
 		public String toString() {
 			return fieldRef.toString();
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((fieldRef == null) ? 0 : fieldRef.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (!(obj instanceof ReadFieldConstraint))
+				return false;
+			ReadFieldConstraint other = (ReadFieldConstraint) obj;
+			if (fieldRef == null) {
+				if (other.fieldRef != null)
+					return false;
+			} else if (!fieldRef.equals(other.fieldRef))
+				return false;
+			return true;
 		}
 	}
 }
