@@ -23,6 +23,7 @@ import heros.solver.PathEdge;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -35,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSensitiveFact<BaseValue, FieldRef, D>, M, I extends InterproceduralCFG<N, M>> {
@@ -71,7 +73,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 	protected final MyConcurrentHashMap<M, Set<IncomingEdge<D, N>>> incoming =
 			new MyConcurrentHashMap<M, Set<IncomingEdge<D, N>>>();
 	
-	protected final MyConcurrentHashMap<M, Set<PathEdge<N,D>>> pausedEdges = new MyConcurrentHashMap<M, Set<PathEdge<N,D>>>();
+	protected final MyConcurrentHashMap<M, ConcurrentHashSet<PathEdge<N,D>>> pausedEdges = new MyConcurrentHashMap<M, ConcurrentHashSet<PathEdge<N,D>>>();
 	
 	@DontSynchronize("stateless")
 	protected final FlowFunctions<N, FieldRef, D, M> flowFunctions;
@@ -90,6 +92,8 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 	
 	@DontSynchronize("readOnly")
 	protected final boolean followReturnsPastSeeds;
+
+	private LinkedList<Runnable> worklist;
 	
 	
 	/**
@@ -124,8 +128,9 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		this.initialSeeds = tabulationProblem.initialSeeds();
 		this.jumpFn = new JumpFunctions<N,D>();
 		this.followReturnsPastSeeds = tabulationProblem.followReturnsPastSeeds();
-		this.numThreads = Math.max(1,tabulationProblem.numThreads());
+		this.numThreads = 1; //Math.max(1,tabulationProblem.numThreads()); //solution is in the current state not thread safe
 		this.executor = getExecutor();
+		this.worklist = Lists.newLinkedList();
 	}
 
 	/**
@@ -175,14 +180,17 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 	 * Runs execution, re-throwing exceptions that might be thrown during its execution.
 	 */
 	private void runExecutorAndAwaitCompletion() {
-		try {
-			executor.awaitCompletion();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		Throwable exception = executor.getException();
-		if(exception!=null) {
-			throw new RuntimeException("There were exceptions during IFDS analysis. Exiting.",exception);
+//		try {
+//			executor.awaitCompletion();
+//		} catch (InterruptedException e) {
+//			e.printStackTrace();
+//		}
+//		Throwable exception = executor.getException();
+//		if(exception!=null) {
+//			throw new RuntimeException("There were exceptions during IFDS analysis. Exiting.",exception);
+//		}
+		while(!worklist.isEmpty()) {
+			worklist.pop().run();
 		}
 	}
 
@@ -193,9 +201,10 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
     protected void scheduleEdgeProcessing(PathEdge<N,D> edge){
     	// If the executor has been killed, there is little point
     	// in submitting new tasks
-    	if (executor.isTerminating())
-    		return;
-    	executor.execute(new PathEdgeProcessingTask(edge));
+//    	if (executor.isTerminating())
+//    		return;
+//    	executor.execute(new PathEdgeProcessingTask(edge));
+    	worklist.add(new PathEdgeProcessingTask(edge));
     	propagationCount++;
     }
 	
@@ -282,7 +291,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 
 	private void resumeEdges(M method, D factAtMethodStartPoint) {
 		//TODO: Check for concurrency issues
-		Set<PathEdge<N, D>> edges = pausedEdges.get(method);
+		ConcurrentHashSet<PathEdge<N, D>> edges = pausedEdges.get(method);
 		if(edges != null) {
 			for(PathEdge<N, D> edge : edges) {
 				if(AccessPathUtil.isPrefixOf(edge.factAtSource(), factAtMethodStartPoint)) {
@@ -308,7 +317,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 							incomingEdge.getCallSite(), 
 							applyConstraint(constraint, incomingEdge.getCallerCallSiteFact()),
 							method,
-							edge.factAtSource()));
+							applyConstraint(constraint, incomingEdge.getCalleeSourceFact())));
 				}
 			}
 		}
@@ -362,7 +371,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		//register end-summary
 		SummaryEdge<D, N> summaryEdge = new SummaryEdge<D, N>(d1, n, d2);
 		if (!addEndSummary(methodThatNeedsSummary, summaryEdge))
-			return;
+			return; //FIXME: should never be reached?! -> assert ?
 		
 		//for each incoming call edge already processed
 		//(see processCall(..))
@@ -480,15 +489,18 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 						propagate |= visited.get(incEdge.getCallSite());
 				}
 				else {
-					boolean equal = incEdge.getCalleeSourceFact().equals(pathEdge.factAtSource()); //TODO: write test case for this
+					boolean equal = incEdge.getCalleeSourceFact().equals(pathEdge.factAtSource()); //TODO: write test case for this //useless check?
+					if(equal)
+						System.out.println();
 					if(!equal && !callSitesWithInterest.contains(incEdge.getCallSite())) {
 						Constraint<FieldRef> callerConstraint = new DeltaConstraint<FieldRef>(incEdge.getCalleeSourceFact().getAccessPath(), pathEdge.factAtSource().getAccessPath());
+						
 						PathEdge<N,D> callerEdge = new ConcretizationPathEdge<>(
 								applyConstraint(callerConstraint, incEdge.getCallerSourceFact()), 
 								incEdge.getCallSite(), 
 								applyConstraint(callerConstraint, incEdge.getCallerCallSiteFact()),
 								calleeMethod,
-								pathEdge.factAtSource());
+								applyConstraint(callerConstraint, incEdge.getCalleeSourceFact()));
 						visited.put(incEdge.getCallSite(), null);
 						boolean result = propagateConstrained(callerEdge, visited);
 						visited.put(incEdge.getCallSite(), result);
@@ -509,7 +521,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 	
 	private void pauseEdge(PathEdge<N,D> edge) {
 		M method = icfg.getMethodOf(edge.getTarget());
-		Set<PathEdge<N, D>> edges = pausedEdges.putIfAbsentElseGet(method, new ConcurrentHashSet<PathEdge<N,D>>());
+		ConcurrentHashSet<PathEdge<N, D>> edges = pausedEdges.putIfAbsentElseGet(method, new ConcurrentHashSet<PathEdge<N,D>>());
 		if(edges.add(edge)) {
 			logger.trace("PAUSED: {}: {}", method, edge);
 		}
@@ -562,8 +574,6 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		
 		if(edge instanceof ConcretizationPathEdge) {
 			ConcretizationPathEdge<M, N, D> concEdge = (ConcretizationPathEdge<M,N,D>) edge;
-			jumpFn.addFunction(concEdge);
-			
 			IncomingEdge<D, N> incomingEdge = new IncomingEdge<D, N>(concEdge.getCalleeSourceFact(), 
 					concEdge.getTarget(), concEdge.factAtSource(), concEdge.factAtTarget());
 			if (!addIncoming(concEdge.getCalleeMethod(), incomingEdge))

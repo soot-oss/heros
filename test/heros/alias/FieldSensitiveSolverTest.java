@@ -358,6 +358,7 @@ public class FieldSensitiveSolverTest {
 	}
 	
 	@Test
+	@Ignore("assumes alternative to k-limitting is used")
 	public void mergeExcludedField() {
 		helper.method("foo",
 				startPoints("a"),

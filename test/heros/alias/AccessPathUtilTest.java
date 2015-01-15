@@ -66,9 +66,8 @@ public class AccessPathUtilTest {
 	@Test
 	public void testMultipleExclusions() {
 		assertTrue(isPrefixOf(new Fact("a^f,g"), new Fact("a^f")));
-		assertFalse(isPrefixOf(new Fact("a^f"), new Fact("a^f,g")));
-		assertTrue(isPrefixOf(new Fact("a^f,g"), new Fact("a^f")));
 		assertTrue(isPrefixOf(new Fact("a^f,g"), new Fact("a^g")));
+		assertFalse(isPrefixOf(new Fact("a^f"), new Fact("a^f,g")));
 	}
 
 	@Test
