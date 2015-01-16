@@ -476,6 +476,8 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		boolean propagate = false;
 		if(pathEdge.factAtSource().equals(zeroValue))
 			propagate = true;
+		else if(hasPausedEdges(calleeMethod, pathEdge))
+			propagate = false;
 		else {
 			Set<N> callSitesWithInterest = Sets.newHashSet();
 			for(IncomingEdge<D, N> incEdge : incomingEdgesPrefixedWith(calleeMethod, pathEdge.factAtSource())) {
@@ -489,10 +491,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 						propagate |= visited.get(incEdge.getCallSite());
 				}
 				else {
-					boolean equal = incEdge.getCalleeSourceFact().equals(pathEdge.factAtSource()); //TODO: write test case for this //useless check?
-					if(equal)
-						System.out.println();
-					if(!equal && !callSitesWithInterest.contains(incEdge.getCallSite())) {
+					if(!callSitesWithInterest.contains(incEdge.getCallSite())) {
 						Constraint<FieldRef> callerConstraint = new DeltaConstraint<FieldRef>(incEdge.getCalleeSourceFact().getAccessPath(), pathEdge.factAtSource().getAccessPath());
 						
 						PathEdge<N,D> callerEdge = new ConcretizationPathEdge<>(
@@ -518,7 +517,18 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 			return false;
 		}
 	}
-	
+
+	private boolean hasPausedEdges(M calleeMethod, PathEdge<N, D> pathEdge) {
+		ConcurrentHashSet<PathEdge<N, D>> pe = pausedEdges.get(calleeMethod);
+		if(pe != null) {
+			for(PathEdge<N, D> edge : pe) {
+				if(AccessPathUtil.isPrefixOf(edge.factAtSource(), pathEdge.factAtSource()))
+					return true;
+			}
+		}
+		return false;
+	}
+
 	private void pauseEdge(PathEdge<N,D> edge) {
 		M method = icfg.getMethodOf(edge.getTarget());
 		ConcurrentHashSet<PathEdge<N, D>> edges = pausedEdges.putIfAbsentElseGet(method, new ConcurrentHashSet<PathEdge<N,D>>());

@@ -20,7 +20,7 @@ import org.junit.rules.TestWatcher;
 
 import static heros.alias.TestHelper.*;
 
-public class FieldSensitiveSolverTest {
+public class FieldSensitiveIFDSSolverTest {
 
 	private TestHelper helper;
 
@@ -563,6 +563,41 @@ public class FieldSensitiveSolverTest {
 		helper.method("baz",
 				startPoints("g"),
 				normalStmt("g").succ("h", flow("3", readField("a"), "4")));
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void pauseForSameSourceMultipleTimes() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1.f")),
+				callSite("b").calls("bar", flow("1.f", "2.f")));
+				
+		helper.method("bar",
+				startPoints("c"),
+				normalStmt("c").succ("d", flow("2", readField("x"), "3"), flow("2", "2")),
+				normalStmt("d").succ("e", flow("2", readField("x"), "4")));
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void pauseForSameSourceMultipleTimesTransitively() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1.f")),
+				callSite("b").calls("xyz", flow("1.f", "2.f")).retSite("f", flow("1.f", "1.f")),
+				callSite("f").calls("xyz", flow("1.f", "2.f")));
+		
+		helper.method("xyz",
+				startPoints("g"),
+				callSite("g").calls("bar", flow("2", "2")));
+				
+		helper.method("bar",
+				startPoints("c"),
+				normalStmt("c").succ("d", flow("2", readField("x"), "3"), flow("2", "2")),
+				normalStmt("d").succ("e", flow("2", readField("x"), "4")));
 		
 		helper.runSolver(false, "a");
 	}
