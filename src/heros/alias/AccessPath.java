@@ -16,6 +16,7 @@ import java.util.Set;
 
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Sets;
 
 @SuppressWarnings("unchecked")
@@ -30,7 +31,7 @@ public class AccessPath<FieldRef> {
 	}
 	
 	AccessPath(FieldRef[] accesses, Set<FieldRef>[] exclusions) {
-		int k = 3;
+		int k = 2;
 		if(accesses.length > k) {
 			this.accesses = Arrays.copyOf(accesses, k);
 			this.exclusions = new Set[0];
@@ -100,35 +101,54 @@ public class AccessPath<FieldRef> {
 		newExclusionsArray[exclusions.length] = Sets.newHashSet(fieldReferences);
 		return new AccessPath<>(accesses, newExclusionsArray);
 	}
+
+	public static enum PrefixTestResult {
+		GUARANTEED_PREFIX(2), POTENTIAL_PREFIX(1), NO_PREFIX(0);
+		
+		private int value;
+
+		private PrefixTestResult(int value) {
+			this.value = value;
+		}
+		
+		public boolean atLeast(PrefixTestResult minimum) {
+			return value >= minimum.value;
+		}
+	}
 	
-	public boolean isPrefixOf(AccessPath<FieldRef> accessPath) {
+	public PrefixTestResult isPrefixOf(AccessPath<FieldRef> accessPath) {
 		if(accesses.length > accessPath.accesses.length)
-			return false;
+			return PrefixTestResult.NO_PREFIX;
 		
 		if(accesses.length + exclusions.length > accessPath.accesses.length + accessPath.exclusions.length)
-			return false;
+			return PrefixTestResult.NO_PREFIX;
 		
 		for(int i=0; i<accesses.length; i++) {
 			if(!accesses[i].equals(accessPath.accesses[i]))
-				return false;
+				return PrefixTestResult.NO_PREFIX;
 		}
 		
+		PrefixTestResult result = PrefixTestResult.GUARANTEED_PREFIX;
 		for(int i=0; i<exclusions.length; i++) {
 			if(i+accesses.length < accessPath.accesses.length) {
 				if(exclusions[i].contains(accessPath.accesses[i+accesses.length]))
-					return false;
+					return PrefixTestResult.NO_PREFIX;
 			}
 			else {
-				if(!exclusions[i].containsAll(accessPath.exclusions[i+accesses.length - accessPath.accesses.length]))
-					return false;
+				if(!accessPath.exclusions[i+accesses.length - accessPath.accesses.length].containsAll(exclusions[i])) {
+					if(Sets.intersection(exclusions[i], accessPath.exclusions[i+accesses.length - accessPath.accesses.length]).isEmpty())
+						result = PrefixTestResult.POTENTIAL_PREFIX;
+					else
+						return PrefixTestResult.NO_PREFIX;
+				}
 			}
 		}
 		
-		return true;
+		return result;
 	}
 	
 	public FieldRef[] getDeltaTo(AccessPath<FieldRef> accPath) {
-		if(isPrefixOf(accPath))
+		if(isPrefixOf(accPath).atLeast(PrefixTestResult.POTENTIAL_PREFIX))
 			return Arrays.copyOfRange(accPath.accesses, accesses.length, accPath.accesses.length);
 		else
 			throw new IllegalArgumentException("Given AccessPath must be a prefix of the current AccessPath");
@@ -214,5 +234,12 @@ public class AccessPath<FieldRef> {
 			newExclusionsArray[index] = newExclusions;
 			return new AccessPath<FieldRef>(accesses, newExclusionsArray);
 		}
+	}
+
+	public FieldRef getFirstAccess() {
+		if(accesses.length > 0)
+			return accesses[0];
+		else 
+			return null;
 	}
 }

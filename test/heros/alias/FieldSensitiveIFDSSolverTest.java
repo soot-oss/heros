@@ -601,4 +601,24 @@ public class FieldSensitiveIFDSSolverTest {
 		
 		helper.runSolver(false, "a");
 	}
+	
+	@Test
+	public void multipleExclusions() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1^h")),
+				callSite("b").calls("bar", flow("1^h", "2^h")));
+				
+		helper.method("bar",
+				startPoints("c"),
+				normalStmt("c").succ("d", flow("2", writeField("f"), "3^f")),
+				callSite("d").calls("xyz", flow("3^f", "4^f")));
+		
+		helper.method("xyz", 
+				startPoints("e"),
+				normalStmt("e").succ("f", flow("4", writeField("g"), "5^g")),
+				normalStmt("f").succ("g", kill("5^g")));
+		
+		helper.runSolver(false, "a");
+	}
 }

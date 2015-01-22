@@ -14,6 +14,7 @@ import heros.DontSynchronize;
 import heros.FlowFunctionCache;
 import heros.InterproceduralCFG;
 import heros.SynchronizedBy;
+import heros.alias.AccessPath.PrefixTestResult;
 import heros.alias.FlowFunction.ConstrainedFact;
 import heros.alias.FlowFunction.Constraint;
 import heros.solver.CountingThreadPoolExecutor;
@@ -262,21 +263,19 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 				//because we have observed a potentially new incoming edge into <sP,d3>
 				if (endSumm != null)
 					for(SummaryEdge<D, N> summary: endSumm) {
-						if(AccessPathUtil.isPrefixOf(summary.getSourceFact(), d3.getFact())) {
-							Optional<D> d4 = AccessPathUtil.applyAbstractedSummary(d3.getFact(), summary);
-							if(d4.isPresent()) {
-								//for each return site
-								for(N retSiteN: returnSiteNs) {
-									//compute return-flow function
-									FlowFunction<FieldRef, D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, summary.getTargetStmt(), retSiteN);
-									//for each target value of the function
-									for(ConstrainedFact<FieldRef, D> d5: computeReturnFlowFunction(retFunction, d4.get(), n)) {
-										D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5.getFact());
-										propagate(new PathEdge<>(d1, retSiteN, d5p_restoredCtx), n, false);
-									}
+						Optional<D> d4 = AccessPathUtil.applyAbstractedSummary(d3.getFact(), summary);
+						if(d4.isPresent()) {
+							//for each return site
+							for(N retSiteN: returnSiteNs) {
+								//compute return-flow function
+								FlowFunction<FieldRef, D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, summary.getTargetStmt(), retSiteN);
+								//for each target value of the function
+								for(ConstrainedFact<FieldRef, D> d5: computeReturnFlowFunction(retFunction, d4.get(), n)) {
+									D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5.getFact());
+									propagate(new PathEdge<>(d1, retSiteN, d5p_restoredCtx), n, false);
 								}
 							}
-						} 
+						}
 					}
 			}
 		}
@@ -294,7 +293,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		ConcurrentHashSet<PathEdge<N, D>> edges = pausedEdges.get(method);
 		if(edges != null) {
 			for(PathEdge<N, D> edge : edges) {
-				if(AccessPathUtil.isPrefixOf(edge.factAtSource(), factAtMethodStartPoint)) {
+				if(AccessPathUtil.isPrefixOf(edge.factAtSource(), factAtMethodStartPoint) == PrefixTestResult.GUARANTEED_PREFIX) {
 					if(edges.remove(edge))  {
 						logger.trace("RESUME-EDGE: {}", edge);
 						propagate(edge, edge instanceof ConcretizationPathEdge ? edge.getTarget() : null, false);
@@ -308,7 +307,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		Set<PathEdge<N, D>> edges = pausedEdges.get(method);
 		if(edges != null) {
 			for(final PathEdge<N, D> edge : edges) {
-				if(AccessPathUtil.isPrefixOf(incomingEdge.getCalleeSourceFact(), edge.factAtSource())) {
+				if(AccessPathUtil.isPrefixOf(incomingEdge.getCalleeSourceFact(), edge.factAtSource()).atLeast(PrefixTestResult.POTENTIAL_PREFIX)) {
 					logger.trace("RECHECKING-PAUSED-EDGE: {} for new incoming edge {}", edge, incomingEdge);
 					
 					Constraint<FieldRef> constraint = new DeltaConstraint<FieldRef>(incomingEdge.getCalleeSourceFact().getAccessPath(), edge.factAtSource().getAccessPath());
@@ -383,7 +382,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 				// compute return-flow function
 				FlowFunction<FieldRef, D> retFunction = flowFunctions.getReturnFlowFunction(callSite, methodThatNeedsSummary, n, retSiteC);
 				
-				if(AccessPathUtil.isPrefixOf(d1, incomingEdge.getCalleeSourceFact())) {
+				if(AccessPathUtil.isPrefixOf(d1, incomingEdge.getCalleeSourceFact()) == PrefixTestResult.GUARANTEED_PREFIX) {
 					Optional<D> concreteCalleeExitFact = AccessPathUtil.applyAbstractedSummary(incomingEdge.getCalleeSourceFact(), summaryEdge);
 					if(concreteCalleeExitFact.isPresent()) {
 						Set<ConstrainedFact<FieldRef, D>> callerTargetFacts = computeReturnFlowFunction(retFunction, concreteCalleeExitFact.get(), callSite);
@@ -480,12 +479,12 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 			propagate = false;
 		else {
 			Set<N> callSitesWithInterest = Sets.newHashSet();
-			for(IncomingEdge<D, N> incEdge : incomingEdgesPrefixedWith(calleeMethod, pathEdge.factAtSource())) {
+			for(IncomingEdge<D, N> incEdge : incomingEdgesPrefixedWith(calleeMethod, pathEdge.factAtSource())) { //guaranteed
 				callSitesWithInterest.add(incEdge.getCallSite());
 			}
 			propagate = !callSitesWithInterest.isEmpty();
 			
-			for(IncomingEdge<D, N> incEdge : incomingEdgesPrefixesOf(calleeMethod, pathEdge.factAtSource())) {
+			for(IncomingEdge<D, N> incEdge : incomingEdgesPotentialPrefixesOf(calleeMethod, pathEdge.factAtSource())) { //potential
 				if(visited.containsKey(incEdge.getCallSite())) {
 					if(visited.get(incEdge.getCallSite()) != null)
 						propagate |= visited.get(incEdge.getCallSite());
@@ -522,7 +521,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		ConcurrentHashSet<PathEdge<N, D>> pe = pausedEdges.get(calleeMethod);
 		if(pe != null) {
 			for(PathEdge<N, D> edge : pe) {
-				if(AccessPathUtil.isPrefixOf(edge.factAtSource(), pathEdge.factAtSource()))
+				if(AccessPathUtil.isPrefixOf(edge.factAtSource(), pathEdge.factAtSource()) == PrefixTestResult.GUARANTEED_PREFIX)
 					return true;
 			}
 		}
@@ -613,7 +612,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		return Sets.filter(map, new Predicate<SummaryEdge<D,N>>() {
 			@Override
 			public boolean apply(SummaryEdge<D, N> edge) {
-				return AccessPathUtil.isPrefixOf(edge.getSourceFact(), d3) || AccessPathUtil.isPrefixOf(d3, edge.getSourceFact());
+				return AccessPathUtil.isPrefixOf(edge.getSourceFact(), d3) == PrefixTestResult.GUARANTEED_PREFIX;
 			}
 		});
 	}
@@ -637,17 +636,17 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		return Sets.filter(result, new Predicate<IncomingEdge<D,N>>() {
 			@Override
 			public boolean apply(IncomingEdge<D, N> edge) {
-				return AccessPathUtil.isPrefixOf(fact, edge.getCalleeSourceFact());
+				return AccessPathUtil.isPrefixOf(fact, edge.getCalleeSourceFact()) == PrefixTestResult.GUARANTEED_PREFIX;
 			}
 		});
 	}
 	
-	protected Set<IncomingEdge<D, N>> incomingEdgesPrefixesOf(M m, final D fact) {
+	protected Set<IncomingEdge<D, N>> incomingEdgesPotentialPrefixesOf(M m, final D fact) {
 		Set<IncomingEdge<D, N>> result = incoming(m);
 		return Sets.filter(result, new Predicate<IncomingEdge<D,N>>() {
 			@Override
 			public boolean apply(IncomingEdge<D, N> edge) {
-				return AccessPathUtil.isPrefixOf(edge.getCalleeSourceFact(), fact);
+				return AccessPathUtil.isPrefixOf(edge.getCalleeSourceFact(), fact).atLeast(PrefixTestResult.POTENTIAL_PREFIX);
 			}
 		});
 	}

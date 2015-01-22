@@ -10,81 +10,83 @@
  ******************************************************************************/
 package heros.alias;
 
+import static heros.alias.AccessPath.PrefixTestResult.*;
 import static heros.alias.AccessPathUtil.applyAbstractedSummary;
 import static heros.alias.AccessPathUtil.isPrefixOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import heros.alias.AccessPath.PrefixTestResult;
 
-import org.junit.Assert;
 import org.junit.Test;
 
 public class AccessPathUtilTest {
 
 	@Test
 	public void testBaseValuePrefixOfFieldAccess() {
-		assertTrue(isPrefixOf(new Fact("a"), new Fact("a.f")));
-		assertFalse(isPrefixOf(new Fact("a.f"), new Fact("a")));
+		assertEquals(GUARANTEED_PREFIX, isPrefixOf(new Fact("a"), new Fact("a.f")));
+		assertEquals(NO_PREFIX, isPrefixOf(new Fact("a.f"), new Fact("a")));
 	}
 	
 	@Test
 	public void testBaseValueIdentity() {
-		assertTrue(isPrefixOf(new Fact("a"), new Fact("a")));
+		assertEquals(GUARANTEED_PREFIX, isPrefixOf(new Fact("a"), new Fact("a")));
 	}
 	
 	@Test
 	public void testFieldAccessPrefixOfFieldAccess() {
-		assertTrue(isPrefixOf(new Fact("a.b"), new Fact("a.b.c")));
-		assertFalse(isPrefixOf(new Fact("a.b.c"), new Fact("a.b")));
+		assertEquals(GUARANTEED_PREFIX, isPrefixOf(new Fact("a.b"), new Fact("a.b.c")));
+		assertEquals(NO_PREFIX, isPrefixOf(new Fact("a.b.c"), new Fact("a.b")));
 	}
 	
 	@Test
 	public void testPrefixOfFieldAccessWithExclusion() {
-		assertTrue(isPrefixOf(new Fact("a^f"), new Fact("a.g")));
-		assertFalse(isPrefixOf(new Fact("a.g"), new Fact("a^f")));
+		assertEquals(GUARANTEED_PREFIX, isPrefixOf(new Fact("a^f"), new Fact("a.g")));
+		assertEquals(NO_PREFIX, isPrefixOf(new Fact("a.g"), new Fact("a^f")));
 	}
 	
 	@Test
 	public void testIdentityWithExclusion() {
-		assertTrue(isPrefixOf(new Fact("a^f"), new Fact("a^f")));
-		assertTrue(isPrefixOf(new Fact("a^f,g"), new Fact("a^f,g")));
+		assertEquals(GUARANTEED_PREFIX, isPrefixOf(new Fact("a^f"), new Fact("a^f")));
+		assertEquals(GUARANTEED_PREFIX, isPrefixOf(new Fact("a^f,g"), new Fact("a^f,g")));
 	}
 	
 	@Test
 	public void testDifferentExclusions() {
-		assertFalse(isPrefixOf(new Fact("a^f"), new Fact("a^g")));
+		assertEquals(POTENTIAL_PREFIX, isPrefixOf(new Fact("a^f"), new Fact("a^g")));
+		assertEquals(POTENTIAL_PREFIX, isPrefixOf(new Fact("a^f^f,g"), new Fact("a^g^f,g")));
+		assertEquals(POTENTIAL_PREFIX, isPrefixOf(new Fact("a^f^f"), new Fact("a^f^g")));
 	}
 	
 	@Test
 	public void testMixedFieldAccess() {
-		assertTrue(isPrefixOf(new Fact("a^f"), new Fact("a.g.g")));
-		assertFalse(isPrefixOf(new Fact("a^f"), new Fact("a.f.h")));
-		assertTrue(isPrefixOf(new Fact("a.f"), new Fact("a.f^g")));
+		assertEquals(GUARANTEED_PREFIX, isPrefixOf(new Fact("a^f"), new Fact("a.g.g")));
+		assertEquals(NO_PREFIX, isPrefixOf(new Fact("a^f"), new Fact("a.f.h")));
+		assertEquals(GUARANTEED_PREFIX, isPrefixOf(new Fact("a.f"), new Fact("a.f^g")));
 	}
 	
 	@Test
 	public void testMultipleExclusions() {
-		assertTrue(isPrefixOf(new Fact("a^f,g"), new Fact("a^f")));
-		assertTrue(isPrefixOf(new Fact("a^f,g"), new Fact("a^g")));
-		assertFalse(isPrefixOf(new Fact("a^f"), new Fact("a^f,g")));
+		assertEquals(NO_PREFIX, isPrefixOf(new Fact("a^f,g"), new Fact("a^f")));
+		assertEquals(NO_PREFIX, isPrefixOf(new Fact("a^f,g"), new Fact("a^g")));
+		assertEquals(GUARANTEED_PREFIX, isPrefixOf(new Fact("a^f"), new Fact("a^f,g")));
 	}
 
 	@Test
 	public void testDifferentAccessPathLength() {
-		assertTrue(isPrefixOf(new Fact("a^f"), new Fact("a.g.h")));
+		assertEquals(GUARANTEED_PREFIX, isPrefixOf(new Fact("a^f"), new Fact("a.g.h")));
 	}
 	
 	@Test
 	public void testExclusionRequiresFieldAccess() {
-		assertTrue(isPrefixOf(new Fact("a"), new Fact("a^f")));
-		assertFalse(isPrefixOf(new Fact("a^f"), new Fact("a")));
+		assertEquals(GUARANTEED_PREFIX, isPrefixOf(new Fact("a"), new Fact("a^f")));
+		assertEquals(NO_PREFIX, isPrefixOf(new Fact("a^f"), new Fact("a")));
 		
-		assertTrue(isPrefixOf(new Fact("a.f"), new Fact("a.f^g")));
-		assertFalse(isPrefixOf(new Fact("a.f^g"), new Fact("a.f")));
+		assertEquals(GUARANTEED_PREFIX, isPrefixOf(new Fact("a.f"), new Fact("a.f^g")));
+		assertEquals(NO_PREFIX, isPrefixOf(new Fact("a.f^g"), new Fact("a.f")));
 		
-		assertTrue(isPrefixOf(new Fact("a.f"), new Fact("a.f^g^h")));
-		assertFalse(isPrefixOf(new Fact("a.f^g^h"), new Fact("a.f")));
+		assertEquals(GUARANTEED_PREFIX, isPrefixOf(new Fact("a.f"), new Fact("a.f^g^h")));
+		assertEquals(NO_PREFIX, isPrefixOf(new Fact("a.f^g^h"), new Fact("a.f")));
 	}
 	
 	@Test

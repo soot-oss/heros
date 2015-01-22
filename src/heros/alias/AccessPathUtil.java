@@ -10,23 +10,26 @@
  ******************************************************************************/
 package heros.alias;
 
+import heros.alias.AccessPath.PrefixTestResult;
+
 import com.google.common.base.Optional;
 
 
 public class AccessPathUtil {
 
-	public static <FieldRef, D extends FieldSensitiveFact<?, FieldRef,  D>> boolean isPrefixOf(D prefixCandidate, D fact) {
+	public static <FieldRef, D extends FieldSensitiveFact<?, FieldRef,  D>> PrefixTestResult isPrefixOf(D prefixCandidate, D fact) {
 		if(prefixCandidate.getBaseValue() == null) {
 			if(fact.getBaseValue() != null)
-				return false;
+				return PrefixTestResult.NO_PREFIX;
 		} else if(!prefixCandidate.getBaseValue().equals(fact.getBaseValue()))
-			return false;
+			return PrefixTestResult.NO_PREFIX;
 		
 		return prefixCandidate.getAccessPath().isPrefixOf(fact.getAccessPath());
 	}
 	
+	
 	public static <FieldRef, D extends FieldSensitiveFact<?, FieldRef, D>> Optional<D> applyAbstractedSummary(D sourceFact, SummaryEdge<D, ?> summary) {
-		if(!isPrefixOf(summary.getSourceFact(), sourceFact))
+		if(!isPrefixOf(summary.getSourceFact(), sourceFact).atLeast(PrefixTestResult.GUARANTEED_PREFIX))
 			throw new IllegalArgumentException(String.format("Source fact in given summary edge '%s' is not a prefix of the given source fact '%s'", summary, sourceFact));
 		
 		AccessPath<FieldRef> concreteAccessPath = sourceFact.getAccessPath();
