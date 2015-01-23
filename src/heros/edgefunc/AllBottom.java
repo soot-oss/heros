@@ -26,6 +26,8 @@ public class AllBottom<V> implements EdgeFunction<V> {
 	}
 
 	public EdgeFunction<V> composeWith(EdgeFunction<V> secondFunction) {
+		if (secondFunction instanceof EdgeIdentity)
+			return this;
 		return secondFunction;
 	}
 
