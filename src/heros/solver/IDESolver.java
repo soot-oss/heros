@@ -93,7 +93,12 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	//see CC 2010 paper by Naeem, Lhotak and Rodriguez
 	@SynchronizedBy("consistent lock on field")
 	protected final Table<N,D,Map<N,Set<D>>> incoming = HashBasedTable.create();
-	
+
+	//stores the initial values that are propagated into callers independent bottom up,
+	//if followReturnPastSeeds is enabled
+	@SynchronizedBy("consistent lock on field")
+	protected final Map<N,Set<D>> callerSeeds;
+
 	@DontSynchronize("stateless")
 	protected final FlowFunctions<N, D, M> flowFunctions;
 
@@ -183,6 +188,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		this.flowFunctions = flowFunctions;
 		this.edgeFunctions = edgeFunctions;
 		this.initialSeeds = tabulationProblem.initialSeeds();
+		this.callerSeeds = new HashMap<N, Set<D>>();
 		this.valueLattice = tabulationProblem.joinLattice();
 		this.allTop = tabulationProblem.allTopFunction();
 		this.jumpFn = new JumpFunctions<N,D,V>(allTop);
@@ -486,6 +492,15 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 						for(D d5: targets) {
 							EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
 							propagateUnbalancedReturnFlow(retSiteC, d5, f.composeWith(f5), c);
+							//register for value processing (2nd IDE phase)
+							synchronized (callerSeeds) {
+								Set<D> oldCallerSeeds = callerSeeds.get(retSiteC);
+								if(oldCallerSeeds==null) {
+									oldCallerSeeds = new HashSet<D>();
+									callerSeeds.put(retSiteC, oldCallerSeeds);
+								}
+								oldCallerSeeds.add(d5);
+							}
 						}
 					}
 				}
@@ -500,7 +515,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			}
 		}
 	
-	protected void propagateUnbalancedReturnFlow(N retSiteC, D targetVal, EdgeFunction<V> edgeFunction, N relatedCallSite) {
+	protected void propagateUnbalancedReturnFlow(N retSiteC, D targetVal, EdgeFunction<V> edgeFunction, N relatedCallSite) {		
 		propagate(zeroValue, retSiteC, targetVal, edgeFunction, relatedCallSite, true);
 	}
 
@@ -620,7 +635,18 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	private void computeValues() {	
 		//Phase II(i)
         logger.debug("Computing the final values for the edge functions");
-		for(Entry<N, Set<D>> seed: initialSeeds.entrySet()) {
+        //union of initial seeds and caller seeds
+        Map<N, Set<D>> allSeeds = new HashMap<N, Set<D>>(initialSeeds);
+		for(Entry<N, Set<D>> seed: callerSeeds.entrySet()) {
+			Set<D> existing = allSeeds.get(seed.getKey());
+			if(existing!=null) {
+				existing.addAll(seed.getValue());
+			} else {
+				allSeeds.put(seed.getKey(), seed.getValue());
+			}
+		}
+		//do processing
+		for(Entry<N, Set<D>> seed: allSeeds.entrySet()) {
 			N startPoint = seed.getKey();
 			for(D val: seed.getValue()) {
 				setVal(startPoint, val, valueLattice.bottomElement());
