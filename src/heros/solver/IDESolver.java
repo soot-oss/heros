@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -94,10 +95,10 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	@SynchronizedBy("consistent lock on field")
 	protected final Table<N,D,Map<N,Set<D>>> incoming = HashBasedTable.create();
 
-	//stores the initial values that are propagated into callers independent bottom up,
+	//stores the return sites (inside callers) to which we have unbalanced returns
 	//if followReturnPastSeeds is enabled
-	@SynchronizedBy("consistent lock on field")
-	protected final Map<N,Set<D>> callerSeeds;
+	@SynchronizedBy("use of ConcurrentHashMap")
+	protected final Set<N> unbalancedRetSites;
 
 	@DontSynchronize("stateless")
 	protected final FlowFunctions<N, D, M> flowFunctions;
@@ -188,7 +189,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		this.flowFunctions = flowFunctions;
 		this.edgeFunctions = edgeFunctions;
 		this.initialSeeds = tabulationProblem.initialSeeds();
-		this.callerSeeds = new HashMap<N, Set<D>>();
+		this.unbalancedRetSites = Collections.newSetFromMap(new ConcurrentHashMap<N, Boolean>());
 		this.valueLattice = tabulationProblem.joinLattice();
 		this.allTop = tabulationProblem.allTopFunction();
 		this.jumpFn = new JumpFunctions<N,D,V>(allTop);
@@ -493,14 +494,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 							EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
 							propagateUnbalancedReturnFlow(retSiteC, d5, f.composeWith(f5), c);
 							//register for value processing (2nd IDE phase)
-							synchronized (callerSeeds) {
-								Set<D> oldCallerSeeds = callerSeeds.get(retSiteC);
-								if(oldCallerSeeds==null) {
-									oldCallerSeeds = new HashSet<D>();
-									callerSeeds.put(retSiteC, oldCallerSeeds);
-								}
-								oldCallerSeeds.add(d5);
-							}
+							unbalancedRetSites.add(retSiteC);
 						}
 					}
 				}
@@ -635,16 +629,16 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	private void computeValues() {	
 		//Phase II(i)
         logger.debug("Computing the final values for the edge functions");
-        //union of initial seeds and caller seeds
+        //add caller seeds to initial seeds in an unbalanced problem
         Map<N, Set<D>> allSeeds = new HashMap<N, Set<D>>(initialSeeds);
-		for(Entry<N, Set<D>> seed: callerSeeds.entrySet()) {
-			Set<D> existing = allSeeds.get(seed.getKey());
-			if(existing!=null) {
-				existing.addAll(seed.getValue());
-			} else {
-				allSeeds.put(seed.getKey(), seed.getValue());
-			}
-		}
+        for(N unbalancedRetSite: unbalancedRetSites) {
+        	Set<D> seeds = allSeeds.get(unbalancedRetSite);
+        	if(seeds==null) {
+        		seeds = new HashSet<D>();
+        		allSeeds.put(unbalancedRetSite, seeds);
+        	}
+        	seeds.add(zeroValue);
+        }
 		//do processing
 		for(Entry<N, Set<D>> seed: allSeeds.entrySet()) {
 			N startPoint = seed.getKey();
@@ -883,8 +877,8 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		public void run() {
 			N n = nAndD.getO1();
 			if(icfg.isStartPoint(n) ||
-				initialSeeds.containsKey(n) ||		//our initial seeds are not necessarily method-start points but here they should be treated as such
-				callerSeeds.containsKey(n)) { 		//the same also for "caller seeds" in case of an unbalanced problem
+				initialSeeds.containsKey(n) ||			//our initial seeds are not necessarily method-start points but here they should be treated as such
+				unbalancedRetSites.contains(n)) { 		//the same also for unbalanced return sites in an unbalanced problem
 				propagateValueAtStart(nAndD, n);
 			}
 			if(icfg.isCallStmt(n)) {
