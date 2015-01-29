@@ -161,22 +161,26 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 	 * shuts down the executor and returns.
 	 */
 	protected void awaitCompletionComputeValuesAndShutdown() {
-		{
-			//run executor and await termination of tasks
-			runExecutorAndAwaitCompletion();
-		}
+//		{
+//			//run executor and await termination of tasks
+//			runExecutorAndAwaitCompletion();
+//		}
 		if(logger.isDebugEnabled())
 			printStats();
 
 		//ask executor to shut down;
 		//this will cause new submissions to the executor to be rejected,
 		//but at this point all tasks should have completed anyway
-		executor.shutdown();
+//		executor.shutdown();
 		//similarly here: we await termination, but this should happen instantaneously,
 		//as all tasks should have completed
 		runExecutorAndAwaitCompletion();
 	}
 
+	protected boolean hasWork() {
+		return !worklist.isEmpty();
+	}
+	
 	/**
 	 * Runs execution, re-throwing exceptions that might be thrown during its execution.
 	 */
@@ -408,7 +412,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 					FlowFunction<FieldRef, D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
 					Set<ConstrainedFact<FieldRef, D>> targets = computeReturnFlowFunction(retFunction, d2, c);
 					for(ConstrainedFact<FieldRef, D> d5: targets)
-						propagate(new PathEdge<>(zeroValue, retSiteC, d5.getFact()), c, true);
+						propagateUnbalancedReturnFlow(new PathEdge<>(zeroValue, retSiteC, d5.getFact()), c);
 				}
 			}
 			//in cases where there are no callers, the return statement would normally not be processed at all;
@@ -566,6 +570,10 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		return d5;
 	}
 	
+	protected void propagateUnbalancedReturnFlow(PathEdge<N,D> edge,
+			/* deliberately exposed to clients */ N relatedCallSite) {
+		propagate(edge, relatedCallSite, true);
+	}
 	
 	/**
 	 * Propagates the flow further down the exploded super graph. 
