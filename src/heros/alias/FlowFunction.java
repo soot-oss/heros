@@ -100,6 +100,8 @@ public interface FlowFunction<FieldRef, D extends FieldSensitiveFact<?, FieldRef
 	
 	public interface Constraint<FieldRef> {
 		AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath);
+		
+		boolean canBeAppliedTo(AccessPath<FieldRef> accPath);
 	}
 	
 	public class WriteFieldConstraint<FieldRef> implements Constraint<FieldRef> {
@@ -141,6 +143,11 @@ public interface FlowFunction<FieldRef, D extends FieldSensitiveFact<?, FieldRef
 					return false;
 			} else if (!fieldRef.equals(other.fieldRef))
 				return false;
+			return true;
+		}
+
+		@Override
+		public boolean canBeAppliedTo(AccessPath<FieldRef> accPath) {
 			return true;
 		}
 	}
@@ -186,6 +193,11 @@ public interface FlowFunction<FieldRef, D extends FieldSensitiveFact<?, FieldRef
 			} else if (!fieldRef.equals(other.fieldRef))
 				return false;
 			return true;
+		}
+
+		@Override
+		public boolean canBeAppliedTo(AccessPath<FieldRef> accPath) {
+			return !accPath.isAccessInExclusions(fieldRef);
 		}
 	}
 }

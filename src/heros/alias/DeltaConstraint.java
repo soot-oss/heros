@@ -27,4 +27,9 @@ public class DeltaConstraint<FieldRef> implements Constraint<FieldRef> {
 		return accPath.addFieldReference(delta).mergeExcludedFieldReferences(accPathAtCallee);
 	}
 
+	@Override
+	public boolean canBeAppliedTo(AccessPath<FieldRef> accPath) {
+		return !accPath.isAccessInExclusions(delta);
+	}
+
 }
