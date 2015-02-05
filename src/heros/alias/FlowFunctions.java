@@ -27,7 +27,7 @@ package heros.alias;
  *            The type of objects used to represent methods. Typically
  *            {@link SootMethod}.
  */
-public interface FlowFunctions<Stmt, FieldRef, F extends FieldSensitiveFact<?, FieldRef, F>, Method> {
+public interface FlowFunctions<Stmt, FieldRef extends AccessPath.FieldRef<FieldRef>, F extends FieldSensitiveFact<?, FieldRef, F>, Method> {
 
 	/**
 	 * Returns the flow function that computes the flow for a normal statement,

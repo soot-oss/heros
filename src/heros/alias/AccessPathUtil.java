@@ -20,7 +20,7 @@ import com.google.common.collect.Sets;
 
 public class AccessPathUtil {
 
-	public static <FieldRef, D extends FieldSensitiveFact<?, FieldRef,  D>> PrefixTestResult isPrefixOf(D prefixCandidate, D fact) {
+	public static <FieldRef extends AccessPath.FieldRef<FieldRef>, D extends FieldSensitiveFact<?, FieldRef,  D>> PrefixTestResult isPrefixOf(D prefixCandidate, D fact) {
 		if(prefixCandidate.getBaseValue() == null) {
 			if(fact.getBaseValue() != null)
 				return PrefixTestResult.NO_PREFIX;
@@ -30,7 +30,7 @@ public class AccessPathUtil {
 		return prefixCandidate.getAccessPath().isPrefixOf(fact.getAccessPath());
 	}
 
-	public static <FieldRef, D extends FieldSensitiveFact<?, FieldRef, D>> Optional<D> applyAbstractedSummary(D sourceFact, SummaryEdge<D, ?> summary) {
+	public static <FieldRef extends AccessPath.FieldRef<FieldRef>, D extends FieldSensitiveFact<?, FieldRef, D>> Optional<D> applyAbstractedSummary(D sourceFact, SummaryEdge<D, ?> summary) {
 		if(!isPrefixOf(summary.getSourceFact(), sourceFact).atLeast(PrefixTestResult.GUARANTEED_PREFIX))
 			throw new IllegalArgumentException(String.format("Source fact in given summary edge '%s' is not a prefix of the given source fact '%s'", summary, sourceFact));
 		
@@ -51,7 +51,7 @@ public class AccessPathUtil {
 		return Optional.of(summary.getTargetFact().cloneWithAccessPath(result));
 	}
 
-	public static <FieldRef, D extends FieldSensitiveFact<?, FieldRef,  D>> D cloneWithAccessPath(D fact, AccessPath<FieldRef> accPath) {
+	public static <FieldRef extends AccessPath.FieldRef<FieldRef>, D extends FieldSensitiveFact<?, FieldRef,  D>> D cloneWithAccessPath(D fact, AccessPath<FieldRef> accPath) {
 		if(fact.getAccessPath().equals(accPath))
 			return fact;
 		else

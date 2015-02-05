@@ -10,46 +10,46 @@
  ******************************************************************************/
 package heros.alias;
 
-import static com.google.common.collect.Iterables.getOnlyElement;
+import heros.alias.SubAccessPath.SetOfPossibleFieldAccesses;
+import heros.alias.SubAccessPath.SpecificFieldAccess;
+import heros.alias.Transition.MatchResult;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
-import heros.alias.Transition.MatchResult;
-import heros.alias.SubAccessPath.*;
-
 @SuppressWarnings("unchecked")
-public class AccessPath<FieldRef> {
+public class AccessPath<T extends AccessPath.FieldRef<T>> {
 
-	public static <T> AccessPath<T> empty() {
+	public static interface FieldRef<F> {
+		boolean shouldBeMergedWith(F fieldRef);
+	}
+	
+	public static <T extends FieldRef<T>> AccessPath<T> empty() {
 		return new AccessPath<T>();
 	}
 	
-	private final SubAccessPath<FieldRef>[] accesses;
-	private final Set<FieldRef>[] exclusions;
+	private final SubAccessPath<T>[] accesses;
+	private final Set<T>[] exclusions;
 	
 	public AccessPath() {
 		accesses = new SubAccessPath[0];
 		exclusions = new Set[0];
 	}
 	
-	AccessPath(SubAccessPath<FieldRef>[] accesses, Set<FieldRef>[] exclusions) {
+	AccessPath(SubAccessPath<T>[] accesses, Set<T>[] exclusions) {
 		this.accesses = accesses;
 		this.exclusions = exclusions;
 	}
 
-	public boolean isAccessInExclusions(SubAccessPath<FieldRef>... fieldReferences) {
+	public boolean isAccessInExclusions(SubAccessPath<T>... fieldReferences) {
 		outer: for(int i=0; i<fieldReferences.length && i<exclusions.length; i++) {
-			for(FieldRef field : fieldReferences[i].elements()) {
+			for(T field : fieldReferences[i].elements()) {
 				if(!exclusions[i].contains(field))
 					continue outer;
 			}
@@ -58,12 +58,11 @@ public class AccessPath<FieldRef> {
 		return false;
 	}
 	
-	public AccessPath<FieldRef> addFieldReference(SubAccessPath<FieldRef>... fieldReferences) {
+	public AccessPath<T> addFieldReference(SubAccessPath<T>... fieldReferences) {
 		return addFieldReference(true, fieldReferences);
 	}
 	
-	
-	AccessPath<FieldRef> addFieldReference(boolean merge, SubAccessPath<FieldRef>... fieldReferences) {
+	AccessPath<T> addFieldReference(boolean merge, SubAccessPath<T>... fieldReferences) {
 		if(isAccessInExclusions(fieldReferences))
 			throw new IllegalArgumentException("FieldRef "+Arrays.toString(fieldReferences)+" cannot be added to "+toString());
 
@@ -74,7 +73,7 @@ public class AccessPath<FieldRef> {
 					finiteDepth = false;
 					
 				for(int j=0; j<accesses.length; j++) {
-					if(accesses[j].intersects(fieldReferences[i])) {
+					if(accesses[j].shouldBeMerged(fieldReferences[i])) {
 						// [..., {j-i}, ...]
 						
 						AccessPathBuilder builder = new AccessPathBuilder(j+fieldReferences.length-i);
@@ -98,8 +97,8 @@ public class AccessPath<FieldRef> {
 		return builder.build();
 	}
 	
-	public AccessPath<FieldRef> addFieldReference(FieldRef... fieldReferences) {
-		SubAccessPath<FieldRef>[] subPath = new SubAccessPath[fieldReferences.length];
+	public AccessPath<T> addFieldReference(T... fieldReferences) {
+		SubAccessPath<T>[] subPath = new SubAccessPath[fieldReferences.length];
 		for(int i=0; i<fieldReferences.length; i++) {
 			subPath[i] = new SpecificFieldAccess<>(fieldReferences[i]);
 		}
@@ -108,8 +107,8 @@ public class AccessPath<FieldRef> {
 	
 	private class AccessPathBuilder {
 		
-		private Set<FieldRef>[] newExclusions;
-		private SubAccessPath<FieldRef>[] newAccesses;
+		private Set<T>[] newExclusions;
+		private SubAccessPath<T>[] newAccesses;
 		private int currentIndex = 0;
 
 		public AccessPathBuilder(int capacity) {
@@ -117,9 +116,9 @@ public class AccessPath<FieldRef> {
 			newExclusions = exclusions;
 		}
 		
-		public AccessPath<FieldRef> build() {
+		public AccessPath<T> build() {
 			while(newAccesses.length > 0 && newExclusions.length > 0) {
-				HashSet<FieldRef> newHashSet = Sets.newHashSet(newExclusions[0]);
+				HashSet<T> newHashSet = Sets.newHashSet(newExclusions[0]);
 				if(newAccesses[newAccesses.length-1] instanceof SetOfPossibleFieldAccesses && newHashSet.removeAll(newAccesses[newAccesses.length-1].elements())) {
 					if(newHashSet.isEmpty()) {
 						removeExclusions(1);
@@ -141,7 +140,7 @@ public class AccessPath<FieldRef> {
 				newExclusions = Arrays.copyOfRange(newExclusions, length, newExclusions.length);
 		}
 
-		public void append(SubAccessPath<FieldRef>[] fieldReferences, int start, int endExcl) {
+		public void append(SubAccessPath<T>[] fieldReferences, int start, int endExcl) {
 			for(int i=start; i<endExcl; i++) {
 				newAccesses[currentIndex] = fieldReferences[i];
 				currentIndex++;
@@ -151,12 +150,12 @@ public class AccessPath<FieldRef> {
 			currentIndex+=endExcl-start;
 		}
 
-		public void mergeWithLast(SubAccessPath<FieldRef>[] fieldReferences, int start, int endExcl) {
+		public void mergeWithLast(SubAccessPath<T>[] fieldReferences, int start, int endExcl) {
 			newAccesses[currentIndex-1].merge(Arrays.copyOfRange(fieldReferences, start, endExcl));
 		}
 
 		public AccessPathBuilder merge(int srcIndex, int destIndexExcl) {
-			Set<FieldRef> set = Sets.newHashSet();
+			Set<T> set = Sets.newHashSet();
 			for(int i=srcIndex; i<destIndexExcl; i++) {
 				set.addAll(accesses[i].elements());
 			}
@@ -171,7 +170,7 @@ public class AccessPath<FieldRef> {
 			return this;
 		}
 
-		public void append(FieldRef fieldRef) {
+		public void append(T fieldRef) {
 			newAccesses[currentIndex] = new SubAccessPath.SpecificFieldAccess<>(fieldRef);
 			currentIndex++;
 		}
@@ -182,7 +181,7 @@ public class AccessPath<FieldRef> {
 		return new ExclusionSet(index);
 	}
 	
-	public AccessPath<FieldRef> prepend(FieldRef fieldRef) {
+	public AccessPath<T> prepend(T fieldRef) {
 		for(int j=0; j<accesses.length; j++) {
 			if(accesses[j].contains(fieldRef)) {
 				// [{0-j}, ...]
@@ -199,11 +198,11 @@ public class AccessPath<FieldRef> {
 		return builder.build();
 	}
 
-	public AccessPath<FieldRef> removeFirst(FieldRef field) {
+	public AccessPath<T> removeFirst(T field) {
 		for(int i=0; i<accesses.length; i++) {
 			if(accesses[i].contains(field)) {
 				if(accesses[i] instanceof SpecificFieldAccess)
-					return new AccessPath<FieldRef>(Arrays.copyOfRange(accesses, i+1, accesses.length), exclusions);
+					return new AccessPath<T>(Arrays.copyOfRange(accesses, i+1, accesses.length), exclusions);
 				else
 					return this;
 			}
@@ -214,22 +213,22 @@ public class AccessPath<FieldRef> {
 		throw new IllegalStateException("Trying to remove "+field+" from "+this);
 	}
 	
-	public AccessPath<FieldRef> removeFirstExclusionSetIfAvailable() {
+	public AccessPath<T> removeFirstExclusionSetIfAvailable() {
 		if(exclusions.length > 0)
-			return new AccessPath<FieldRef>(accesses, Arrays.copyOfRange(exclusions, 1, exclusions.length));
+			return new AccessPath<T>(accesses, Arrays.copyOfRange(exclusions, 1, exclusions.length));
 		else
 			return this;
 	}
 
-	public AccessPath<FieldRef> mergeExcludedFieldReference(FieldRef... fieldRef) {
+	public AccessPath<T> mergeExcludedFieldReference(T... fieldRef) {
 		if(exclusions.length>0)
 			return getExclusions(0).addExclusion(fieldRef);
 		else
 			return appendExcludedFieldReference(fieldRef);
 	}
 	
-	public AccessPath<FieldRef> appendExcludedFieldReference(FieldRef... fieldReferences) {
-		Set<FieldRef>[] newExclusionsArray = Arrays.copyOf(exclusions, exclusions.length+1);
+	public AccessPath<T> appendExcludedFieldReference(T... fieldReferences) {
+		Set<T>[] newExclusionsArray = Arrays.copyOf(exclusions, exclusions.length+1);
 		newExclusionsArray[exclusions.length] = Sets.newHashSet(fieldReferences);
 		return new AccessPath<>(accesses, newExclusionsArray);
 	}
@@ -248,25 +247,22 @@ public class AccessPath<FieldRef> {
 		}
 	}
 	
-	public PrefixTestResult isPrefixOf(AccessPath<FieldRef> accPath) {
+	public PrefixTestResult isPrefixOf(AccessPath<T> accPath) {
 		int currIndex = 0;
 		int otherIndex = 0;
 		PrefixTestResult result = PrefixTestResult.GUARANTEED_PREFIX;
 		
 		int finalIndex = finalIndex();
 		outer: while(currIndex < finalIndex) {
-			Collection<Transition<FieldRef>> transitions = possibleTransitions(currIndex);
-			Collection<Transition<FieldRef>> otherTransitions = accPath.possibleTransitions(otherIndex);
+			Collection<Transition<T>> transitions = possibleTransitions(currIndex, true);
+			Collection<Transition<T>> otherTransitions = accPath.possibleTransitions(otherIndex, true);
 
-			if(transitions.size() > 1 && otherTransitions.size() > 1)
-				throw new AssertionError();
-			
-			for(Transition<FieldRef> transition : transitions) {
-				for(Transition<FieldRef> otherTransition : otherTransitions) {
-					MatchResult<Transition<FieldRef>> match = transition.isPrefixMatchOf(otherTransition);
+			for(Transition<T> transition : transitions) {
+				for(Transition<T> otherTransition : otherTransitions) {
+					MatchResult<Transition<T>> match = transition.isPrefixMatchOf(otherTransition);
 					if(match.hasMatched()) {
 						if(currIndex == transition.transitionToIndex() && otherIndex == otherTransition.transitionToIndex())
-							throw new AssertionError();
+							continue;
 						
 						currIndex = transition.transitionToIndex();
 						otherIndex = otherTransition.transitionToIndex();
@@ -295,48 +291,72 @@ public class AccessPath<FieldRef> {
 		return finalIndex;
 	}
 
-	private Collection<Transition<FieldRef>> possibleTransitions(int index) {
-		Collection<Transition<FieldRef>> result = Lists.newLinkedList();
+	private Collection<Transition<T>> possibleTransitions(int index, boolean addExclusionTransitions) {
+		Collection<Transition<T>> result = Lists.newLinkedList();
 		if(index < accesses.length) {
 			if(accesses[index] instanceof SetOfPossibleFieldAccesses) {
 				result.add(new Transition.SubAccessPathTransition<>(index, accesses[index]));
-				result.addAll(possibleTransitions(index+1));
+				result.addAll(possibleTransitions(index+1, addExclusionTransitions));
 			}
 			else
 				result.add(new Transition.SubAccessPathTransition<>(index+1, accesses[index]));
-		} else if(index - accesses.length < exclusions.length) {
-			result.add(new Transition.ExclusionPathTransition<FieldRef>(index+1, exclusions[index-accesses.length]));
+		} else if(addExclusionTransitions && index - accesses.length < exclusions.length) {
+			result.add(new Transition.ExclusionPathTransition<T>(index+1, exclusions[index-accesses.length]));
 		}
 		return result;
 	}
 	
-	public SubAccessPath<FieldRef>[] getDeltaTo(AccessPath<FieldRef> accPath) {
-		int currentIndex = 0;
+	public SubAccessPath<T>[] getDeltaTo(AccessPath<T> accPath) {
+		int currIndex = 0;
+		int otherIndex = 0;
 		
-		for(SubAccessPath<FieldRef> sub : accesses) {
-			if(!(sub instanceof SpecificFieldAccess))
-				throw new IllegalArgumentException("Cannot calculate delta to. Current AccessPath contains set elements: "+toString());
-			
-			FieldRef field = sub.elements().iterator().next();
-			
-			while(true) {
-				if(currentIndex<accPath.accesses.length && accPath.accesses[currentIndex].contains(field)) {
-					if(accPath.accesses[currentIndex] instanceof SpecificFieldAccess)
-						currentIndex++;
-					break;
-				} else if(currentIndex<accPath.accesses.length && accPath.accesses[currentIndex] instanceof SetOfPossibleFieldAccesses) {
-					currentIndex++;
+		outer: while(true) {
+			Collection<Transition<T>> transitions = possibleTransitions(currIndex, false);
+			Collection<Transition<T>> otherTransitions = accPath.possibleTransitions(otherIndex, false);
+
+			for(Transition<T> transition : transitions) {
+				for(Transition<T> otherTransition : otherTransitions) {
+					MatchResult<Transition<T>> match = transition.isPrefixMatchOf(otherTransition);
+					if(match.hasMatched()) {
+						if(currIndex == transition.transitionToIndex() && otherIndex == otherTransition.transitionToIndex())
+							continue;
+						
+						currIndex = transition.transitionToIndex();
+						otherIndex = otherTransition.transitionToIndex();
+						continue outer;
+					}
 				}
-				else
-					throw new IllegalArgumentException("'"+toString()+ "' is not a prefix of the given AccessPath: "+accPath);
 			}
+			break;
 		}
 		
-		return Arrays.copyOfRange(accPath.accesses, currentIndex, accPath.accesses.length);
+		return Arrays.copyOfRange(accPath.accesses, otherIndex, accPath.accesses.length);
+		
+//		int currentIndex = 0;
+//		for(SubAccessPath<T> sub : accesses) {
+//			if(!(sub instanceof SpecificFieldAccess))
+//				throw new IllegalArgumentException("Cannot calculate delta to. Current AccessPath contains set elements: "+toString());
+//			
+//			T field = sub.elements().iterator().next();
+//			
+//			while(true) {
+//				if(currentIndex<accPath.accesses.length && accPath.accesses[currentIndex].contains(field)) {
+//					if(accPath.accesses[currentIndex] instanceof SpecificFieldAccess)
+//						currentIndex++;
+//					break;
+//				} else if(currentIndex<accPath.accesses.length && accPath.accesses[currentIndex] instanceof SetOfPossibleFieldAccesses) {
+//					currentIndex++;
+//				}
+//				else
+//					throw new IllegalArgumentException("'"+toString()+ "' is not a prefix of the given AccessPath: "+accPath);
+//			}
+//		}
+//		
+//		return Arrays.copyOfRange(accPath.accesses, currentIndex, accPath.accesses.length);
 	}
 	
-	public AccessPath<FieldRef> mergeExcludedFieldReferences(AccessPath<FieldRef> accPath) {
-		Set<FieldRef>[] newExclusionArray = new Set[Math.max(exclusions.length,accPath.exclusions.length)];
+	public AccessPath<T> mergeExcludedFieldReferences(AccessPath<T> accPath) {
+		Set<T>[] newExclusionArray = new Set[Math.max(exclusions.length,accPath.exclusions.length)];
 		for(int i=0; i<newExclusionArray.length; i++) {
 			newExclusionArray[i] = Sets.newHashSet();
 			if(i<exclusions.length)
@@ -383,7 +403,7 @@ public class AccessPath<FieldRef> {
 	@Override
 	public String toString() {
 		String result = accesses.length > 0 ? "."+Joiner.on(".").join(accesses) : "";
-		for(Set<FieldRef> exclusion : exclusions) {
+		for(Set<T> exclusion : exclusions) {
 			result += "^" + Joiner.on(",").join(exclusion);
 		}
 		return result;
@@ -411,19 +431,19 @@ public class AccessPath<FieldRef> {
 			this.index = index;
 		}
 		
-		public AccessPath<FieldRef> addExclusion(FieldRef... exclusion) {
-			HashSet<FieldRef> newExclusions = Sets.newHashSet(exclusions[index]);
-			for(FieldRef excl : exclusion)
+		public AccessPath<T> addExclusion(T... exclusion) {
+			HashSet<T> newExclusions = Sets.newHashSet(exclusions[index]);
+			for(T excl : exclusion)
 				newExclusions.add(excl);
-			Set<FieldRef>[] newExclusionsArray = exclusions.clone();
+			Set<T>[] newExclusionsArray = exclusions.clone();
 			newExclusionsArray[index] = newExclusions;
-			return new AccessPath<FieldRef>(accesses, newExclusionsArray);
+			return new AccessPath<T>(accesses, newExclusionsArray);
 		}
 	}
 
-	public AccessPath<FieldRef> removeAnyAccess() {
+	public AccessPath<T> removeAnyAccess() {
 		if(accesses.length > 0)
-			return new AccessPath<FieldRef>(new SubAccessPath[0], exclusions);
+			return new AccessPath<T>(new SubAccessPath[0], exclusions);
 		else
 			return this;
 	}

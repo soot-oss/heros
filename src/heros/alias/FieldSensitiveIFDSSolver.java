@@ -41,7 +41,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
-public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSensitiveFact<BaseValue, FieldRef, D>, M, I extends InterproceduralCFG<N, M>> {
+public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.FieldRef<FieldRef>, D extends FieldSensitiveFact<BaseValue, FieldRef, D>, M, I extends InterproceduralCFG<N, M>> {
 
 
 	public static CacheBuilder<Object, Object> DEFAULT_CACHE_BUILDER = CacheBuilder.newBuilder().concurrencyLevel
@@ -643,11 +643,11 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 						System.out.println(String.format("Cache hits: %,8d, Edges at position: %,8d", cacheHits, cache.get(key).size()));
 						System.out.println(edge);
 						System.out.println(icfg.getMethodOf(edge.getTarget()));
-						System.out.println("---");
+//						System.out.println("---");
 //						for(PathEdge<N,D> cachedEdge : cache.get(key)) {
 //							System.out.println(cachedEdge);
 //						}
-						System.out.println("---");
+//						System.out.println("---");
 					}
 					cacheHits++;
 //					boolean opposite = false;

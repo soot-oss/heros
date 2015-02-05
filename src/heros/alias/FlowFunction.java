@@ -31,14 +31,14 @@ import java.util.Set;
  * 
  * @param <D> The type of data-flow facts to be computed by the tabulation problem.
  */
-public interface FlowFunction<FieldRef, D extends FieldSensitiveFact<?, FieldRef, D>> {
+public interface FlowFunction<FieldRef extends AccessPath.FieldRef<FieldRef>, D extends FieldSensitiveFact<?, FieldRef, D>> {
 
 	/**
 	 * Returns the target values reachable from the source.
 	 */
 	Set<ConstrainedFact<FieldRef, D>> computeTargets(D source);
 	
-	public static class ConstrainedFact<FieldRef, D extends FieldSensitiveFact<?, FieldRef, D>> {
+	public static class ConstrainedFact<FieldRef extends AccessPath.FieldRef<FieldRef>, D extends FieldSensitiveFact<?, FieldRef, D>> {
 		
 		private D fact;
 		private Constraint<FieldRef> constraint;
@@ -98,13 +98,13 @@ public interface FlowFunction<FieldRef, D extends FieldSensitiveFact<?, FieldRef
 		}
 	}
 	
-	public interface Constraint<FieldRef> {
+	public interface Constraint<FieldRef extends AccessPath.FieldRef<FieldRef>> {
 		AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath, boolean sourceFact);
 		
 		boolean canBeAppliedTo(AccessPath<FieldRef> accPath);
 	}
 	
-	public class WriteFieldConstraint<FieldRef> implements Constraint<FieldRef> {
+	public class WriteFieldConstraint<FieldRef extends AccessPath.FieldRef<FieldRef>> implements Constraint<FieldRef> {
 		private FieldRef fieldRef;
 
 		public WriteFieldConstraint(FieldRef fieldRef) {
@@ -152,7 +152,7 @@ public interface FlowFunction<FieldRef, D extends FieldSensitiveFact<?, FieldRef
 		}
 	}
 	
-	public class ReadFieldConstraint<FieldRef> implements Constraint<FieldRef> {
+	public class ReadFieldConstraint<FieldRef extends AccessPath.FieldRef<FieldRef>> implements Constraint<FieldRef> {
 
 		private FieldRef fieldRef;
 

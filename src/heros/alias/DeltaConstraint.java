@@ -12,7 +12,7 @@ package heros.alias;
 
 import heros.alias.FlowFunction.Constraint;
 
-public class DeltaConstraint<FieldRef> implements Constraint<FieldRef> {
+public class DeltaConstraint<FieldRef extends AccessPath.FieldRef<FieldRef>> implements Constraint<FieldRef> {
 
 	private SubAccessPath<FieldRef>[] delta;
 	private AccessPath<FieldRef> accPathAtCallee;

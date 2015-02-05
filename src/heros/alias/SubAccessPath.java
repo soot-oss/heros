@@ -22,10 +22,14 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 
-public interface SubAccessPath<FieldRef> {
+public interface SubAccessPath<FieldRef extends AccessPath.FieldRef<FieldRef>> {
 	
 	boolean contains(FieldRef field);
 	
+	boolean shouldBeMerged(FieldRef field);
+
+	boolean shouldBeMerged(SubAccessPath<FieldRef> accPath);
+
 	boolean intersects(SubAccessPath<FieldRef> accPath);
 
 	Collection<? extends FieldRef> elements();
@@ -33,7 +37,7 @@ public interface SubAccessPath<FieldRef> {
 	SetOfPossibleFieldAccesses<FieldRef> merge(SubAccessPath<FieldRef>... fields);
 
 	
-	public static class SpecificFieldAccess<FieldRef> implements SubAccessPath<FieldRef> {
+	public static class SpecificFieldAccess<FieldRef extends AccessPath.FieldRef<FieldRef>> implements SubAccessPath<FieldRef> {
 		private final FieldRef field;
 		
 		public SpecificFieldAccess(FieldRef field) {
@@ -93,9 +97,19 @@ public interface SubAccessPath<FieldRef> {
 		public boolean intersects(SubAccessPath<FieldRef> accPath) {
 			return accPath.contains(field);
 		}
+
+		@Override
+		public boolean shouldBeMerged(SubAccessPath<FieldRef> accPath) {
+			return accPath.shouldBeMerged(field);
+		}
+
+		@Override
+		public boolean shouldBeMerged(FieldRef field) {
+			return this.field.shouldBeMergedWith(field);
+		}
 	}
 	
-	public static class SetOfPossibleFieldAccesses<FieldRef> implements SubAccessPath<FieldRef> {
+	public static class SetOfPossibleFieldAccesses<FieldRef extends AccessPath.FieldRef<FieldRef>> implements SubAccessPath<FieldRef> {
 		
 		private final Set<FieldRef> set;
 		
@@ -161,6 +175,24 @@ public interface SubAccessPath<FieldRef> {
 		public boolean intersects(SubAccessPath<FieldRef> accPath) {
 			for(FieldRef f:set) {
 				if(accPath.contains(f))
+					return true;
+			}
+			return false;
+		}
+
+		@Override
+		public boolean shouldBeMerged(FieldRef field) {
+			for(FieldRef f : set) {
+				if(f.shouldBeMergedWith(field))
+					return true;
+			}
+			return false;
+		}
+
+		@Override
+		public boolean shouldBeMerged(SubAccessPath<FieldRef> accPath) {
+			for(FieldRef f : set) {
+				if(accPath.shouldBeMerged(f))
 					return true;
 			}
 			return false;

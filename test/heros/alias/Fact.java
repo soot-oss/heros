@@ -20,15 +20,15 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 
 
-public class Fact implements FieldSensitiveFact<String, String, Fact> {
+public class Fact implements FieldSensitiveFact<String, FieldRef, Fact> {
 
 	public final String baseValue;
-	public final AccessPath<String> accessPath;
+	public final AccessPath<FieldRef> accessPath;
 	
 	public Fact(String name) {
 		Pattern pattern = Pattern.compile("(\\.|\\^)([^\\.\\^]+)");
 		Matcher matcher = pattern.matcher(name);
-		AccessPath<String> accessPath = new AccessPath<>();
+		AccessPath<FieldRef> accessPath = new AccessPath<>();
 		boolean addedExclusions = false;
 		
 		int firstSeparator = matcher.find() ? matcher.start() : name.length();
@@ -42,16 +42,20 @@ public class Fact implements FieldSensitiveFact<String, String, Fact> {
 			if(separator.equals(".")) {
 				if(addedExclusions)
 					throw new IllegalArgumentException("Access path contains field references after exclusions.");
-				accessPath = accessPath.addFieldReference(identifier);
+				accessPath = accessPath.addFieldReference(new FieldRef(identifier));
 			} else {
 				addedExclusions=true;
-				accessPath = accessPath.appendExcludedFieldReference(identifier.split(","));
+				String[] excl = identifier.split(",");
+				FieldRef[] fExcl = new FieldRef[excl.length];
+				for(int i=0; i<excl.length; i++)
+					fExcl[i] = new FieldRef(excl[i]);
+				accessPath = accessPath.appendExcludedFieldReference(fExcl);
 			}
 		}
 		this.accessPath = accessPath;
 	}
 	
-	public Fact(String baseValue, AccessPath<String> accessPath) {
+	public Fact(String baseValue, AccessPath<FieldRef> accessPath) {
 		this.baseValue = baseValue;
 		this.accessPath = accessPath;
 	}
@@ -67,7 +71,7 @@ public class Fact implements FieldSensitiveFact<String, String, Fact> {
 	}
 
 	@Override
-	public AccessPath<String> getAccessPath() {
+	public AccessPath<FieldRef> getAccessPath() {
 		return accessPath;
 	}
 
@@ -113,7 +117,7 @@ public class Fact implements FieldSensitiveFact<String, String, Fact> {
 	}
 
 	@Override
-	public Fact cloneWithAccessPath(AccessPath<String> accessPath) {
+	public Fact cloneWithAccessPath(AccessPath<FieldRef> accessPath) {
 		return new Fact(baseValue, accessPath);
 	}
 	

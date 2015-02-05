@@ -22,7 +22,7 @@ public interface Transition<FieldRef> {
 	MatchResult<Transition<FieldRef>> isPrefixMatchOf(Transition<FieldRef> t);
 	
 	
-	public static class SubAccessPathTransition<FieldRef> implements Transition<FieldRef> {
+	public static class SubAccessPathTransition<FieldRef extends AccessPath.FieldRef<FieldRef>> implements Transition<FieldRef> {
 		
 		private int transitionToIndex;
 		private SubAccessPath<FieldRef> subAccPath;
@@ -49,7 +49,7 @@ public interface Transition<FieldRef> {
 		}
 	}
 	
-	public static class ExclusionPathTransition<FieldRef> implements Transition<FieldRef> {
+	public static class ExclusionPathTransition<FieldRef extends AccessPath.FieldRef<FieldRef>> implements Transition<FieldRef> {
 		
 		private Set<FieldRef> excludedFields;
 		private int transitionToIndex;
