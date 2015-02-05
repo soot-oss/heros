@@ -14,17 +14,17 @@ import heros.alias.FlowFunction.Constraint;
 
 public class DeltaConstraint<FieldRef> implements Constraint<FieldRef> {
 
-	private FieldRef[] delta;
+	private SubAccessPath<FieldRef>[] delta;
 	private AccessPath<FieldRef> accPathAtCallee;
 
 	public DeltaConstraint(AccessPath<FieldRef> accPathAtCaller, AccessPath<FieldRef> accPathAtCallee) {
 		this.accPathAtCallee = accPathAtCallee;
-		delta = accPathAtCaller.getDeltaTo(accPathAtCallee);					
+		delta = accPathAtCaller.getDeltaTo(accPathAtCallee);
 	}
 
 	@Override
-	public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath) {
-		return accPath.addFieldReference(delta).mergeExcludedFieldReferences(accPathAtCallee);
+	public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath, boolean sourceFact) {
+		return accPath.addFieldReference(sourceFact, delta).mergeExcludedFieldReferences(accPathAtCallee);
 	}
 
 	@Override

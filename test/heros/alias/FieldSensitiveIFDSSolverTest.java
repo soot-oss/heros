@@ -38,18 +38,6 @@ public class FieldSensitiveIFDSSolverTest {
 	};
 	
 	@Test
-	@Ignore("assumes k-limiting not used")
-	public void mergeWithExistingPrefixFacts() {
-		helper.method("foo", 
-				startPoints("a"),
-				normalStmt("a").succ("b", flow("0", "1")),
-				normalStmt("b").succ("b", flow("1", "1.f")).succ("c", flow("1", "2")),
-				normalStmt("c").succ("d", kill("2")));
-				
-		helper.runSolver(false, "a");
-	}
-	
-	@Test
 	public void dontMergeWithExistingNonPrefixFacts() {
 		helper.method("foo", 
 				startPoints("a"),
@@ -185,17 +173,39 @@ public class FieldSensitiveIFDSSolverTest {
 	}
 	
 	@Test
-	@Ignore("assumes k-limiting not used")
 	public void loopAndMerge() {
 		helper.method("foo",
-				startPoints("a"),
-				normalStmt("a").succ("b", flow("0", "1")),
-				normalStmt("b").succ("c", flow("1", readField("f"), "2"), flow("1", "1"), flow("2", "2")),
-				normalStmt("c").succ("d", flow("1", "1", "1.f"), flow("2", "2")),
-				normalStmt("d").succ("e", flow("1", "1"), flow("2", "2")).succ("b", flow("1", "1"), flow("2", "2")),
-				normalStmt("e").succ("f", kill("1"), kill("2")));
+				startPoints("a0"),
+				normalStmt("a0").succ("a1", flow("0", "1")),
+				callSite("a1").calls("bar", flow("1", "1.g")));
 		
-		helper.runSolver(false, "a");
+		helper.method("bar",
+				startPoints("b"),
+				normalStmt("b").succ("c", flow("1", "1", "1.f"), flow("1.f", "1.f.f"), flow("1.f.f", "1.f.f")),
+				normalStmt("c").succ("b", flow("1", "1"), flow("1.f", "1.f"), flow("1.f.f", "1.f.f")).succ("d", flow("1", "1"), flow("1.f", "1.f"), flow("1.f.f", "1.f.f")),
+				normalStmt("d").succ("e", flow("1", readField("f"), "2"), flow("1.f", "2"), flow("1.f.f", "2.f.f")),
+				normalStmt("e").succ("f", kill("2"), kill("2.f.f")));
+		
+		helper.runSolver(false, "a0");
+	}
+	
+	@Test
+	@Ignore("not implemented optimization")
+	public void loopAndMergeExclusion() {
+		helper.method("foo",
+				startPoints("a0"),
+				normalStmt("a0").succ("a1", flow("0", "1")),
+				callSite("a1").calls("bar", flow("1", "1.f")));
+		
+		helper.method("bar",
+				startPoints("b"),
+				normalStmt("b").succ("c", flow("1", "1", "1^f")),
+				normalStmt("c").succ("b", flow("1", "1")).succ("d", flow("1", "1")),
+				normalStmt("d").succ("e", flow("1", writeField("f"), "2")),
+				normalStmt("e").succ("f", kill("2")));
+			
+		
+		helper.runSolver(false, "a0");
 	}
 	
 	@Test
@@ -358,7 +368,7 @@ public class FieldSensitiveIFDSSolverTest {
 	}
 	
 	@Test
-	@Ignore("assumes alternative to k-limitting is used")
+	@Ignore("not implemented optimization")
 	public void mergeExcludedField() {
 		helper.method("foo",
 				startPoints("a"),

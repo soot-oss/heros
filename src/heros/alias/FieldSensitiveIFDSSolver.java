@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -181,6 +182,8 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		return !worklist.isEmpty();
 	}
 	
+	private int jobCounter = 0;
+	private HashMultimap<M, PathEdge<N, D>> edgesPerMethod = HashMultimap.create();
 	/**
 	 * Runs execution, re-throwing exceptions that might be thrown during its execution.
 	 */
@@ -195,7 +198,25 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 //			throw new RuntimeException("There were exceptions during IFDS analysis. Exiting.",exception);
 //		}
 		while(!worklist.isEmpty()) {
-			worklist.pop().run();
+//			if(jobCounter % 100_000 == 0)
+			
+			PathEdgeProcessingTask current = (PathEdgeProcessingTask) worklist.removeLast();
+			int size = worklist.size();
+			current.run();
+			jobCounter++;
+			M method = icfg.getMethodOf(current.edge.getTarget());
+//			edgesPerMethod.put(method, current.edge);
+//			if(edgesPerMethod.get(method).size() > 10_000) {
+//				System.out.println(method);
+//				for(PathEdge<N,D> edge : edgesPerMethod.get(method)) {
+//					System.out.println(String.format("%-50.50s -> %-100.100s @stmt: %s", edge.factAtSource(), edge.factAtTarget(), edge.getTarget()));
+//				}
+//			}
+			
+			if(worklist.size() > size + 100 || jobCounter%100_000 == 0) {
+				System.err.println(String.format("worklist: %,6d -> %,6d, processed: %,8d ", size, worklist.size(), jobCounter) +
+						String.format("%-100.100s: %-50.50s -> %-100.100s @stmt: %s", method, current.edge.factAtSource(), current.edge.factAtTarget(), current.edge.getTarget()));
+			}
 		}
 	}
 
@@ -293,7 +314,6 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 	}
 
 	private void resumeEdges(M method, D factAtMethodStartPoint) {
-		//TODO: Check for concurrency issues
 		ConcurrentHashSet<PathEdge<N, D>> edges = pausedEdges.get(method);
 		if(edges != null) {
 			for(PathEdge<N, D> edge : edges) {
@@ -320,11 +340,11 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 							constraint.canBeAppliedTo(incomingEdge.getCallerCallSiteFact().getAccessPath())) {
 					
 						propagateConstrained(new ConcretizationPathEdge<>(
-								applyConstraint(constraint, incomingEdge.getCallerSourceFact()), 
+								applyConstraint(constraint, incomingEdge.getCallerSourceFact(), true), 
 								incomingEdge.getCallSite(), 
-								applyConstraint(constraint, incomingEdge.getCallerCallSiteFact()),
+								applyConstraint(constraint, incomingEdge.getCallerCallSiteFact(), false),
 								method,
-								applyConstraint(constraint, incomingEdge.getCalleeSourceFact())));
+								applyConstraint(constraint, incomingEdge.getCalleeSourceFact(), true)));
 					}
 				}
 			}
@@ -458,7 +478,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 			Set<ConstrainedFact<FieldRef, D>> res = computeNormalFlowFunction(flowFunction, d1, d2);
 			for (ConstrainedFact<FieldRef, D> d3 : res) {
 				if(d3.getConstraint() != null) {
-					propagateConstrained(new PathEdge<>(applyConstraint(d3.getConstraint(), d1), m, d3.getFact()));
+					propagateConstrained(new PathEdge<>(applyConstraint(d3.getConstraint(), d1, true), m, d3.getFact()));
 				}
 				else
 					propagate(new PathEdge<>(d1, m, d3.getFact()), null, false);
@@ -466,11 +486,11 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		}
 	}
 	
-	private D applyConstraint(Constraint<FieldRef> constraint, D fact) {
+	private D applyConstraint(Constraint<FieldRef> constraint, D fact, boolean sourceFact) {
 		if(fact.equals(zeroValue))
 			return zeroValue;
 		else
-			return fact.cloneWithAccessPath(constraint.applyToAccessPath(fact.getAccessPath()));
+			return fact.cloneWithAccessPath(constraint.applyToAccessPath(fact.getAccessPath(), sourceFact));
 	}
 	
 	private boolean propagateConstrained(PathEdge<N, D> pathEdge) {
@@ -505,11 +525,11 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 								callerConstraint.canBeAppliedTo(incEdge.getCallerCallSiteFact().getAccessPath())) {
 				
 							PathEdge<N,D> callerEdge = new ConcretizationPathEdge<>(
-									applyConstraint(callerConstraint, incEdge.getCallerSourceFact()), 
+									applyConstraint(callerConstraint, incEdge.getCallerSourceFact(), true), 
 									incEdge.getCallSite(), 
-									applyConstraint(callerConstraint, incEdge.getCallerCallSiteFact()),
+									applyConstraint(callerConstraint, incEdge.getCallerCallSiteFact(), false),
 									calleeMethod,
-									applyConstraint(callerConstraint, incEdge.getCalleeSourceFact()));
+									applyConstraint(callerConstraint, incEdge.getCalleeSourceFact(), true));
 							visited.put(incEdge.getCallSite(), null);
 							boolean result = propagateConstrained(callerEdge, visited);
 							visited.put(incEdge.getCallSite(), result);
@@ -583,6 +603,10 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 		propagate(edge, relatedCallSite, true);
 	}
 	
+	private HashMultimap<CacheKey<N,D,BaseValue>, PathEdge<N,D>> cache = HashMultimap.create();
+	private int cacheHits = 0;
+	private int cacheMerges = 0;
+	private int cacheOppositePrefix = 0;
 	/**
 	 * Propagates the flow further down the exploded super graph. 
 	 * @param edge the PathEdge that should be propagated
@@ -613,11 +637,92 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, D extends FieldSen
 					existingVal.addNeighbor(edge.factAtTarget());
 			}
 			else {
+				CacheKey<N,D,BaseValue> key = new CacheKey<N,D,BaseValue>(edge.getTarget(), edge.factAtSource(), edge.factAtTarget().getBaseValue());
+				if(cache.containsKey(key)) {
+					if(/*cacheHits % 10_000 == 0 ||*/ cache.get(key).size() > 1000) {
+						System.out.println(String.format("Cache hits: %,8d, Edges at position: %,8d", cacheHits, cache.get(key).size()));
+						System.out.println(edge);
+						System.out.println(icfg.getMethodOf(edge.getTarget()));
+						System.out.println("---");
+//						for(PathEdge<N,D> cachedEdge : cache.get(key)) {
+//							System.out.println(cachedEdge);
+//						}
+						System.out.println("---");
+					}
+					cacheHits++;
+//					boolean opposite = false;
+//					for(PathEdge<N,D> cachedEdge : cache.get(key)) {
+//						//FIXME: Actually it should be a test for suffix?!
+//						if(AccessPathUtil.isPrefixOf(cachedEdge.factAtTarget(), edge.factAtTarget()) == PrefixTestResult.GUARANTEED_PREFIX) {
+//							cachedEdge.factAtTarget().addNeighbor(edge.factAtTarget());
+//							cacheMerges++;
+//							logger.trace("MERGE: {} with previous edge {}", edge, cachedEdge);
+//							return;
+//						}
+//						else if(AccessPathUtil.isPrefixOf(edge.factAtTarget(), cachedEdge.factAtTarget()) == PrefixTestResult.GUARANTEED_PREFIX)
+//							opposite=true;
+//					}
+//					if(opposite)
+//						cacheOppositePrefix++;
+				}	
+				
+				cache.put(key, edge);
 				scheduleEdgeProcessing(edge);
 				if(edge.factAtTarget()!=zeroValue)
 					logger.trace("EDGE: {}: {}", icfg.getMethodOf(edge.getTarget()), edge);
 			}
 		}
+	}
+	
+	private static class CacheKey<N, D, BaseValue> {
+
+		private N target;
+		private D factAtSource;
+		private BaseValue baseValueAtTarget;
+
+		public CacheKey(N target, D factAtSource, BaseValue baseValueAtTarget) {
+			this.target = target;
+			this.factAtSource = factAtSource;
+			this.baseValueAtTarget = baseValueAtTarget;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((baseValueAtTarget == null) ? 0 : baseValueAtTarget.hashCode());
+			result = prime * result + ((factAtSource == null) ? 0 : factAtSource.hashCode());
+			result = prime * result + ((target == null) ? 0 : target.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (!(obj instanceof CacheKey))
+				return false;
+			CacheKey other = (CacheKey) obj;
+			if (baseValueAtTarget == null) {
+				if (other.baseValueAtTarget != null)
+					return false;
+			} else if (!baseValueAtTarget.equals(other.baseValueAtTarget))
+				return false;
+			if (factAtSource == null) {
+				if (other.factAtSource != null)
+					return false;
+			} else if (!factAtSource.equals(other.factAtSource))
+				return false;
+			if (target == null) {
+				if (other.target != null)
+					return false;
+			} else if (!target.equals(other.target))
+				return false;
+			return true;
+		}
+		
 	}
 
 	private Set<SummaryEdge<D, N>> endSummary(M m, final D d3) {

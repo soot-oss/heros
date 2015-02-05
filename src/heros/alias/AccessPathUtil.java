@@ -10,9 +10,12 @@
  ******************************************************************************/
 package heros.alias;
 
+import java.util.Set;
+
 import heros.alias.AccessPath.PrefixTestResult;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Sets;
 
 
 public class AccessPathUtil {
@@ -26,8 +29,7 @@ public class AccessPathUtil {
 		
 		return prefixCandidate.getAccessPath().isPrefixOf(fact.getAccessPath());
 	}
-	
-	
+
 	public static <FieldRef, D extends FieldSensitiveFact<?, FieldRef, D>> Optional<D> applyAbstractedSummary(D sourceFact, SummaryEdge<D, ?> summary) {
 		if(!isPrefixOf(summary.getSourceFact(), sourceFact).atLeast(PrefixTestResult.GUARANTEED_PREFIX))
 			throw new IllegalArgumentException(String.format("Source fact in given summary edge '%s' is not a prefix of the given source fact '%s'", summary, sourceFact));
@@ -39,7 +41,7 @@ public class AccessPathUtil {
 		if(abstractAccessPath.equals(concreteAccessPath))
 			return Optional.of(summary.getTargetFact());
 		
-		FieldRef[] delta = abstractAccessPath.getDeltaTo(concreteAccessPath);
+		SubAccessPath<FieldRef>[] delta = abstractAccessPath.getDeltaTo(concreteAccessPath);
 		if(targetAccessPath.isAccessInExclusions(delta))
 			return Optional.absent();
 		
@@ -55,4 +57,5 @@ public class AccessPathUtil {
 		else
 			return fact.cloneWithAccessPath(accPath);
 	}
+	
 }

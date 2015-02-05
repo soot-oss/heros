@@ -99,7 +99,7 @@ public interface FlowFunction<FieldRef, D extends FieldSensitiveFact<?, FieldRef
 	}
 	
 	public interface Constraint<FieldRef> {
-		AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath);
+		AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath, boolean sourceFact);
 		
 		boolean canBeAppliedTo(AccessPath<FieldRef> accPath);
 	}
@@ -112,7 +112,7 @@ public interface FlowFunction<FieldRef, D extends FieldSensitiveFact<?, FieldRef
 		}
 
 		@Override
-		public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath) {
+		public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath, boolean sourceFact) {
 			return accPath.mergeExcludedFieldReference(fieldRef);
 		}
 		
@@ -161,8 +161,8 @@ public interface FlowFunction<FieldRef, D extends FieldSensitiveFact<?, FieldRef
 		}
 		
 		@Override
-		public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath) {
-			return accPath.addFieldReference(fieldRef);
+		public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath, boolean sourceFact) {
+			return accPath.addFieldReference(!sourceFact, new SubAccessPath.SpecificFieldAccess<FieldRef>(fieldRef));
 		}
 		
 		@Override
@@ -197,7 +197,7 @@ public interface FlowFunction<FieldRef, D extends FieldSensitiveFact<?, FieldRef
 
 		@Override
 		public boolean canBeAppliedTo(AccessPath<FieldRef> accPath) {
-			return !accPath.isAccessInExclusions(fieldRef);
+			return !accPath.isAccessInExclusions(new SubAccessPath.SpecificFieldAccess<FieldRef>(fieldRef));
 		}
 	}
 }
