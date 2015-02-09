@@ -237,4 +237,25 @@ public class AccessPathTest {
 		assertEquals(PrefixTestResult.GUARANTEED_PREFIX,  ap(anyOf("f"), s("h")).isPrefixOf(ap(s("f"), s("h"))));
 		assertEquals(PrefixTestResult.GUARANTEED_PREFIX,  ap(anyOf("f")).appendExcludedFieldReference(f("f")).isPrefixOf(ap(s("f"), s("h"))));
 	}
+
+	@Test
+	public void subsumes() {
+		assertTrue(ap(anyOf("f")).subsumes(ap(s("f"))));
+		assertFalse(ap(s("f")).subsumes(ap(anyOf("f"))));
+		
+		assertTrue(ap(anyOf("f", "g")).subsumes(ap(s("f"), s("g"))));
+		assertFalse(ap(s("f"), s("g")).subsumes(ap(anyOf("f", "g"))));
+		
+		assertTrue(ap(anyOf("f", "g")).subsumes(ap(anyOf("f"), anyOf("g"))));
+		assertFalse(ap(anyOf("f"), anyOf("g")).subsumes(ap(anyOf("f", "g"))));
+	}
+
+	@Test
+	public void subsumesWithExclusions() {
+		assertTrue(ap().subsumes(ap().appendExcludedFieldReference(f("a"))));
+		assertFalse(ap().appendExcludedFieldReference(f("a")).subsumes(ap()));
+		
+		assertTrue(ap().appendExcludedFieldReference(f("a")).subsumes(ap().appendExcludedFieldReference(f("a", "b"))));
+		assertFalse(ap().appendExcludedFieldReference(f("a", "b")).subsumes(ap().appendExcludedFieldReference(f("a"))));
+	}
 }

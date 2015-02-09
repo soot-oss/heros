@@ -15,18 +15,29 @@ import heros.FlowFunctionCache;
 import heros.InterproceduralCFG;
 import heros.SynchronizedBy;
 import heros.alias.AccessPath.PrefixTestResult;
+import heros.alias.BiDiFieldSensitiveIFDSSolver.AbstractionWithSourceStmt;
 import heros.alias.FlowFunction.ConstrainedFact;
 import heros.alias.FlowFunction.Constraint;
 import heros.solver.CountingThreadPoolExecutor;
 import heros.solver.IFDSSolver;
 import heros.solver.PathEdge;
 
+import java.io.BufferedOutputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -38,8 +49,10 @@ import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.sun.org.apache.xpath.internal.axes.IteratorPool;
 
 public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.FieldRef<FieldRef>, D extends FieldSensitiveFact<BaseValue, FieldRef, D>, M, I extends InterproceduralCFG<N, M>> {
 
@@ -95,7 +108,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 	@DontSynchronize("readOnly")
 	protected final boolean followReturnsPastSeeds;
 
-	private LinkedList<Runnable> worklist;
+	private LinkedList<PathEdgeProcessingTask> worklist;
 	
 	
 	/**
@@ -141,6 +154,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 	public void solve() {		
 		submitInitialSeeds();
 		awaitCompletionComputeValuesAndShutdown();
+		writeDebugFile();
 	}
 
 	/**
@@ -200,7 +214,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 		while(!worklist.isEmpty()) {
 //			if(jobCounter % 100_000 == 0)
 			
-			PathEdgeProcessingTask current = (PathEdgeProcessingTask) worklist.removeLast();
+			PathEdgeProcessingTask current = worklist.removeLast();
 			int size = worklist.size();
 			current.run();
 			jobCounter++;
@@ -212,11 +226,12 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 //					System.out.println(String.format("%-50.50s -> %-100.100s @stmt: %s", edge.factAtSource(), edge.factAtTarget(), edge.getTarget()));
 //				}
 //			}
-			
-			if(worklist.size() > size + 100 || jobCounter%100_000 == 0) {
+			if(worklist.size() > size + 100 || jobCounter%10_000 == 0) {
 				System.err.println(String.format("worklist: %,6d -> %,6d, processed: %,8d ", size, worklist.size(), jobCounter) +
 						String.format("%-100.100s: %-50.50s -> %-100.100s @stmt: %s", method, current.edge.factAtSource(), current.edge.factAtTarget(), current.edge.getTarget()));
 			}
+//			System.err.println(String.format("worklist: %,6d -> %,6d, processed: %,8d ", size, worklist.size(), jobCounter) +
+//					String.format("%-100.100s: %-50.50s -> %-100.100s @stmt: %s", method, current.edge.factAtSource(), current.edge.factAtTarget(), current.edge.getTarget()));
 		}
 	}
 
@@ -330,6 +345,9 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 	private void registerInterestedCaller(M method, IncomingEdge<D, N> incomingEdge) {
 		Set<PathEdge<N, D>> edges = pausedEdges.get(method);
 		if(edges != null) {
+			if(edges.size() > 100)
+				System.out.println("Paused edges for method "+method+": "+edges.size());
+			
 			for(final PathEdge<N, D> edge : edges) {
 				if(AccessPathUtil.isPrefixOf(incomingEdge.getCalleeSourceFact(), edge.factAtSource()).atLeast(PrefixTestResult.POTENTIAL_PREFIX)) {
 					logger.trace("RECHECKING-PAUSED-EDGE: {} for new incoming edge {}", edge, incomingEdge);
@@ -603,10 +621,14 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 		propagate(edge, relatedCallSite, true);
 	}
 	
+	private HashMultimap<CacheKey<N,D,BaseValue>, PathEdge<N,D>> sourceBaseValueCache = HashMultimap.create();
 	private HashMultimap<CacheKey<N,D,BaseValue>, PathEdge<N,D>> cache = HashMultimap.create();
 	private int cacheHits = 0;
 	private int cacheMerges = 0;
 	private int cacheOppositePrefix = 0;
+	private int cacheSourceBaseValue = 0;
+	private int concretizationEdges = 0;
+	private int cacheEquals = 0;
 	/**
 	 * Propagates the flow further down the exploded super graph. 
 	 * @param edge the PathEdge that should be propagated
@@ -622,6 +644,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 		final D existingVal = jumpFn.addFunction(edge);
 		
 		if(edge instanceof ConcretizationPathEdge) {
+			concretizationEdges++;
 			ConcretizationPathEdge<M, N, D> concEdge = (ConcretizationPathEdge<M,N,D>) edge;
 			IncomingEdge<D, N> incomingEdge = new IncomingEdge<D, N>(concEdge.getCalleeSourceFact(), 
 					concEdge.getTarget(), concEdge.factAtSource(), concEdge.factAtTarget());
@@ -631,39 +654,58 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 			resumeEdges(concEdge.getCalleeMethod(), concEdge.getCalleeSourceFact());
 			registerInterestedCaller(concEdge.getCalleeMethod(), incomingEdge);
 		} else {
-			//TODO: Merge d.* and d.*\{x} as d.*
+			if(cacheSourceBaseValue % 10_000 == 0 || cacheEquals % 100_000 == 0) {
+				System.out.println(String.format("cache hits: %,8d, cache hits on SourceBaseValue: %,8d, equals: %,8d, merges: %,8d, opposite: %,8d, concretizationEdges: %,8d",
+						cacheHits, cacheSourceBaseValue, cacheEquals, cacheMerges, cacheOppositePrefix, concretizationEdges));
+			}
+			
+			
 			if (existingVal != null) {
+				cacheEquals++;
 				if (existingVal != edge.factAtTarget())
 					existingVal.addNeighbor(edge.factAtTarget());
 			}
 			else {
+				CacheKey<N,D,BaseValue> sourceValueKey = new CacheKey<N,D,BaseValue>(edge.getTarget(), edge.factAtSource().getBaseValue(), edge.factAtTarget().getBaseValue());
+				
+				if(sourceBaseValueCache.containsKey(sourceValueKey)) {
+					cacheSourceBaseValue++;
+				}
+				sourceBaseValueCache.put(sourceValueKey, edge);
+				
+				
 				CacheKey<N,D,BaseValue> key = new CacheKey<N,D,BaseValue>(edge.getTarget(), edge.factAtSource(), edge.factAtTarget().getBaseValue());
 				if(cache.containsKey(key)) {
-					if(/*cacheHits % 10_000 == 0 ||*/ cache.get(key).size() > 1000) {
-						System.out.println(String.format("Cache hits: %,8d, Edges at position: %,8d", cacheHits, cache.get(key).size()));
-						System.out.println(edge);
-						System.out.println(icfg.getMethodOf(edge.getTarget()));
+//					if(cacheHits % 10_000 == 0) {
+//						System.out.println(String.format("cache hits: %,8d, merges: %,8d, opposite: %,8d", cacheHits, cacheMerges, cacheOppositePrefix));
+//						System.out.println(String.format("Cache hits: %,8d, Edges at position: %,8d", cacheHits, cache.get(key).size()));
+//						System.out.println(edge);
+//						System.out.println(icfg.getMethodOf(edge.getTarget()));
 //						System.out.println("---");
 //						for(PathEdge<N,D> cachedEdge : cache.get(key)) {
 //							System.out.println(cachedEdge);
 //						}
 //						System.out.println("---");
-					}
-					cacheHits++;
-//					boolean opposite = false;
-//					for(PathEdge<N,D> cachedEdge : cache.get(key)) {
-//						//FIXME: Actually it should be a test for suffix?!
-//						if(AccessPathUtil.isPrefixOf(cachedEdge.factAtTarget(), edge.factAtTarget()) == PrefixTestResult.GUARANTEED_PREFIX) {
-//							cachedEdge.factAtTarget().addNeighbor(edge.factAtTarget());
-//							cacheMerges++;
-//							logger.trace("MERGE: {} with previous edge {}", edge, cachedEdge);
-//							return;
-//						}
-//						else if(AccessPathUtil.isPrefixOf(edge.factAtTarget(), cachedEdge.factAtTarget()) == PrefixTestResult.GUARANTEED_PREFIX)
-//							opposite=true;
 //					}
+					cacheHits++;
+					boolean opposite = false;
+					for(PathEdge<N,D> cachedEdge : cache.get(key)) {
+						if(cachedEdge.factAtTarget().getAccessPath().subsumes(edge.factAtTarget().getAccessPath())) {
+							cachedEdge.factAtTarget().addNeighbor(edge.factAtTarget());
+							cacheMerges++;
+							logger.trace("MERGE: {} with previous edge {}", edge, cachedEdge);
+							return;
+						}
+//						else if(edge.factAtTarget().getAccessPath().subsumes(cachedEdge.factAtTarget().getAccessPath()))
+//							opposite=true;
+
+					}
 //					if(opposite)
 //						cacheOppositePrefix++;
+//					else if(cache.get(key).size() > 500) {
+//						System.out.println("had to check "+cache.get(key).size()+" items to find out there is no subsumption relation");
+//						System.out.println(edge.factAtTarget());
+//					}
 				}	
 				
 				cache.put(key, edge);
@@ -676,23 +718,17 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 	
 	private static class CacheKey<N, D, BaseValue> {
 
-		private N target;
-		private D factAtSource;
-		private BaseValue baseValueAtTarget;
+		private Object[] values;
 
-		public CacheKey(N target, D factAtSource, BaseValue baseValueAtTarget) {
-			this.target = target;
-			this.factAtSource = factAtSource;
-			this.baseValueAtTarget = baseValueAtTarget;
+		public CacheKey(Object...values) {
+			this.values = values;
 		}
 
 		@Override
 		public int hashCode() {
 			final int prime = 31;
 			int result = 1;
-			result = prime * result + ((baseValueAtTarget == null) ? 0 : baseValueAtTarget.hashCode());
-			result = prime * result + ((factAtSource == null) ? 0 : factAtSource.hashCode());
-			result = prime * result + ((target == null) ? 0 : target.hashCode());
+			result = prime * result + Arrays.hashCode(values);
 			return result;
 		}
 
@@ -705,20 +741,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 			if (!(obj instanceof CacheKey))
 				return false;
 			CacheKey other = (CacheKey) obj;
-			if (baseValueAtTarget == null) {
-				if (other.baseValueAtTarget != null)
-					return false;
-			} else if (!baseValueAtTarget.equals(other.baseValueAtTarget))
-				return false;
-			if (factAtSource == null) {
-				if (other.factAtSource != null)
-					return false;
-			} else if (!factAtSource.equals(other.factAtSource))
-				return false;
-			if (target == null) {
-				if (other.target != null)
-					return false;
-			} else if (!target.equals(other.target))
+			if (!Arrays.equals(values, other.values))
 				return false;
 			return true;
 		}
@@ -826,4 +849,55 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 	}
 	
 
+	public void writeDebugFile() {
+		try {
+			FileWriter writer = new FileWriter("debug-solver-dump.json");
+			writer.write("var methods= {\n\t");
+			Enumeration<M> summaryEnumerable = endSummary.keys();
+			
+			while(summaryEnumerable.hasMoreElements()) {
+				M m = summaryEnumerable.nextElement();
+				writer.write("\""+m.toString()+"\"");
+				writer.write(": { \n\t\tsummaries: [\n");
+				for(SummaryEdge<D,N> summary : endSummary.get(m)) {
+					writer.write("\t\t\t{ \n\t\t\t\tsource: ");
+					writeFact(writer, summary.getSourceFact());
+					writer.write(",\n\t\t\t\ttarget: ");
+					writeFact(writer, summary.getTargetFact());
+					writer.write("\n\t\t\t},");
+				}
+				writer.write("\n\t\t],");
+				writer.write("\n\t\tincoming: [\n");
+				Set<IncomingEdge<D, N>> incEdges = incoming.get(m);
+				if(incEdges!=null)
+					for(IncomingEdge<D,N> incEdge : incEdges) {
+						writer.write("\t\t\t{ \n\t\t\t\tcallee_source: ");
+						writeFact(writer, incEdge.getCalleeSourceFact());
+						writer.write(",\n\t\t\t\tcalling_method: ");
+						writer.write("\""+icfg.getMethodOf(incEdge.getCallSite())+"\"");
+						writer.write("\n\t\t\t},");
+					}
+				
+				writer.write("\n\t\t]");
+				writer.write("\n\t},\n");
+			}
+			
+			writer.write("}");
+			writer.flush();
+			writer.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void writeFact(FileWriter writer, D sourceFact) throws IOException {
+		writer.write("{");
+		writer.write("type: \""+((AbstractionWithSourceStmt) sourceFact).getAbstraction().getClass().getSimpleName()+"\", ");
+		writer.write("baseValue: \""+sourceFact.getBaseValue()+"\", ");
+		writer.write("accPath: [");
+		for(String s :sourceFact.getAccessPath().tokenize()) {
+			writer.write("\""+s+"\",");
+		}
+		writer.write("]}");
+	}
 }

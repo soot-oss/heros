@@ -17,6 +17,7 @@ import heros.alias.Transition.MatchResult;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Joiner;
@@ -40,6 +41,8 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 	public AccessPath() {
 		accesses = new SubAccessPath[0];
 		exclusions = new Set[0];
+		if(exclusions.length > 1) 
+			System.out.println("Exclusion depth: "+exclusions.length);
 	}
 	
 	AccessPath(SubAccessPath<T>[] accesses, Set<T>[] exclusions) {
@@ -331,28 +334,6 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 		}
 		
 		return Arrays.copyOfRange(accPath.accesses, otherIndex, accPath.accesses.length);
-		
-//		int currentIndex = 0;
-//		for(SubAccessPath<T> sub : accesses) {
-//			if(!(sub instanceof SpecificFieldAccess))
-//				throw new IllegalArgumentException("Cannot calculate delta to. Current AccessPath contains set elements: "+toString());
-//			
-//			T field = sub.elements().iterator().next();
-//			
-//			while(true) {
-//				if(currentIndex<accPath.accesses.length && accPath.accesses[currentIndex].contains(field)) {
-//					if(accPath.accesses[currentIndex] instanceof SpecificFieldAccess)
-//						currentIndex++;
-//					break;
-//				} else if(currentIndex<accPath.accesses.length && accPath.accesses[currentIndex] instanceof SetOfPossibleFieldAccesses) {
-//					currentIndex++;
-//				}
-//				else
-//					throw new IllegalArgumentException("'"+toString()+ "' is not a prefix of the given AccessPath: "+accPath);
-//			}
-//		}
-//		
-//		return Arrays.copyOfRange(accPath.accesses, currentIndex, accPath.accesses.length);
 	}
 	
 	public AccessPath<T> mergeExcludedFieldReferences(AccessPath<T> accPath) {
@@ -450,5 +431,71 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 
 	public boolean hasEmptyAccessPath() {
 		return accesses.length == 0;
+	}
+
+	public boolean subsumes(AccessPath<T> accPath) {
+		int currIndex = 0;
+		int otherIndex = 0;
+		
+		
+		outer: while(true) {
+			Collection<Transition<T>> transitions = possibleTransitions(currIndex, false);
+			Collection<Transition<T>> otherTransitions = accPath.possibleTransitions(otherIndex, false);
+
+			if((currIndex >= accesses.length || (currIndex == accesses.length-1 && accesses[currIndex] instanceof SetOfPossibleFieldAccesses)) 
+					&& otherIndex>=accPath.accesses.length-1) {
+				if(transitions.isEmpty())
+					return otherTransitions.isEmpty() && hasAtLeastTheSameExclusionsAs(accPath);
+				for(Transition<T> transition : transitions) {
+					for(Transition<T> otherTransition : otherTransitions) {
+						MatchResult<Transition<T>> match = transition.isPrefixMatchOf(otherTransition);
+						if(!match.hasMatched())
+							return false;
+					}	
+				}
+				return hasAtLeastTheSameExclusionsAs(accPath);
+			}
+
+			for(Transition<T> transition : transitions) {
+				for(Transition<T> otherTransition : otherTransitions) {
+					MatchResult<Transition<T>> match = transition.isPrefixMatchOf(otherTransition);
+					if(match.hasMatched()) {
+						if(otherIndex == otherTransition.transitionToIndex())
+							continue;
+						
+						currIndex = transition.transitionToIndex();
+						otherIndex = otherTransition.transitionToIndex();
+						continue outer;
+					}
+				}
+			}
+			return false;
+		}
+	}
+	
+	private boolean hasAtLeastTheSameExclusionsAs(AccessPath<T> accPath) {
+		if(exclusions.length > accPath.exclusions.length)
+			return false;
+		
+		for(int i=0; i<accPath.exclusions.length; i++) {
+			if(i<exclusions.length) {
+				if(!accPath.exclusions[i].containsAll(exclusions[i]))
+					return false;
+			}
+			else
+				return true;
+		}
+		return true;
+	}
+
+	public Collection<String> tokenize() {
+		List<String> result = Lists.newLinkedList();
+		for(SubAccessPath<T> s : accesses) {
+			result.add(s.toString());
+		}
+		for(Set<T> excl : exclusions) {
+			result.add("^"+Joiner.on(",").join(excl));
+		}
+		return result;
 	}
 }
