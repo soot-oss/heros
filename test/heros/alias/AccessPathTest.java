@@ -25,108 +25,108 @@ import heros.alias.SubAccessPath.*;
 @SuppressWarnings("unchecked")
 public class AccessPathTest {
 
-	private static FieldRef f(String s) {
-		return new FieldRef(s);
+	private static TestFieldRef f(String s) {
+		return new TestFieldRef(s);
 	}
 	
-	private static FieldRef[] f(String...s) {
-		FieldRef[] result = new FieldRef[s.length];
+	private static TestFieldRef[] f(String...s) {
+		TestFieldRef[] result = new TestFieldRef[s.length];
 		for(int i=0; i<s.length; i++) {
 			result[i] = f(s[i]);
 		}
 		return result;
 	}
 	
-	private static SetOfPossibleFieldAccesses<FieldRef> anyOf(String...fields) {
-		Set<FieldRef> set = Sets.newHashSet();
+	private static SetOfPossibleFieldAccesses<TestFieldRef> anyOf(String...fields) {
+		Set<TestFieldRef> set = Sets.newHashSet();
 		for(String f : fields)
-			set.add(new FieldRef(f));
-		return new SetOfPossibleFieldAccesses<FieldRef>(set);
+			set.add(new TestFieldRef(f));
+		return new SetOfPossibleFieldAccesses<TestFieldRef>(set);
 	}
 	
-	private static SpecificFieldAccess<FieldRef> s(String field) {
-		return new SpecificFieldAccess<FieldRef>(new FieldRef(field));
+	private static SpecificFieldAccess<TestFieldRef> s(String field) {
+		return new SpecificFieldAccess<TestFieldRef>(new TestFieldRef(field));
 	}
 	
-	private static AccessPath<FieldRef> ap(SubAccessPath<FieldRef>... path) {
-		return new AccessPath<FieldRef>(path, new Set[0]);
+	private static AccessPath<TestFieldRef> ap(SubAccessPath<TestFieldRef>... path) {
+		return new AccessPath<TestFieldRef>(path, Sets.<TestFieldRef> newHashSet());
 	}
 	
 	@Test
 	public void addAndMergeAll() {
-		AccessPath<FieldRef> sut = AccessPath.<FieldRef>empty().addFieldReference(f("a", "b", "c"));
+		AccessPath<TestFieldRef> sut = AccessPath.<TestFieldRef>empty().addFieldReference(f("a", "b", "c"));
 		assertEquals(ap(anyOf("a","b","c")), sut.addFieldReference(f("a")));
 	}
 
 	@Test
 	public void addAndMergeSuffix() {
-		AccessPath<FieldRef> sut = AccessPath.<FieldRef>empty().addFieldReference(f("a", "b", "c"));
+		AccessPath<TestFieldRef> sut = AccessPath.<TestFieldRef>empty().addFieldReference(f("a", "b", "c"));
 		assertEquals(ap(s("a"), anyOf("b","c")), sut.addFieldReference(f("b")));
 	}
 	
 	@Test
 	public void addWithoutMerge() {
-		AccessPath<FieldRef> sut = ap(s("a"));
+		AccessPath<TestFieldRef> sut = ap(s("a"));
 		assertEquals(ap(s("a"), s("b")), sut.addFieldReference(f("b")));
 	}
 	
 	@Test
 	public void addMergedFields() {
-		AccessPath<FieldRef> sut = ap(s("a"));
+		AccessPath<TestFieldRef> sut = ap(s("a"));
 		assertEquals(ap(anyOf("a")), sut.addFieldReference(anyOf("a")));
 	}
 
 	@Test
 	public void addMergedFieldsOnExclusion() {
-		AccessPath<FieldRef> sut = ap().appendExcludedFieldReference(f("a"));
+		AccessPath<TestFieldRef> sut = ap().appendExcludedFieldReference(f("a"));
 		assertEquals(ap(anyOf("a", "b")), sut.addFieldReference(anyOf("a", "b")));
 	}
 	
 	@Test
 	public void addMergedFieldsOnNestedExclusion() {
-		AccessPath<FieldRef> sut = ap().appendExcludedFieldReference(f("a")).appendExcludedFieldReference(f("b"));
+		AccessPath<TestFieldRef> sut = ap().appendExcludedFieldReference(f("a")).appendExcludedFieldReference(f("b"));
 		assertEquals(ap(anyOf("a", "b")), sut.addFieldReference(anyOf("a", "b")));
 	}
 	
 	@Test
 	public void addFieldThatMerges() {
-		AccessPath<FieldRef> sut = ap(s("a"), s("b")).appendExcludedFieldReference(f("c")).appendExcludedFieldReference(f("x"));
-		assertEquals(ap(anyOf("a", "b")).appendExcludedFieldReference(f("x")), sut.addFieldReference(s("a")));
+		AccessPath<TestFieldRef> sut = ap(s("a"), s("b")).appendExcludedFieldReference(f("x"));
+		assertEquals(ap(anyOf("a", "b")), sut.addFieldReference(s("a")));
 	}
 	
 	@Test
 	public void addFieldThatMergesResultingInExclusionOfMergedField() {
-		AccessPath<FieldRef> sut = ap(s("a"), s("b")).appendExcludedFieldReference(f("c")).appendExcludedFieldReference(f("b"));
+		AccessPath<TestFieldRef> sut = ap(s("a"), s("b")).appendExcludedFieldReference(f("c")).appendExcludedFieldReference(f("b"));
 		assertEquals(ap(anyOf("a", "b")), sut.addFieldReference(s("a")));
 	}
 	
 	@Test
 	public void addFieldThatMergesResultingInExclusionOfMergedField2() {
-		AccessPath<FieldRef> sut = ap().appendExcludedFieldReference(f("a")).appendExcludedFieldReference(f("b"));
+		AccessPath<TestFieldRef> sut = ap().appendExcludedFieldReference(f("a")).appendExcludedFieldReference(f("b"));
 		assertEquals(ap(anyOf("a", "c")), sut.addFieldReference(anyOf("a","c")));
 	}
 	
 	@Test
 	public void addFieldThatMergesResultingInExclusionOfMergedField3() {
-		AccessPath<FieldRef> sut = ap(s("c")).appendExcludedFieldReference(f("a")).appendExcludedFieldReference(f("b"));
+		AccessPath<TestFieldRef> sut = ap(s("c")).appendExcludedFieldReference(f("a")).appendExcludedFieldReference(f("b"));
 		assertEquals(ap(anyOf("c")), sut.addFieldReference(anyOf("c")));
 	}
 	
 	@Test
 	public void addOnExclusion() {
-		AccessPath<FieldRef> sut = ap().appendExcludedFieldReference(f("a")).appendExcludedFieldReference(f("b"));
-		assertEquals(ap(s("b")).appendExcludedFieldReference(f("b")), sut.addFieldReference(s("b")));
+		AccessPath<TestFieldRef> sut = ap().appendExcludedFieldReference(f("a"));
+		assertEquals(ap(s("b")), sut.addFieldReference(s("b")));
 	}
 	
 	@Test
 	public void addOnNestedExclusion() {
-		AccessPath<FieldRef> sut = ap().appendExcludedFieldReference(f("a")).appendExcludedFieldReference(f("b"));
+		AccessPath<TestFieldRef> sut = ap().appendExcludedFieldReference(f("a")).appendExcludedFieldReference(f("b"));
 		assertEquals(ap(anyOf("a", "c")), sut.addFieldReference(anyOf("a", "c")));
 	}
 
 	@Test(expected=IllegalArgumentException.class)
 	public void addMergedFieldsOnSingleExclusion() {
-		AccessPath<FieldRef> sut = ap().appendExcludedFieldReference(f("a"));
+		AccessPath<TestFieldRef> sut = ap().appendExcludedFieldReference(f("a"));
 		sut.addFieldReference(anyOf("a"));	
 	}
 	
@@ -162,37 +162,37 @@ public class AccessPathTest {
 	
 	@Test
 	public void deltaDepth1() {
-		SubAccessPath<FieldRef>[] actual = ap(s("a")).getDeltaTo(ap(s("a"), s("b")));
+		SubAccessPath<TestFieldRef>[] actual = ap(s("a")).getDeltaTo(ap(s("a"), s("b")));
 		assertArrayEquals(new SubAccessPath[] { s("b") }, actual);
 	}
 	
 	@Test
 	public void deltaDepth2() {
-		SubAccessPath<FieldRef>[] actual = ap(s("a")).getDeltaTo(ap(s("a"), s("b"), s("c")));
+		SubAccessPath<TestFieldRef>[] actual = ap(s("a")).getDeltaTo(ap(s("a"), s("b"), s("c")));
 		assertArrayEquals(new SubAccessPath[] { s("b"), s("c") }, actual);
 	}
 	
 	@Test
 	public void delta() {
-		SubAccessPath<FieldRef>[] actual = ap(s("a")).getDeltaTo(ap(s("a"), anyOf("b")));
+		SubAccessPath<TestFieldRef>[] actual = ap(s("a")).getDeltaTo(ap(s("a"), anyOf("b")));
 		assertArrayEquals(new SubAccessPath[] { anyOf("b") }, actual);
 	}
 	
 	@Test
 	public void delta2() {
-		SubAccessPath<FieldRef>[] actual = ap(s("f"), s("g"), s("h")).getDeltaTo(ap(anyOf("f", "g"), s("h")));
+		SubAccessPath<TestFieldRef>[] actual = ap(s("f"), s("g"), s("h")).getDeltaTo(ap(anyOf("f", "g"), s("h")));
 		assertArrayEquals(new SubAccessPath[] {  }, actual);
 	}
 	
 	@Test
 	public void delta3() {
-		SubAccessPath<FieldRef>[] actual = ap(s("f"), s("f")).getDeltaTo(ap(anyOf("f")));
+		SubAccessPath<TestFieldRef>[] actual = ap(s("f"), s("f")).getDeltaTo(ap(anyOf("f")));
 		assertArrayEquals(new SubAccessPath[] { anyOf("f") } , actual);
 	}
 	
 	@Test
 	public void deltaMatchingMergedField() {
-		SubAccessPath<FieldRef>[] actual = ap(s("a"), s("b")).getDeltaTo(ap(s("a"), anyOf("b")));
+		SubAccessPath<TestFieldRef>[] actual = ap(s("a"), s("b")).getDeltaTo(ap(s("a"), anyOf("b")));
 		assertArrayEquals(new SubAccessPath[] { anyOf("b") }, actual);
 	}
 	
@@ -212,7 +212,7 @@ public class AccessPathTest {
 	
 	@Test
 	public void prefixOfExclusion() {
-		AccessPath<FieldRef> sut = ap().appendExcludedFieldReference(f("f"));
+		AccessPath<TestFieldRef> sut = ap().appendExcludedFieldReference(f("f"));
 		assertEquals(PrefixTestResult.NO_PREFIX, sut.isPrefixOf(ap(anyOf("f"))));
 		assertEquals(PrefixTestResult.GUARANTEED_PREFIX, sut.isPrefixOf(ap(anyOf("f", "g"))));
 		assertEquals(PrefixTestResult.GUARANTEED_PREFIX, sut.isPrefixOf(ap(anyOf("g"))));
@@ -221,7 +221,7 @@ public class AccessPathTest {
 	
 	@Test
 	public void prefixOfExclusions() {
-		AccessPath<FieldRef> sut = ap().appendExcludedFieldReference(f("f", "g"));
+		AccessPath<TestFieldRef> sut = ap().appendExcludedFieldReference(f("f", "g"));
 		assertEquals(PrefixTestResult.NO_PREFIX, sut.isPrefixOf(ap(anyOf("f"))));
 		assertEquals(PrefixTestResult.NO_PREFIX, sut.isPrefixOf(ap(anyOf("f", "g"))));
 		assertEquals(PrefixTestResult.GUARANTEED_PREFIX, sut.isPrefixOf(ap(anyOf("f"), s("h"))));

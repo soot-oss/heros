@@ -90,22 +90,22 @@ public class TestHelper {
 		return new ExpectedFlowFunction(times, new Fact(source));
 	}
 
-	public static Constraint<FieldRef> readField(String fieldName) {
-		return new FlowFunction.ReadFieldConstraint<FieldRef>(new FieldRef(fieldName));
+	public static Constraint<TestFieldRef> readField(String fieldName) {
+		return new FlowFunction.ReadFieldConstraint<TestFieldRef>(new TestFieldRef(fieldName));
 	}
 	
-	public static Constraint<FieldRef> writeField(String fieldName) {
-		return new FlowFunction.WriteFieldConstraint<FieldRef>(new FieldRef(fieldName));
+	public static Constraint<TestFieldRef> writeField(String fieldName) {
+		return new FlowFunction.WriteFieldConstraint<TestFieldRef>(new TestFieldRef(fieldName));
 	}
 	
-	public static ExpectedFlowFunction flow(String source, Constraint<FieldRef> constraint, String... targets) {
+	public static ExpectedFlowFunction flow(String source, Constraint<TestFieldRef> constraint, String... targets) {
 		return flow(1, source, constraint, targets);
 	}
 	
-	public static ExpectedFlowFunction flow(int times, String source, Constraint<FieldRef> constraint, String... targets) {
-		ConstrainedFact<FieldRef, Fact>[] targetFacts = new ConstrainedFact[targets.length];
+	public static ExpectedFlowFunction flow(int times, String source, Constraint<TestFieldRef> constraint, String... targets) {
+		ConstrainedFact<TestFieldRef, Fact>[] targetFacts = new ConstrainedFact[targets.length];
 		for(int i=0; i<targets.length; i++) {
-			targetFacts[i] = new ConstrainedFact<FieldRef, Fact>(new Fact(targets[i]), constraint);
+			targetFacts[i] = new ConstrainedFact<TestFieldRef, Fact>(new Fact(targets[i]), constraint);
 		}
 		return new ExpectedFlowFunction(times, new Fact(source), targetFacts);
 	}
@@ -302,11 +302,11 @@ public class TestHelper {
 	public static class ExpectedFlowFunction {
 
 		public final Fact source;
-		public final ConstrainedFact<FieldRef, Fact>[] targets;
+		public final ConstrainedFact<TestFieldRef, Fact>[] targets;
 		public Edge edge;
 		private int times;
 
-		public ExpectedFlowFunction(int times, Fact source, ConstrainedFact<FieldRef, Fact>... targets) {
+		public ExpectedFlowFunction(int times, Fact source, ConstrainedFact<TestFieldRef, Fact>... targets) {
 			this.times = times;
 			this.source = source;
 			this.targets = targets;
@@ -438,11 +438,11 @@ public class TestHelper {
 			return a.equals(b);
 	}
 
-	public FlowFunctions<Statement, FieldRef, Fact, Method> flowFunctions() {
-		return new FlowFunctions<Statement, FieldRef, Fact, Method>() {
+	public FlowFunctions<Statement, TestFieldRef, Fact, Method> flowFunctions() {
+		return new FlowFunctions<Statement, TestFieldRef, Fact, Method>() {
 
 			@Override
-			public FlowFunction<FieldRef, Fact> getReturnFlowFunction(Statement callSite, Method calleeMethod, Statement exitStmt, Statement returnSite) {
+			public FlowFunction<TestFieldRef, Fact> getReturnFlowFunction(Statement callSite, Method calleeMethod, Statement exitStmt, Statement returnSite) {
 				for (final ReturnEdge edge : returnEdges) {
 					if (nullAwareEquals(callSite, edge.callSite) && edge.calleeMethod.equals(calleeMethod)
 							&& edge.exitStmt.equals(exitStmt) && nullAwareEquals(edge.returnSite, returnSite)) {
@@ -454,7 +454,7 @@ public class TestHelper {
 			}
 
 			@Override
-			public FlowFunction<FieldRef, Fact> getNormalFlowFunction(final Statement curr, final Statement succ) {
+			public FlowFunction<TestFieldRef, Fact> getNormalFlowFunction(final Statement curr, final Statement succ) {
 				for (final NormalEdge edge : normalEdges) {
 					if (edge.unit.equals(curr) && edge.succUnit.equals(succ)) {
 						return createFlowFunction(edge);
@@ -464,7 +464,7 @@ public class TestHelper {
 			}
 
 			@Override
-			public FlowFunction<FieldRef, Fact> getCallToReturnFlowFunction(Statement callSite, Statement returnSite) {
+			public FlowFunction<TestFieldRef, Fact> getCallToReturnFlowFunction(Statement callSite, Statement returnSite) {
 				for (final Call2ReturnEdge edge : call2retEdges) {
 					if (edge.callSite.equals(callSite) && edge.returnSite.equals(returnSite)) {
 						return createFlowFunction(edge);
@@ -474,7 +474,7 @@ public class TestHelper {
 			}
 
 			@Override
-			public FlowFunction<FieldRef, Fact> getCallFlowFunction(Statement callStmt, Method destinationMethod) {
+			public FlowFunction<TestFieldRef, Fact> getCallFlowFunction(Statement callStmt, Method destinationMethod) {
 				for (final CallEdge edge : callEdges) {
 					if (edge.callSite.equals(callStmt) && edge.destinationMethod.equals(destinationMethod)) {
 						return createFlowFunction(edge);
@@ -483,11 +483,11 @@ public class TestHelper {
 				throw new AssertionError(String.format("No Flow Function expected for call %s -> %s", callStmt, destinationMethod));
 			}
 
-			private FlowFunction<FieldRef, Fact> createFlowFunction(final Edge edge) {
-				return new FlowFunction<FieldRef, Fact>() {
+			private FlowFunction<TestFieldRef, Fact> createFlowFunction(final Edge edge) {
+				return new FlowFunction<TestFieldRef, Fact>() {
 					@Override
-					public Set<ConstrainedFact<FieldRef, Fact>> computeTargets(Fact source) {
-						Set<ConstrainedFact<FieldRef, Fact>> result = Sets.newHashSet();
+					public Set<ConstrainedFact<TestFieldRef, Fact>> computeTargets(Fact source) {
+						Set<ConstrainedFact<TestFieldRef, Fact>> result = Sets.newHashSet();
 						boolean found = false;
 						for (ExpectedFlowFunction ff : edge.flowFunctions) {
 							if (ff.source.equals(source)) {
@@ -510,17 +510,17 @@ public class TestHelper {
 	}
 
 	public void runSolver(final boolean followReturnsPastSeeds, final String...initialSeeds) {
-		FieldSensitiveIFDSSolver<Statement, String, FieldRef, Fact, Method, InterproceduralCFG<Statement,Method>> solver = new FieldSensitiveIFDSSolver<Statement,String, FieldRef ,Fact, Method, InterproceduralCFG<Statement,Method>>(createTabulationProblem(followReturnsPastSeeds, initialSeeds));
+		FieldSensitiveIFDSSolver<Statement, String, TestFieldRef, Fact, Method, InterproceduralCFG<Statement,Method>> solver = new FieldSensitiveIFDSSolver<Statement,String, TestFieldRef ,Fact, Method, InterproceduralCFG<Statement,Method>>(createTabulationProblem(followReturnsPastSeeds, initialSeeds));
 		solver.solve();
 		assertAllFlowFunctionsUsed();
 	}
 	
 	
-	private IFDSTabulationProblem<Statement, FieldRef, Fact, Method, InterproceduralCFG<Statement, Method>> createTabulationProblem(final boolean followReturnsPastSeeds, final String[] initialSeeds) {
+	private IFDSTabulationProblem<Statement, TestFieldRef, Fact, Method, InterproceduralCFG<Statement, Method>> createTabulationProblem(final boolean followReturnsPastSeeds, final String[] initialSeeds) {
 		final InterproceduralCFG<Statement, Method> icfg = buildIcfg();
-		final FlowFunctions<Statement, FieldRef, Fact, Method> flowFunctions = flowFunctions();
+		final FlowFunctions<Statement, TestFieldRef, Fact, Method> flowFunctions = flowFunctions();
 		
-		return new IFDSTabulationProblem<Statement,FieldRef,  Fact, Method, InterproceduralCFG<Statement, Method>>() {
+		return new IFDSTabulationProblem<Statement,TestFieldRef,  Fact, Method, InterproceduralCFG<Statement, Method>>() {
 
 			@Override
 			public boolean followReturnsPastSeeds() {
@@ -543,7 +543,7 @@ public class TestHelper {
 			}
 
 			@Override
-			public FlowFunctions<Statement,FieldRef,  Fact, Method> flowFunctions() {
+			public FlowFunctions<Statement,TestFieldRef,  Fact, Method> flowFunctions() {
 				return flowFunctions;
 			}
 

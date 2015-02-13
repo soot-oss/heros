@@ -10,15 +10,12 @@
  ******************************************************************************/
 package heros.alias;
 
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 
@@ -35,6 +32,8 @@ public interface SubAccessPath<FieldRef extends AccessPath.FieldRef<FieldRef>> {
 	Collection<? extends FieldRef> elements();
 	
 	SetOfPossibleFieldAccesses<FieldRef> merge(SubAccessPath<FieldRef>... fields);
+	
+	<U extends AccessPath.FieldRef<U>> SubAccessPath<U> map(Function<FieldRef, U> function);
 
 	
 	public static class SpecificFieldAccess<FieldRef extends AccessPath.FieldRef<FieldRef>> implements SubAccessPath<FieldRef> {
@@ -106,6 +105,11 @@ public interface SubAccessPath<FieldRef extends AccessPath.FieldRef<FieldRef>> {
 		@Override
 		public boolean shouldBeMerged(FieldRef field) {
 			return this.field.shouldBeMergedWith(field);
+		}
+		
+		@Override
+		public <U extends heros.alias.AccessPath.FieldRef<U>> SubAccessPath<U> map(Function<FieldRef, U> function) {
+			return new SpecificFieldAccess<U>(function.apply(field));
 		}
 	}
 	
@@ -198,7 +202,14 @@ public interface SubAccessPath<FieldRef extends AccessPath.FieldRef<FieldRef>> {
 			return false;
 		}
 		
-		
+		@Override
+		public <U extends heros.alias.AccessPath.FieldRef<U>> SubAccessPath<U> map(Function<FieldRef, U> function) {
+			Set<U> newSet = Sets.newHashSet();
+			for(FieldRef f : set) {
+				newSet.add(function.apply(f));
+			}
+			return new SetOfPossibleFieldAccesses<>(newSet);
+		}
 	}
 
 }

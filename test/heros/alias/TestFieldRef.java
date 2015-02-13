@@ -10,16 +10,16 @@
  ******************************************************************************/
 package heros.alias;
 
-class FieldRef implements AccessPath.FieldRef<FieldRef> {
+public class TestFieldRef implements AccessPath.FieldRef<TestFieldRef> {
 	
-	private String f;
+	public final String f;
 
-	public FieldRef(String f) {
+	public TestFieldRef(String f) {
 		this.f = f;
 	}
 	
 	@Override
-	public boolean shouldBeMergedWith(FieldRef fieldRef) {
+	public boolean shouldBeMergedWith(TestFieldRef fieldRef) {
 		return f.equals(fieldRef.f);
 	}
 	
@@ -42,9 +42,9 @@ class FieldRef implements AccessPath.FieldRef<FieldRef> {
 			return true;
 		if (obj == null)
 			return false;
-		if (!(obj instanceof FieldRef))
+		if (!(obj instanceof TestFieldRef))
 			return false;
-		FieldRef other = (FieldRef) obj;
+		TestFieldRef other = (TestFieldRef) obj;
 		if (f == null) {
 			if (other.f != null)
 				return false;

@@ -54,8 +54,6 @@ public class AccessPathUtilTest {
 	@Test
 	public void testDifferentExclusions() {
 		assertEquals(POTENTIAL_PREFIX, isPrefixOf(new Fact("a^f"), new Fact("a^g")));
-		assertEquals(POTENTIAL_PREFIX, isPrefixOf(new Fact("a^f^f,g"), new Fact("a^g^f,g")));
-		assertEquals(POTENTIAL_PREFIX, isPrefixOf(new Fact("a^f^f"), new Fact("a^f^g")));
 	}
 	
 	@Test
@@ -117,12 +115,6 @@ public class AccessPathUtilTest {
 	@Test
 	public void testSummaryWithExcludedField() {
 		assertEquals(new Fact("a.f"), applyAbstractedSummary(new Fact("a.f"), new SummaryEdge<>(new Fact("a"), null, new Fact("a^g"))).get());
-	}
-	
-	@Test
-	public void testSummaryWithMultipleExcludedFields() {
-		assertEquals(new Fact("a.f^h,i"), applyAbstractedSummary(new Fact("a.f"), new SummaryEdge<>(new Fact("a"), null, new Fact("a^g^h,i"))).get());
-		assertEquals(new Fact("a.f.f"), applyAbstractedSummary(new Fact("a.f.f"), new SummaryEdge<>(new Fact("a"), null, new Fact("a^g^h,i"))).get());
 	}
 	
 	@Test

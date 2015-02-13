@@ -113,7 +113,7 @@ public interface FlowFunction<FieldRef extends AccessPath.FieldRef<FieldRef>, D 
 
 		@Override
 		public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath, boolean sourceFact) {
-			return accPath.mergeExcludedFieldReference(fieldRef);
+			return accPath.appendExcludedFieldReference(fieldRef);
 		}
 		
 		@Override

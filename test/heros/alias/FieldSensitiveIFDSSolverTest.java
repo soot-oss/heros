@@ -183,7 +183,7 @@ public class FieldSensitiveIFDSSolverTest {
 				startPoints("b"),
 				normalStmt("b").succ("c", flow("1", "1", "1.f"), flow("1.f", "1.f.f"), flow("1.f.f", "1.f.f")),
 				normalStmt("c").succ("b", flow("1", "1"), flow("1.f", "1.f"), flow("1.f.f", "1.f.f")).succ("d", flow("1", "1"), flow("1.f", "1.f"), flow("1.f.f", "1.f.f")),
-				normalStmt("d").succ("e", flow("1", readField("f"), "2"), flow("1.f", "2"), flow("1.f.f", "2.f.f")),
+				normalStmt("d").succ("e", /*flow("1", readField("f"), "2"),*/ flow("1.f", "2"), flow("1.f.f", "2.f.f")),
 				normalStmt("e").succ("f", kill("2"), kill("2.f.f")));
 		
 		helper.runSolver(false, "a0");

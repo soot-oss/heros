@@ -892,7 +892,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 
 	private void writeFact(FileWriter writer, D sourceFact) throws IOException {
 		writer.write("{");
-		writer.write("type: \""+((AbstractionWithSourceStmt) sourceFact).getAbstraction().getClass().getSimpleName()+"\", ");
+//		writer.write("type: \""+((AbstractionWithSourceStmt) sourceFact).getAbstraction().getClass().getSimpleName()+"\", ");
 		writer.write("baseValue: \""+sourceFact.getBaseValue()+"\", ");
 		writer.write("accPath: [");
 		for(String s :sourceFact.getAccessPath().tokenize()) {
