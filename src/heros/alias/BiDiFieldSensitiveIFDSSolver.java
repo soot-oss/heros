@@ -153,7 +153,7 @@ public class BiDiFieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessP
 	/**
 	 * This is a modified IFDS solver that is capable of pausing and unpausing return-flow edges.
 	 */
-	protected class SingleDirectionSolver extends FieldSensitiveIFDSSolver<N, BaseValue, FieldRef, AbstractionWithSourceStmt, M, I> {
+	protected class SingleDirectionSolver extends FieldSensitiveIFDSSolver<N, BaseValueWithSourceStmt, FieldRef, AbstractionWithSourceStmt, M, I> {
 		private final String debugName;
 		private SingleDirectionSolver otherSolver;
 		private Set<LeakKey<N>> leakedSources = Collections.newSetFromMap(Maps.<LeakKey<N>, Boolean>newConcurrentMap());
@@ -252,7 +252,7 @@ public class BiDiFieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessP
 	 * This is an augmented abstraction propagated by the {@link SingleDirectionSolver}. It associates with the
 	 * abstraction the source statement from which this fact originated. 
 	 */
-	public class AbstractionWithSourceStmt implements FieldSensitiveFact<BaseValue, FieldRef, AbstractionWithSourceStmt> {
+	public class AbstractionWithSourceStmt implements FieldSensitiveFact<BaseValueWithSourceStmt, FieldRef, AbstractionWithSourceStmt> {
 
 		protected final D abstraction;
 		protected final N source;
@@ -321,8 +321,8 @@ public class BiDiFieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessP
 		}
 
 		@Override
-		public BaseValue getBaseValue() {
-			return abstraction.getBaseValue();
+		public BaseValueWithSourceStmt getBaseValue() {
+			return new BaseValueWithSourceStmt(abstraction.getBaseValue(), source);
 		}
 
 		@Override
@@ -336,6 +336,47 @@ public class BiDiFieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessP
 			return new AbstractionWithSourceStmt(abstraction.cloneWithAccessPath(accessPath), source);
 		}
 
+	}
+	
+	private class BaseValueWithSourceStmt {
+		private BaseValue baseValue;
+		private N source;
+
+		private BaseValueWithSourceStmt(BaseValue baseValue, N source) {
+			this.baseValue = baseValue;
+			this.source = source;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((baseValue == null) ? 0 : baseValue.hashCode());
+			result = prime * result + ((source == null) ? 0 : source.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			BaseValueWithSourceStmt other = (BaseValueWithSourceStmt) obj;
+			if (baseValue == null) {
+				if (other.baseValue != null)
+					return false;
+			} else if (!baseValue.equals(other.baseValue))
+				return false;
+			if (source == null) {
+				if (other.source != null)
+					return false;
+			} else if (!source.equals(other.source))
+				return false;
+			return true;
+		}
 	}
 	
 	/**
