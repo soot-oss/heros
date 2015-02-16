@@ -85,7 +85,7 @@ public class FieldSensitiveIFDSSolverTest {
 		helper.method("foo",startPoints("d"),
 				normalStmt("d").succ("e", flow("3", "4")),
 				normalStmt("e").succ("f", flow("4","4")),
-				exitStmt("f").returns(over("c"), to("retC"), flow("4.field", "5.field")).returns(over("g"), to("retG"), flow("4.anotherField", "6.anotherField")));
+				exitStmt("f").returns(over("c"), to("retC"), flow("4", "5")).returns(over("g"), to("retG"), flow("4", "6")));
 
 		helper.method("xyz", 
 				startPoints("g"),
@@ -121,7 +121,7 @@ public class FieldSensitiveIFDSSolverTest {
 		helper.method("foo",startPoints("d"),
 				normalStmt("d").succ("e", flow("3", "3"), flow("3", readField("notfield"), "6")),
 				normalStmt("e").succ("f", flow("3","4"), kill("6")),
-				exitStmt("f").returns(over("c"), to("rs"), flow("4.field", "5")));
+				exitStmt("f").returns(over("c"), to("rs"), flow("4", "5")));
 		
 		helper.runSolver(false, "a", "g");
 	}
@@ -183,7 +183,7 @@ public class FieldSensitiveIFDSSolverTest {
 				startPoints("b"),
 				normalStmt("b").succ("c", flow("1", "1", "1.f"), flow("1.f", "1.f.f"), flow("1.f.f", "1.f.f")),
 				normalStmt("c").succ("b", flow("1", "1"), flow("1.f", "1.f"), flow("1.f.f", "1.f.f")).succ("d", flow("1", "1"), flow("1.f", "1.f"), flow("1.f.f", "1.f.f")),
-				normalStmt("d").succ("e", /*flow("1", readField("f"), "2"),*/ flow("1.f", "2"), flow("1.f.f", "2.f.f")),
+				normalStmt("d").succ("e", flow("1", readField("f"), "2"), flow("1.f", "2"), flow("1.f.f", "2.f.f")),
 				normalStmt("e").succ("f", kill("2"), kill("2.f.f")));
 		
 		helper.runSolver(false, "a0");
@@ -314,7 +314,7 @@ public class FieldSensitiveIFDSSolverTest {
 		helper.method("bar",
 				startPoints("c"),
 				normalStmt("c").succ("d", flow("2", writeField("f"), "2^f"), flow("2", "3")),
-				exitStmt("d").returns(over("b"), to("e"), flow("3.f", "4")).returns(over("e"), to("f"), kill("3.g"), kill("2.g" /* 2^f is back substituted to 2.g*/))); 
+				exitStmt("d").returns(over("b"), to("e"), flow("3", "4")).returns(over("e"), to("f"), kill("3"), kill("2^f"))); 
 		
 		helper.runSolver(false, "a");
 	}
@@ -325,12 +325,13 @@ public class FieldSensitiveIFDSSolverTest {
 				startPoints("a"),
 				normalStmt("a").succ("b", flow("0", "1.f")),
 				callSite("b").calls("bar", flow("1.f", "2.f")).retSite("e", kill("1.f")),
-				callSite("e").calls("bar", flow("4", "2")).retSite("f", kill("4")));
+				normalStmt("e").succ("f", flow("4", readField("f"), "2")),
+				callSite("f").calls("bar", flow("2", "2")).retSite("g", kill("2")));
 		
 		helper.method("bar",
 				startPoints("c"),
 				normalStmt("c").succ("d", flow("2", writeField("f"), "2^f"), flow("2", "3")),
-				exitStmt("d").returns(over("b"), to("e"), flow("3.f", "4")).returns(over("e"), to("f"), kill("3"), kill("2^f"))); 
+				exitStmt("d").returns(over("b"), to("e"), flow("3", "4")).returns(over("f"), to("g"), kill("3"), kill("2^f"))); 
 		
 		helper.runSolver(false, "a");
 	}
@@ -356,13 +357,13 @@ public class FieldSensitiveIFDSSolverTest {
 				startPoints("a"),
 				normalStmt("a").succ("b", flow("0", "1.g")),
 				callSite("b").calls("bar", flow("1.g", "1.g")).retSite("e", kill("1.g")),
-				normalStmt("e").succ("f", flow("1.g", "3")),
+				normalStmt("e").succ("f", flow("1", readField("g"), "3")),
 				callSite("f").calls("bar", flow("3", "1")).retSite("g", kill("3"))); 
 		
 		helper.method("bar",
 				startPoints("c"),
 				normalStmt("c").succ("d", flow("1", readField("f"), "2"), flow("1", "1")),
-				exitStmt("d").returns(over("b"), to("e"), flow("1.g", "1.g") /* ignore fact 2, not possible with this caller ctx*/).returns(over("f"), to("g"), kill("1"), kill("2")));
+				exitStmt("d").returns(over("b"), to("e"), flow("1", "1") /* ignore fact 2, not possible with this caller ctx*/).returns(over("f"), to("g"), kill("1"), kill("2")));
 		
 		helper.runSolver(false, "a");
 	}
@@ -422,14 +423,14 @@ public class FieldSensitiveIFDSSolverTest {
 		helper.method("foo", 
 				startPoints("a"),
 				callSite("a").calls("bar", flow("0", "x")).retSite("b", flow("0", "y")),
-				callSite("b").calls("bar", flow("y", "x")).retSite("c", flow("y")),
+				callSite("b").calls("bar", flow(2, "y", "x")).retSite("c", kill(2, "y")),
 				normalStmt("c").succ("c0", flow("w", "0")));
 		
 		helper.method("bar",
 				startPoints("d"),
 				normalStmt("d").succ("e", flow("x", "z")),
 				exitStmt("e").returns(over("a"), to("b"), flow("z", "y"))
-							  .returns(over("b"), to("c"), flow("z", "w")));
+							  .returns(over("b"), to("c"), flow(2, "z", "w")));
 		
 		helper.runSolver(false, "a");
 	}
@@ -630,5 +631,316 @@ public class FieldSensitiveIFDSSolverTest {
 				normalStmt("f").succ("g", kill("5^g")));
 		
 		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void unbalancedReturnWithFieldRead() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				exitStmt("b").returns(over("cs"), to("c"), flow("1", "2")));
+		
+		helper.method("xyz",
+				startPoints("n/a"),
+				exitStmt("c").returns(over("cs2"), to("d"), flow("2", "2")));
+		
+		helper.method("bar",
+				startPoints("unused"),
+				normalStmt("d").succ("e", flow("2", readField("f"), "3")),
+				normalStmt("e").succ("f", kill("3")));
+		
+		helper.runSolver(true, "a");
+	}
+	
+	@Test
+	public void unbalancedReturnAbstraction() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				normalStmt("b").succ("c", flow("1", "2.f")),
+				exitStmt("c").returns(over("cs"), to("rs"), flow("2.f", "2.f")));
+		
+		helper.method("bar",
+				startPoints("unused"),
+				normalStmt("rs").succ("d", flow("2", "3")));
+		
+		helper.runSolver(true, "a");
+	}
+	
+	@Test
+	public void unbalancedReturnReadAbstractedField() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				normalStmt("b").succ("c", flow("1", "2.f")),
+				exitStmt("c").returns(over("cs"), to("rs"), flow("2.f", "2.f")));
+		
+		helper.method("bar",
+				startPoints("unused"),
+				normalStmt("rs").succ("d", flow("2", "3")),
+				normalStmt("d").succ("e", flow("3", readField("f"), "4")),
+				normalStmt("e").succ("f", kill("4")));
+		
+		helper.runSolver(true, "a");
+	}
+
+	@Test
+	public void unbalancedReturnReadUnwrittenAbstractedField() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				normalStmt("b").succ("c", flow("1", "2.f")),
+				exitStmt("c").returns(over("cs"), to("rs"), flow("2.f", "2.f")));
+		
+		helper.method("bar",
+				startPoints("unused"),
+				normalStmt("rs").succ("d", flow("2", "3")),
+				normalStmt("d").succ("e", flow("3", readField("h"), "4")),
+				normalStmt("e").succ("f"));
+		
+		helper.runSolver(true, "a");
+	}
+	
+	@Test
+	public void unbalancedReturnTransitiveAbstraction() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				normalStmt("b").succ("c", flow("1", "2.f")),
+				exitStmt("c").returns(over("cs1"), to("rs1"), flow("2.f", "2.f")));
+		
+		helper.method("bar",
+				startPoints("unused1"),
+				normalStmt("rs1").succ("d", flow("2", "3.g")),
+				exitStmt("d").returns(over("cs2"), to("rs2"), flow("3.g", "4.g")));
+		
+		helper.method("xyz",
+				startPoints("unused2"),
+				normalStmt("rs2").succ("e", flow("4", "5")),
+				normalStmt("e").succ("f", flow("5", readField("g"), "6")),
+				normalStmt("f").succ("g", flow("6", readField("f"), "7")),
+				normalStmt("g").succ("h", kill("7")));
+		
+		
+		helper.runSolver(true, "a");
+	}
+	
+	@Test
+	public void unbalancedReturnPauseAndResume() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				exitStmt("b").returns(over("cs"), to("rs"), flow("1", "2.g")));
+		
+		helper.method("bar",
+				startPoints("unused"),
+				normalStmt("rs").succ("c", flow("2", "2")).succ("d", flow("2", readField("f"), "3")),
+				exitStmt("c").returns(over("cs2"), to("rs"), flow("2", "2.f")),
+				normalStmt("d").succ("e", kill("3")));
+		
+		helper.runSolver(true, "a");
+	}
+	
+	@Test
+	public void abstractedReturnUseCallerInterest() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				callSite("b").calls("bar", flow("1", "2")).retSite("c", kill("1")),
+				normalStmt("c").succ("d", flow("2", readField("f"), "3")),
+				normalStmt("d").succ("e", kill("3")));
+		
+		helper.method("bar",
+				startPoints("f"),
+				exitStmt("f").returns(over("b"), to("c"), flow("2", "2")));
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void abstractedReturnDeltaBlockingCallerInterest() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				callSite("b").calls("bar", flow("1", "2.h")).retSite("c", kill("1")),
+				normalStmt("c").succ("d", flow("2", readField("f"), "3")),
+				normalStmt("d").succ("e"));
+		
+		helper.method("bar",
+				startPoints("f"),
+				exitStmt("f").returns(over("b"), to("c"), flow("2", "2")));
+		
+		helper.runSolver(false, "a");		
+	}
+	
+	@Test
+	public void abstractedReturnResolveThroughDelta() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b1", flow("0", "1")),
+				callSite("b1").calls("xyz", flow("1", "1.f")));
+				
+		helper.method("xyz",
+				startPoints("b2"),
+				callSite("b2").calls("bar", flow("1", "2.h")).retSite("c", kill("1")),
+				normalStmt("c").succ("d", flow("2", readField("h"), "3")),
+				normalStmt("d").succ("e", kill("3")));
+		
+		helper.method("bar",
+				startPoints("f"),
+				exitStmt("f").returns(over("b2"), to("c"), flow("2", "2")));
+		
+		helper.runSolver(false, "a");		
+	}
+	
+	@Test
+	public void unbalancedAbstractedReturnRecursive() {
+		helper.method("bar", 
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				exitStmt("b").returns(over("cs1"), to("b"), flow(2, "1", "1")).returns(over("cs2"), to("c"), flow(2, "1", "1")));
+		
+		helper.method("foo",
+				startPoints("unused"),
+				normalStmt("c").succ("d", flow("1", readField("f"), "2")),
+				normalStmt("d").succ("e", kill("2")));
+		
+		helper.runSolver(true, "a");
+	}
+	
+	@Test
+	public void includeResolversInCallDeltas() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				callSite("b").calls("bar", flow("1", "2")).retSite("e", kill("1")),
+				callSite("e").calls("xyz", flow("3", "3")));
+		
+		helper.method("bar",
+				startPoints("c"),
+				normalStmt("c").succ("d", flow("2", writeField("f"), "2^f")),
+				exitStmt("d").returns(over("b"), to("e"), flow("2^f", "3^f")));
+		
+		helper.method("xyz", 
+				startPoints("f"),
+				normalStmt("f").succ("g", flow("3", readField("f"), "4")),
+				normalStmt("g").succ("h"));
+				
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void includeResolversInCallDeltas2() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				callSite("b").calls("bar", flow("1", "2")).retSite("e", kill("1")),
+				callSite("e").calls("xyz", flow("3", "3")).retSite("g", kill("3")),
+				normalStmt("g").succ("h", flow("3", readField("f"), "4")),
+				normalStmt("h").succ("i"));
+		
+		helper.method("bar",
+				startPoints("c"),
+				normalStmt("c").succ("d", flow("2", writeField("f"), "2^f")),
+				exitStmt("d").returns(over("b"), to("e"), flow("2^f", "3^f")));
+		
+		helper.method("xyz", 
+				startPoints("f"),
+				exitStmt("f").returns(over("e"), to("g"), flow("3", "3")));
+				
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void includeResolversInCallDeltas3() {
+		helper.method("main",
+				startPoints("m_a"),
+				normalStmt("m_a").succ("m_b", flow("0", "1")),
+				callSite("m_b").calls("foo", flow("1", "1.g")).retSite("m_c", kill("1")),
+				callSite("m_c").calls("foo", flow("5", "1.f")).retSite("m_d", kill("5")),
+				normalStmt("m_d").succ("m_e", kill("6")));
+		
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("1", "1")),
+				callSite("b").calls("bar", flow("1", "2")).retSite("e", kill("1")),
+				callSite("e").calls("xyz", flow(2, "3", "3")).retSite("g", kill(2, "3")),
+				normalStmt("g").succ("h", flow(2, "3", readField("f"), "4"), flow(2, "3", readField("g"), "5")),
+				exitStmt("h").returns(over("m_c"), to("m_d"), flow("4", "6")).returns(over("m_b"), to("m_c"), flow("5", "5")));
+		
+		helper.method("bar",
+				startPoints("c"),
+				normalStmt("c").succ("d", flow("2", writeField("f"), "2^f"), flow("2", writeField("g"), "2^g")),
+				exitStmt("d").returns(over("b"), to("e"), flow("2^f", "3^f"), flow("2^g", "3^g")));
+		
+		helper.method("xyz", 
+				startPoints("f"),
+				exitStmt("f").returns(over("e"), to("g"), flow(2, "3", "3")));
+				
+		helper.runSolver(false, "m_a");
+	}
+	
+	@Test
+	public void recursiveCallReturnCase() {
+		helper.method("xyz",
+				startPoints("x"),
+				normalStmt("x").succ("y", flow("0", "1")),
+				callSite("y").calls("foo", flow("1", "1.g")));
+		
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("1", "1")),
+				callSite("b").calls("bar", flow("1", "2")).retSite("c", kill("1")),
+				callSite("c").calls("bar", flow("2", "2")));
+		
+		helper.method("bar", 
+				startPoints("d"),
+				normalStmt("d").succ("e", flow("2", readField("f"), "3")).succ("f", flow("2", "2")),
+				exitStmt("f").returns(over("b"), to("c"), flow("2", "2")));
+		
+		helper.runSolver(false, "x");
+	}
+	
+	@Test
+	public void recursivelyUseIncompatibleReturnResolver() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				callSite("b").calls("bar", flow("1", "1")).retSite("f", kill("1")),
+				normalStmt("f").succ("g", flow("2", readField("f"), "3")),
+				normalStmt("h").succ("i"));
+		
+		helper.method("bar",
+				startPoints("c"),
+				callSite("c").calls("xyz", flow("1", "1")).retSite("d", kill("1")),
+				normalStmt("d").succ("e", flow("1", writeField("f"), "1^f")),
+				exitStmt("e").returns(over("b"), to("f"), flow(2, "1^f", "2^f"))); //once per incoming edge: 1 and 1^f
+		
+		helper.method("xyz",
+				startPoints("x"),
+				exitStmt("x").returns(over("c"), to("d"), flow("1", "1")));
+		
+		helper.runSolver(false, "a");
+	}
+
+	@Test
+	public void unbalancedUseIncompatibleReturnResolver() {
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a").succ("b", flow("0", "1")),
+				exitStmt("b").returns(over("cs"), to("c"), flow("1", "1")));
+		
+		helper.method("bar",
+				startPoints("unused1"),
+				normalStmt("c").succ("d", flow("1", readField("g"), "1")),
+				normalStmt("d").succ("e", flow("1", writeField("f"), "2")),
+				exitStmt("e").returns(over("cs2"), to("f"), flow("2", "2")));
+		
+		helper.method("xyz",
+				startPoints("unused2"),
+				normalStmt("f").succ("g", flow("2", readField("f"), "3")),
+				normalStmt("g").succ("h"));
+				
+		helper.runSolver(true, "a");
 	}
 }

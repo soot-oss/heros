@@ -490,9 +490,14 @@ public class TestHelper {
 						Set<ConstrainedFact<TestFieldRef, Fact>> result = Sets.newHashSet();
 						boolean found = false;
 						for (ExpectedFlowFunction ff : edge.flowFunctions) {
-							if (ff.source.equals(source)) {
+							if (ff.source.equals(source.cloneWithAccessPath(source.getAccessPath().setResolver(null)))) {
 								if (remainingFlowFunctions.remove(ff)) {
-									result.addAll(Sets.newHashSet(ff.targets));
+									for(ConstrainedFact<TestFieldRef, Fact> target : ff.targets) {
+										result.add(new ConstrainedFact<TestFieldRef, Fact>(
+												target.getFact().cloneWithAccessPath(
+														target.getFact().accessPath.setResolver(source.getAccessPath().getResolver())), 
+												target.getConstraint()));
+									}
 									found = true;
 								} else {
 									throw new AssertionError(String.format("Flow Function '%s' was used multiple times on edge '%s'", ff, edge));

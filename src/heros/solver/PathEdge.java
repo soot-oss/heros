@@ -57,6 +57,10 @@ public class PathEdge<N,D> {
 		return dTarget;
 	}
 
+	public PathEdge<N,D> copyWithTarget(D dTarget) {
+		return new PathEdge<>(dSource, target, dTarget);
+	}
+	
 	@Override
 	public int hashCode() {
 		return hashCode;

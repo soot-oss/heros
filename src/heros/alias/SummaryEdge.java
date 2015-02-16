@@ -21,6 +21,11 @@ public class SummaryEdge<D, N> {
 		this.targetStmt = targetStmt;
 		this.targetFact = targetFact;
 	}
+	
+	@Override
+	public String toString() {
+		return "[SummaryEdge: "+sourceFact+" -> "+targetFact+" @stmt: "+targetStmt+"]";
+	}
 
 	@Override
 	public int hashCode() {

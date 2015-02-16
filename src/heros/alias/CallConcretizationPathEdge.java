@@ -12,12 +12,12 @@ package heros.alias;
 
 import heros.solver.PathEdge;
 
-public class ConcretizationPathEdge<M, N,D> extends PathEdge<N, D> {
+public class CallConcretizationPathEdge<M, N,D> extends PathEdge<N, D> {
 
 	private M calleeMethod;
 	private D calleeSourceFact;
 
-	public ConcretizationPathEdge(D dSource, N target, D dTarget, M calleeMethod, D calleeSourceFact) {
+	public CallConcretizationPathEdge(D dSource, N target, D dTarget, M calleeMethod, D calleeSourceFact) {
 		super(dSource, target, dTarget);
 		this.calleeMethod = calleeMethod;
 		this.calleeSourceFact = calleeSourceFact;
@@ -46,9 +46,9 @@ public class ConcretizationPathEdge<M, N,D> extends PathEdge<N, D> {
 			return true;
 		if (!super.equals(obj))
 			return false;
-		if (!(obj instanceof ConcretizationPathEdge))
+		if (!(obj instanceof CallConcretizationPathEdge))
 			return false;
-		ConcretizationPathEdge other = (ConcretizationPathEdge) obj;
+		CallConcretizationPathEdge other = (CallConcretizationPathEdge) obj;
 		if (calleeMethod == null) {
 			if (other.calleeMethod != null)
 				return false;

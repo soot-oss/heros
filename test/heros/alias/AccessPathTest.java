@@ -49,7 +49,7 @@ public class AccessPathTest {
 	}
 	
 	private static AccessPath<TestFieldRef> ap(SubAccessPath<TestFieldRef>... path) {
-		return new AccessPath<TestFieldRef>(path, Sets.<TestFieldRef> newHashSet());
+		return new AccessPath<TestFieldRef>(path, Sets.<TestFieldRef> newHashSet(), null);
 	}
 	
 	@Test
@@ -84,7 +84,7 @@ public class AccessPathTest {
 	
 	@Test
 	public void addMergedFieldsOnNestedExclusion() {
-		AccessPath<TestFieldRef> sut = ap().appendExcludedFieldReference(f("a")).appendExcludedFieldReference(f("b"));
+		AccessPath<TestFieldRef> sut = ap().appendExcludedFieldReference(f("a"));
 		assertEquals(ap(anyOf("a", "b")), sut.addFieldReference(anyOf("a", "b")));
 	}
 	
@@ -162,37 +162,37 @@ public class AccessPathTest {
 	
 	@Test
 	public void deltaDepth1() {
-		SubAccessPath<TestFieldRef>[] actual = ap(s("a")).getDeltaTo(ap(s("a"), s("b")));
+		SubAccessPath<TestFieldRef>[] actual = ap(s("a")).getDeltaTo(ap(s("a"), s("b"))).accesses;
 		assertArrayEquals(new SubAccessPath[] { s("b") }, actual);
 	}
 	
 	@Test
 	public void deltaDepth2() {
-		SubAccessPath<TestFieldRef>[] actual = ap(s("a")).getDeltaTo(ap(s("a"), s("b"), s("c")));
+		SubAccessPath<TestFieldRef>[] actual = ap(s("a")).getDeltaTo(ap(s("a"), s("b"), s("c"))).accesses;
 		assertArrayEquals(new SubAccessPath[] { s("b"), s("c") }, actual);
 	}
 	
 	@Test
 	public void delta() {
-		SubAccessPath<TestFieldRef>[] actual = ap(s("a")).getDeltaTo(ap(s("a"), anyOf("b")));
+		SubAccessPath<TestFieldRef>[] actual = ap(s("a")).getDeltaTo(ap(s("a"), anyOf("b"))).accesses;
 		assertArrayEquals(new SubAccessPath[] { anyOf("b") }, actual);
 	}
 	
 	@Test
 	public void delta2() {
-		SubAccessPath<TestFieldRef>[] actual = ap(s("f"), s("g"), s("h")).getDeltaTo(ap(anyOf("f", "g"), s("h")));
+		SubAccessPath<TestFieldRef>[] actual = ap(s("f"), s("g"), s("h")).getDeltaTo(ap(anyOf("f", "g"), s("h"))).accesses;
 		assertArrayEquals(new SubAccessPath[] {  }, actual);
 	}
 	
 	@Test
 	public void delta3() {
-		SubAccessPath<TestFieldRef>[] actual = ap(s("f"), s("f")).getDeltaTo(ap(anyOf("f")));
+		SubAccessPath<TestFieldRef>[] actual = ap(s("f"), s("f")).getDeltaTo(ap(anyOf("f"))).accesses;
 		assertArrayEquals(new SubAccessPath[] { anyOf("f") } , actual);
 	}
 	
 	@Test
 	public void deltaMatchingMergedField() {
-		SubAccessPath<TestFieldRef>[] actual = ap(s("a"), s("b")).getDeltaTo(ap(s("a"), anyOf("b")));
+		SubAccessPath<TestFieldRef>[] actual = ap(s("a"), s("b")).getDeltaTo(ap(s("a"), anyOf("b"))).accesses;
 		assertArrayEquals(new SubAccessPath[] { anyOf("b") }, actual);
 	}
 	

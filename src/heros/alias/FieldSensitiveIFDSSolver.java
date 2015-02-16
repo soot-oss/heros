@@ -14,12 +14,14 @@ import heros.DontSynchronize;
 import heros.FlowFunctionCache;
 import heros.InterproceduralCFG;
 import heros.SynchronizedBy;
+import heros.alias.AccessPath.Delta;
 import heros.alias.AccessPath.PrefixTestResult;
 import heros.alias.BiDiFieldSensitiveIFDSSolver.AbstractionWithSourceStmt;
 import heros.alias.FlowFunction.ConstrainedFact;
 import heros.alias.FlowFunction.Constraint;
 import heros.solver.CountingThreadPoolExecutor;
 import heros.solver.IFDSSolver;
+import heros.solver.Pair;
 import heros.solver.PathEdge;
 
 import java.io.BufferedOutputStream;
@@ -33,6 +35,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +54,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.sun.org.apache.xpath.internal.axes.IteratorPool;
 
@@ -303,16 +307,21 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 				//because we have observed a potentially new incoming edge into <sP,d3>
 				if (endSumm != null)
 					for(SummaryEdge<D, N> summary: endSumm) {
-						Optional<D> d4 = AccessPathUtil.applyAbstractedSummary(d3.getFact(), summary);
-						if(d4.isPresent()) {
+						Optional<Delta<FieldRef>> delta = AccessPathUtil.getDelta(d3.getFact(), summary);
+						if(delta.isPresent()) {
 							//for each return site
 							for(N retSiteN: returnSiteNs) {
 								//compute return-flow function
 								FlowFunction<FieldRef, D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, summary.getTargetStmt(), retSiteN);
 								//for each target value of the function
-								for(ConstrainedFact<FieldRef, D> d5: computeReturnFlowFunction(retFunction, d4.get(), n)) {
+								for(ConstrainedFact<FieldRef, D> d5: computeReturnFlowFunction(retFunction, summary.getTargetFact(), n)) {
 									D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5.getFact());
-									propagate(new PathEdge<>(d1, retSiteN, d5p_restoredCtx), n, false);
+									Resolver resolver = getResolver(d1, d5p_restoredCtx.cloneWithAccessPath(AccessPath.<FieldRef>empty()), retSiteN);
+									resolver.addIncomingFact(summary, d5p_restoredCtx, delta.get());
+									
+									AccessPath<FieldRef> abstractedAccPath = new AccessPath<FieldRef>().setResolver(new DecoratingResolver(resolver));
+									D abstractedTargetFact = d5p_restoredCtx.cloneWithAccessPath(abstractedAccPath);
+									propagate(new PathEdge<>(d1, retSiteN, abstractedTargetFact), n, false);
 								}
 							}
 						}
@@ -335,7 +344,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 				if(AccessPathUtil.isPrefixOf(edge.factAtSource(), factAtMethodStartPoint) == PrefixTestResult.GUARANTEED_PREFIX) {
 					if(edges.remove(edge))  {
 						logger.trace("RESUME-EDGE: {}", edge);
-						propagate(edge, edge instanceof ConcretizationPathEdge ? edge.getTarget() : null, false);
+						propagate(edge, edge instanceof CallConcretizationPathEdge ? edge.getTarget() : null, false);
 					}
 				}
 			}
@@ -356,13 +365,23 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 					
 					if(constraint.canBeAppliedTo(incomingEdge.getCallerSourceFact().getAccessPath()) && 
 							constraint.canBeAppliedTo(incomingEdge.getCallerCallSiteFact().getAccessPath())) {
-					
-						propagateConstrained(new ConcretizationPathEdge<>(
+						if(incomingEdge.getCalleeSourceFact().getAccessPath().hasResolver()) {
+							DecoratingResolver decoratingResolver = (DecoratingResolver) incomingEdge.getCalleeSourceFact().getAccessPath().getResolver();
+							decoratingResolver.resolve(constraint, new CallConcretizationPathEdge<>(
 								applyConstraint(constraint, incomingEdge.getCallerSourceFact(), true), 
 								incomingEdge.getCallSite(), 
 								applyConstraint(constraint, incomingEdge.getCallerCallSiteFact(), false),
 								method,
 								applyConstraint(constraint, incomingEdge.getCalleeSourceFact(), true)));
+						}
+						else {
+							propagateConstrained(new CallConcretizationPathEdge<>(
+									applyConstraint(constraint, incomingEdge.getCallerSourceFact(), true), 
+									incomingEdge.getCallSite(), 
+									applyConstraint(constraint, incomingEdge.getCallerCallSiteFact(), false),
+									method,
+									applyConstraint(constraint, incomingEdge.getCalleeSourceFact(), true)));
+						}
 					}
 				}
 			}
@@ -430,14 +449,17 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 				FlowFunction<FieldRef, D> retFunction = flowFunctions.getReturnFlowFunction(callSite, methodThatNeedsSummary, n, retSiteC);
 				
 				if(AccessPathUtil.isPrefixOf(d1, incomingEdge.getCalleeSourceFact()) == PrefixTestResult.GUARANTEED_PREFIX) {
-					Optional<D> concreteCalleeExitFact = AccessPathUtil.applyAbstractedSummary(incomingEdge.getCalleeSourceFact(), summaryEdge);
-					if(concreteCalleeExitFact.isPresent()) {
-						Set<ConstrainedFact<FieldRef, D>> callerTargetFacts = computeReturnFlowFunction(retFunction, concreteCalleeExitFact.get(), callSite);
+					Optional<Delta<FieldRef>> delta = AccessPathUtil.getDelta(incomingEdge.getCalleeSourceFact(), summaryEdge);
+					if(delta.isPresent()) {
+						Set<ConstrainedFact<FieldRef, D>> callerTargetFacts = computeReturnFlowFunction(retFunction, d2, callSite);
 	
 						// for each incoming-call value
 						for (ConstrainedFact<FieldRef, D> callerTargetAnnotatedFact : callerTargetFacts) {
 							D callerTargetFact = restoreContextOnReturnedFact(incomingEdge.getCallerCallSiteFact(), callerTargetAnnotatedFact.getFact());
-							propagate(new PathEdge<>(incomingEdge.getCallerSourceFact(), retSiteC, callerTargetFact), callSite, false);
+							Resolver resolver = getResolver(incomingEdge.getCallerSourceFact(), callerTargetFact.cloneWithAccessPath(AccessPath.<FieldRef>empty()), retSiteC);
+							resolver.addIncomingFact(summaryEdge, callerTargetFact, delta.get());
+							AccessPath<FieldRef> abstractedAccPath = new AccessPath<FieldRef>().setResolver(new DecoratingResolver(resolver));
+							propagate(new PathEdge<>(incomingEdge.getCallerSourceFact(), retSiteC, callerTargetFact.cloneWithAccessPath(abstractedAccPath)), callSite, false);
 						}
 					}
 				}
@@ -454,8 +476,13 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
 					FlowFunction<FieldRef, D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
 					Set<ConstrainedFact<FieldRef, D>> targets = computeReturnFlowFunction(retFunction, d2, c);
-					for(ConstrainedFact<FieldRef, D> d5: targets)
-						propagateUnbalancedReturnFlow(new PathEdge<>(zeroValue, retSiteC, d5.getFact()), c);
+					for(ConstrainedFact<FieldRef, D> d5: targets) {
+						
+						Resolver resolver = getResolver(zeroValue, d5.getFact().cloneWithAccessPath(AccessPath.<FieldRef>empty()), retSiteC);
+						resolver.addIncomingFact(summaryEdge, d5.getFact(), AccessPath.Delta.<FieldRef> empty());
+						AccessPath<FieldRef> abstractedAccPath = new AccessPath<FieldRef>().setResolver(new DecoratingResolver(resolver));
+						propagateUnbalancedReturnFlow(new PathEdge<>(zeroValue, retSiteC, d5.getFact().cloneWithAccessPath(abstractedAccPath)), c);
+					}
 				}
 			}
 			//in cases where there are no callers, the return statement would normally not be processed at all;
@@ -466,6 +493,300 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 				retFunction.computeTargets(d2);
 			}
 		}
+	}
+	
+	private Map<HashKey, Resolver> returnSiteIncomingEdges = Maps.newHashMap();
+	
+	private Resolver getResolver(D sourceFact, D targetFact, N stmt) {
+		HashKey key = new HashKey(sourceFact, targetFact, stmt);
+		if(!returnSiteIncomingEdges.containsKey(key))
+			returnSiteIncomingEdges.put(key, new Resolver(sourceFact, targetFact, stmt));
+		return returnSiteIncomingEdges.get(key);
+	}
+	
+	private class PausedReturnSiteEdge {
+
+		private Constraint<FieldRef> constraint;
+		private PathEdge<N, D> pathEdge;
+		private AccessPath<FieldRef> alreadyResolvedAccPath;
+		private D concretizedStmtFact;
+
+		public PausedReturnSiteEdge(Constraint<FieldRef> constraint, PathEdge<N, D> pathEdge, AccessPath<FieldRef> alreadyResolvedAccPath, D concretizedStmtFact) {
+			this.constraint = constraint;
+			this.pathEdge = pathEdge;
+			this.alreadyResolvedAccPath = alreadyResolvedAccPath;
+			this.concretizedStmtFact = concretizedStmtFact;
+		}
+	}
+	
+	class Resolver {
+
+		private D sourceFact;
+		private N stmt;
+		private Set<IncomingFact> incomingFacts = Sets.newHashSet();
+		private D targetFact;
+		private List<PausedReturnSiteEdge> paused = Lists.newLinkedList();
+
+		public Resolver(D sourceFact, D targetFact, N stmt) {
+			this.sourceFact = sourceFact;
+			this.targetFact = targetFact;
+			this.stmt = stmt;
+		}
+
+		public void addIncomingFact(SummaryEdge<D, N> summaryEdge, D fact, Delta<FieldRef> delta) {
+			if(summaryEdge.getTargetFact().getAccessPath().hasResolver()) {
+				if(!fact.getAccessPath().hasResolver())
+					throw new AssertionError();
+				if(!summaryEdge.getTargetFact().getAccessPath().getResolver().equals(fact.getAccessPath().getResolver()))
+					throw new AssertionError();
+			}
+			
+			logger.trace("new incoming return edge at {}: {} with delta '{}' from summary {}", stmt, fact, delta, summaryEdge);
+			IncomingFact incFact = new IncomingFact(summaryEdge, fact, delta);
+			incomingFacts.add(incFact);
+			
+			for(PausedReturnSiteEdge edge: Lists.newLinkedList(paused)) {
+				if(resolve(edge.constraint, edge.pathEdge, edge.alreadyResolvedAccPath, edge.concretizedStmtFact, incFact, new Visited())) {
+					propagate(edge.pathEdge, null, false);
+					paused.remove(edge);
+				}
+			}
+		}
+
+		private boolean resolve(Constraint<FieldRef> constraint, PathEdge<N, D> pathEdge, AccessPath<FieldRef> alreadyResolvedAccPath, Visited visited) {
+			if(!visited.resolver.add(this))
+				return false;
+			
+			alreadyResolvedAccPath = constraint.applyToAccessPath(alreadyResolvedAccPath, false);
+			D concretizedStmtFact = targetFact.cloneWithAccessPath(alreadyResolvedAccPath);
+			
+			logger.trace("Resolving {} through return site {} (inc edges: {})", alreadyResolvedAccPath, stmt, incomingFacts.size());
+			
+			boolean resolved = false;
+			for(final IncomingFact incFact : incomingFacts) {
+				resolved |= resolve(constraint, pathEdge, alreadyResolvedAccPath, concretizedStmtFact, incFact, visited);
+				if(resolved)
+					break;
+			}
+			if(resolved) {
+				propagate(pathEdge, null, false);
+			} else {
+				logger.trace("Pause {} at {}", pathEdge, stmt);
+				paused.add(new PausedReturnSiteEdge(constraint, pathEdge, alreadyResolvedAccPath, concretizedStmtFact));
+			}
+			return resolved;
+		}
+
+		protected boolean resolve(Constraint<FieldRef> constraint, final PathEdge<N, D> pathEdge, AccessPath<FieldRef> alreadyResolvedAccPath,
+				final D concretizedStmtFact, final IncomingFact incFact, Visited visited) {
+			
+			
+			logger.trace("Checking Incoming Fact {} with delta '{}' ({}) at {} to resolve {}", incFact.fact, incFact.delta, incFact.summaryEdge, stmt, alreadyResolvedAccPath);
+			
+			if(AccessPathUtil.isPrefixOf(concretizedStmtFact, incFact.fact) == PrefixTestResult.GUARANTEED_PREFIX) {
+				logger.trace("Resolved by incoming fact {}", incFact.fact);
+				return true;
+			} else if(AccessPathUtil.isPrefixOf(incFact.fact, concretizedStmtFact).atLeast(PrefixTestResult.POTENTIAL_PREFIX)) {
+				if(incFact.fact.getAccessPath().hasResolver()) {
+					DecoratingResolver decoratingResolver = (DecoratingResolver) incFact.fact.getAccessPath().getResolver();
+					logger.trace("Asking {} to resolve {}", decoratingResolver, alreadyResolvedAccPath);
+					final Constraint<FieldRef> deltaConstraint = new DeltaConstraint<FieldRef>(incFact.fact.getAccessPath(), alreadyResolvedAccPath);
+					if(deltaConstraint.canBeAppliedTo(incFact.fact.getAccessPath()) && deltaConstraint.canBeAppliedTo(decoratingResolver.alreadyResolvedAccPath)) {
+						boolean resolved = decoratingResolver.resolver.resolve(deltaConstraint, new ReturnConcretizationPathEdge<N, D>(
+								incFact.summaryEdge.getSourceFact(), 
+								incFact.summaryEdge.getTargetStmt(), 
+								applyConstraint(deltaConstraint, incFact.summaryEdge.getTargetFact(), false)) {
+
+									@Override
+									public void _propagate(D dSource, N target, D dTarget) {
+										addIncomingFact(new SummaryEdge<>(dSource, target, dTarget), applyConstraint(deltaConstraint, incFact.fact, false), incFact.delta);
+									}
+						}, decoratingResolver.alreadyResolvedAccPath, visited);
+						if(resolved) {
+							propagate(pathEdge, null, false);
+							return true;
+						}
+					}
+				}
+				else {
+					D factWithDelta = incFact.fact.cloneWithAccessPath(incFact.delta.applyTo(incFact.fact.getAccessPath()));
+					if(AccessPathUtil.isPrefixOf(concretizedStmtFact, factWithDelta) == PrefixTestResult.GUARANTEED_PREFIX) {
+						logger.trace("Resolved by incoming fact {} with delta {}", incFact.fact, incFact.delta);
+						return true;
+					} else if(AccessPathUtil.isPrefixOf(factWithDelta, concretizedStmtFact).atLeast(PrefixTestResult.POTENTIAL_PREFIX)) {
+						if(factWithDelta.getAccessPath().hasResolver()) {
+							DecoratingResolver decoratingResolver = (DecoratingResolver) factWithDelta.getAccessPath().getResolver();
+							logger.trace("Asking {} to resolve {}", decoratingResolver, alreadyResolvedAccPath);
+							
+							final Constraint<FieldRef> deltaConstraint = new DeltaConstraint<FieldRef>(factWithDelta.getAccessPath(), alreadyResolvedAccPath);
+							if(deltaConstraint.canBeAppliedTo(decoratingResolver.alreadyResolvedAccPath)) {
+								D target = applyConstraint(deltaConstraint, decoratingResolver.resolver.targetFact, false);
+								target = target.cloneWithAccessPath(target.getAccessPath().setResolver(decoratingResolver).decorateResolver(deltaConstraint));
+								PathEdge<N, D> newEdge = new ReturnConcretizationPathEdge<N, D>(decoratingResolver.resolver.sourceFact, decoratingResolver.resolver.stmt, target) {
+									@Override
+									protected void _propagate(D dSource, N target, D dTarget) {
+										FieldSensitiveIFDSSolver.this.propagate(pathEdge, null, false);
+									}
+								};
+								
+								boolean resolved = decoratingResolver.resolver.resolve(deltaConstraint, newEdge, decoratingResolver.alreadyResolvedAccPath, visited);
+								if(resolved) {
+									return true;
+								}
+							}
+						}
+						else {
+							final DeltaConstraint<FieldRef> deltaConstraint = new DeltaConstraint<>(alreadyResolvedAccPath, constraint.applyToAccessPath(factWithDelta.getAccessPath(), false));
+							AccessPath<FieldRef> newAccPath = deltaConstraint.applyToAccessPath(pathEdge.factAtTarget().getAccessPath().setResolver(null), false);
+							boolean resolved = propagateConstrained(new ReturnConcretizationPathEdge<N, D>(
+									applyConstraint(constraint, sourceFact, true), pathEdge.getTarget(), 
+									pathEdge.factAtTarget().cloneWithAccessPath(newAccPath)) {
+										@Override
+										protected void _propagate(D dSource, N target, D dTarget) {
+											addIncomingFact(new SummaryEdge<>(dSource, target, dTarget), dTarget, incFact.delta);
+										}
+									}, visited);
+							if(resolved)
+								return true;
+						}
+					}
+				}
+			}
+			return false;
+		}
+		
+		@Override
+		public String toString() {
+			return stmt.toString();
+		}
+	}
+
+	private class Visited {
+		Set<Resolver> resolver = Sets.newHashSet();
+		Map<N, Boolean> visitedCallSites = Maps.newHashMap();
+	}
+	
+	class DecoratingResolver implements SubPathResolver<FieldRef> {
+		
+		private Resolver resolver;
+		private AccessPath<FieldRef> alreadyResolvedAccPath;
+
+		public DecoratingResolver(Resolver resolver) {
+			this.resolver = resolver;
+			this.alreadyResolvedAccPath = new AccessPath<FieldRef>();
+		}
+		
+		public DecoratingResolver(Resolver resolver, AccessPath<FieldRef> alreadyResolvedAccPath) {
+			this.resolver = resolver;
+			this.alreadyResolvedAccPath = alreadyResolvedAccPath;
+		}
+		
+		public boolean resolve(Constraint<FieldRef> constraint, PathEdge<N, D> pathEdge) {
+			return resolve(constraint, pathEdge, new Visited());
+		}
+
+		public boolean resolve(Constraint<FieldRef> constraint, PathEdge<N, D> pathEdge, Visited visited) {
+			return resolver.resolve(constraint, pathEdge, alreadyResolvedAccPath, visited);
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((alreadyResolvedAccPath == null) ? 0 : alreadyResolvedAccPath.hashCode());
+			result = prime * result + ((resolver == null) ? 0 : resolver.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			DecoratingResolver other = (DecoratingResolver) obj;
+			if (alreadyResolvedAccPath == null) {
+				if (other.alreadyResolvedAccPath != null)
+					return false;
+			} else if (!alreadyResolvedAccPath.equals(other.alreadyResolvedAccPath))
+				return false;
+			if (resolver == null) {
+				if (other.resolver != null)
+					return false;
+			} else if (!resolver.equals(other.resolver))
+				return false;
+			return true;
+		}
+		
+		@Override
+		public String toString() {
+			return alreadyResolvedAccPath+ ":"+resolver.toString();
+		}
+
+		@Override
+		public SubPathResolver<FieldRef> decorate(Constraint<FieldRef> constraint) {
+			return new DecoratingResolver(resolver, constraint.applyToAccessPath(alreadyResolvedAccPath, false));
+		}
+	}
+	
+	private class IncomingFact {
+
+		private D fact;
+		private Delta<FieldRef> delta;
+		private SummaryEdge<D, N> summaryEdge;
+
+		public IncomingFact(SummaryEdge<D, N> summaryEdge, D fact, Delta<FieldRef> delta) {
+			this.summaryEdge = summaryEdge;
+			this.fact = fact;
+			this.delta = delta;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((delta == null) ? 0 : delta.hashCode());
+			result = prime * result + ((fact == null) ? 0 : fact.hashCode());
+			result = prime * result + ((summaryEdge == null) ? 0 : summaryEdge.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			IncomingFact other = (IncomingFact) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (delta == null) {
+				if (other.delta != null)
+					return false;
+			} else if (!delta.equals(other.delta))
+				return false;
+			if (fact == null) {
+				if (other.fact != null)
+					return false;
+			} else if (!fact.equals(other.fact))
+				return false;
+			if (summaryEdge == null) {
+				if (other.summaryEdge != null)
+					return false;
+			} else if (!summaryEdge.equals(other.summaryEdge))
+				return false;
+			return true;
+		}
+
+		private FieldSensitiveIFDSSolver getOuterType() {
+			return FieldSensitiveIFDSSolver.this;
+		}
+		
 	}
 	
 	/**
@@ -486,6 +807,7 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 	 * Simply propagate normal, intra-procedural flows.
 	 * @param edge
 	 */
+	@SuppressWarnings("unchecked")
 	private void processNormalFlow(PathEdge<N,D> edge) {
 		final D d1 = edge.factAtSource();
 		final N n = edge.getTarget(); 
@@ -496,7 +818,11 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 			Set<ConstrainedFact<FieldRef, D>> res = computeNormalFlowFunction(flowFunction, d1, d2);
 			for (ConstrainedFact<FieldRef, D> d3 : res) {
 				if(d3.getConstraint() != null) {
-					propagateConstrained(new PathEdge<>(applyConstraint(d3.getConstraint(), d1, true), m, d3.getFact()));
+					if(d3.getFact().getAccessPath().hasResolver()) {
+						AccessPath<FieldRef> accPath = d3.getFact().getAccessPath().decorateResolver(d3.getConstraint());
+						((DecoratingResolver) d3.getFact().getAccessPath().getResolver()).resolve(d3.getConstraint(), new PathEdge<>(d1, m, d3.getFact().cloneWithAccessPath(accPath)));
+					} else
+						propagateConstrained(new PathEdge<>(applyConstraint(d3.getConstraint(), d1, true), m, d3.getFact()));
 				}
 				else
 					propagate(new PathEdge<>(d1, m, d3.getFact()), null, false);
@@ -512,12 +838,12 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 	}
 	
 	private boolean propagateConstrained(PathEdge<N, D> pathEdge) {
-		return propagateConstrained(pathEdge, new HashMap<N, Boolean>());
+		return propagateConstrained(pathEdge, new Visited());
 	}
 	
-	private boolean propagateConstrained(PathEdge<N, D> pathEdge, Map<N, Boolean> visited) {
+	private boolean propagateConstrained(PathEdge<N, D> pathEdge, Visited visited) {
 		M calleeMethod = icfg.getMethodOf(pathEdge.getTarget());
-		logger.trace("Checking interest at method {} in fact {}", calleeMethod, pathEdge.factAtSource());
+		logger.trace("Checking interest at method {} in fact {} for edge {}", calleeMethod, pathEdge.factAtSource(), pathEdge);
 
 		boolean propagate = false;
 		if(pathEdge.factAtSource().equals(zeroValue))
@@ -531,27 +857,50 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 			}
 			propagate = !callSitesWithInterest.isEmpty();
 			
-			for(IncomingEdge<D, N> incEdge : incomingEdgesPotentialPrefixesOf(calleeMethod, pathEdge.factAtSource())) { //potential
-				if(visited.containsKey(incEdge.getCallSite())) {
-					if(visited.get(incEdge.getCallSite()) != null)
-						propagate |= visited.get(incEdge.getCallSite());
+			Set<IncomingEdge<D, N>> incomingEdgesPotentialPrefixesOf = incomingEdgesPotentialPrefixesOf(calleeMethod, pathEdge.factAtSource());
+			Collection<IncomingEdge<D, N>> candidates = reduceToMostAbstractCalleeFactsPerCallSite(incomingEdgesPotentialPrefixesOf);
+			
+			for(IncomingEdge<D, N> incEdge : candidates) { //potential
+				if(visited.visitedCallSites.containsKey(incEdge.getCallSite())) {
+					if(visited.visitedCallSites.get(incEdge.getCallSite()) != null)
+						propagate |= visited.visitedCallSites.get(incEdge.getCallSite());
 				}
 				else {
 					if(!callSitesWithInterest.contains(incEdge.getCallSite())) {
-						Constraint<FieldRef> callerConstraint = new DeltaConstraint<FieldRef>(incEdge.getCalleeSourceFact().getAccessPath(), pathEdge.factAtSource().getAccessPath());
-						if(callerConstraint.canBeAppliedTo(incEdge.getCallerSourceFact().getAccessPath()) && 
-								callerConstraint.canBeAppliedTo(incEdge.getCallerCallSiteFact().getAccessPath())) {
-				
-							PathEdge<N,D> callerEdge = new ConcretizationPathEdge<>(
-									applyConstraint(callerConstraint, incEdge.getCallerSourceFact(), true), 
-									incEdge.getCallSite(), 
-									applyConstraint(callerConstraint, incEdge.getCallerCallSiteFact(), false),
-									calleeMethod,
-									applyConstraint(callerConstraint, incEdge.getCalleeSourceFact(), true));
-							visited.put(incEdge.getCallSite(), null);
-							boolean result = propagateConstrained(callerEdge, visited);
-							visited.put(incEdge.getCallSite(), result);
-							propagate |= result;
+						if(incEdge.getCalleeSourceFact().getAccessPath().hasResolver()) {
+							Constraint<FieldRef> callerConstraint = new DeltaConstraint<FieldRef>(incEdge.getCalleeSourceFact().getAccessPath(), pathEdge.factAtSource().getAccessPath());
+							if(callerConstraint.canBeAppliedTo(incEdge.getCallerSourceFact().getAccessPath()) && 
+									callerConstraint.canBeAppliedTo(incEdge.getCallerCallSiteFact().getAccessPath())) {
+								DecoratingResolver decoratingResolver = (DecoratingResolver) incEdge.getCalleeSourceFact().getAccessPath().getResolver();
+								D calleeSourceFact = applyConstraint(callerConstraint, incEdge.getCalleeSourceFact(), true);
+								calleeSourceFact = calleeSourceFact.cloneWithAccessPath(calleeSourceFact.getAccessPath().setResolver(
+										incEdge.getCalleeSourceFact().getAccessPath().getResolver().decorate(callerConstraint)));
+								boolean result = decoratingResolver.resolve(callerConstraint, new CallConcretizationPathEdge<>(
+										applyConstraint(callerConstraint, incEdge.getCallerSourceFact(), true), 
+										incEdge.getCallSite(), 
+										applyConstraint(callerConstraint, incEdge.getCallerCallSiteFact(), false), 
+										calleeMethod,
+										calleeSourceFact), visited);
+								visited.visitedCallSites.put(incEdge.getCallSite(), result);
+								propagate |= result;
+							}
+						}
+						else {
+							Constraint<FieldRef> callerConstraint = new DeltaConstraint<FieldRef>(incEdge.getCalleeSourceFact().getAccessPath(), pathEdge.factAtSource().getAccessPath());
+							if(callerConstraint.canBeAppliedTo(incEdge.getCallerSourceFact().getAccessPath()) && 
+									callerConstraint.canBeAppliedTo(incEdge.getCallerCallSiteFact().getAccessPath())) {
+					
+								PathEdge<N,D> callerEdge = new CallConcretizationPathEdge<>(
+										applyConstraint(callerConstraint, incEdge.getCallerSourceFact(), true), 
+										incEdge.getCallSite(), 
+										applyConstraint(callerConstraint, incEdge.getCallerCallSiteFact(), false),
+										calleeMethod,
+										applyConstraint(callerConstraint, incEdge.getCalleeSourceFact(), true));
+								visited.visitedCallSites.put(incEdge.getCallSite(), null);
+								boolean result = propagateConstrained(callerEdge, visited);
+								visited.visitedCallSites.put(incEdge.getCallSite(), result);
+								propagate |= result;
+							}
 						}
 					}
 				}
@@ -559,12 +908,27 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 		}
 		
 		if(propagate) {
-			propagate(pathEdge, pathEdge instanceof ConcretizationPathEdge ? pathEdge.getTarget() : null, false);
+			propagate(pathEdge, pathEdge instanceof CallConcretizationPathEdge ? pathEdge.getTarget() : null, false);
 			return true;
 		} else {
 			pauseEdge(pathEdge);
 			return false;
 		}
+	}
+
+	private Collection<IncomingEdge<D, N>> reduceToMostAbstractCalleeFactsPerCallSite(Set<IncomingEdge<D, N>> candidates) {
+		Map<N, IncomingEdge<D, N>> result = Maps.newHashMap();
+		for(IncomingEdge<D, N> incEdge : candidates) {
+			if(result.containsKey(incEdge.getCallSite())) {
+				IncomingEdge<D, N> currentIncEdge = result.get(incEdge.getCallSite());
+				if(AccessPathUtil.isPrefixOf(incEdge.getCalleeSourceFact(), currentIncEdge.getCalleeSourceFact()) == PrefixTestResult.GUARANTEED_PREFIX) {
+					result.put(incEdge.getCallSite(), incEdge);
+				}
+			}
+			else
+				result.put(incEdge.getCallSite(), incEdge);
+		}
+		return result.values();
 	}
 
 	private boolean hasPausedEdges(M calleeMethod, PathEdge<N, D> pathEdge) {
@@ -643,9 +1007,16 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 		
 		final D existingVal = jumpFn.addFunction(edge);
 		
-		if(edge instanceof ConcretizationPathEdge) {
+		
+		if(!edge.factAtTarget().getAccessPath().hasResolver()) {
+			if(!edge.factAtTarget().getAccessPath().hasAllExclusionsOf(edge.factAtSource().getAccessPath())) {
+				throw new AssertionError();
+			}
+		}
+		
+		if(edge instanceof CallConcretizationPathEdge) {
 			concretizationEdges++;
-			ConcretizationPathEdge<M, N, D> concEdge = (ConcretizationPathEdge<M,N,D>) edge;
+			CallConcretizationPathEdge<M, N, D> concEdge = (CallConcretizationPathEdge<M,N,D>) edge;
 			IncomingEdge<D, N> incomingEdge = new IncomingEdge<D, N>(concEdge.getCalleeSourceFact(), 
 					concEdge.getTarget(), concEdge.factAtSource(), concEdge.factAtTarget());
 			if (!addIncoming(concEdge.getCalleeMethod(), incomingEdge))
@@ -653,11 +1024,13 @@ public class FieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.
 			
 			resumeEdges(concEdge.getCalleeMethod(), concEdge.getCalleeSourceFact());
 			registerInterestedCaller(concEdge.getCalleeMethod(), incomingEdge);
+		} else if(edge instanceof ReturnConcretizationPathEdge) {
+			((ReturnConcretizationPathEdge<N,D>) edge).propagate();
 		} else {
-			if(cacheSourceBaseValue % 10_000 == 0 || cacheEquals % 100_000 == 0) {
-				System.out.println(String.format("cache hits: %,8d, cache hits on SourceBaseValue: %,8d, equals: %,8d, merges: %,8d, opposite: %,8d, concretizationEdges: %,8d",
-						cacheHits, cacheSourceBaseValue, cacheEquals, cacheMerges, cacheOppositePrefix, concretizationEdges));
-			}
+//			if(cacheSourceBaseValue % 10_000 == 0 || cacheEquals % 100_000 == 0) {
+//				System.out.println(String.format("cache hits: %,8d, cache hits on SourceBaseValue: %,8d, equals: %,8d, merges: %,8d, opposite: %,8d, concretizationEdges: %,8d",
+//						cacheHits, cacheSourceBaseValue, cacheEquals, cacheMerges, cacheOppositePrefix, concretizationEdges));
+//			}
 			
 			
 			if (existingVal != null) {

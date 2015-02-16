@@ -10,6 +10,7 @@
  ******************************************************************************/
 package heros.alias;
 
+import heros.alias.FlowFunction.Constraint;
 import heros.alias.SubAccessPath.SetOfPossibleFieldAccesses;
 import heros.alias.SubAccessPath.SpecificFieldAccess;
 import heros.alias.Transition.MatchResult;
@@ -38,15 +39,18 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 	
 	private final SubAccessPath<T>[] accesses;
 	private final Set<T> exclusions;
+	private final SubPathResolver<T> resolver;
 	
 	public AccessPath() {
 		accesses = new SubAccessPath[0];
 		exclusions = Sets.newHashSet();
+		resolver = null;
 	}
 	
-	AccessPath(SubAccessPath<T>[] accesses, Set<T> exclusions) {
+	AccessPath(SubAccessPath<T>[] accesses, Set<T> exclusions, SubPathResolver<T> resolver) {
 		this.accesses = accesses;
 		this.exclusions = exclusions;
+		this.resolver = resolver;
 	}
 
 	public boolean isAccessInExclusions(SubAccessPath<T>... fieldReferences) {
@@ -62,6 +66,10 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 	
 	public AccessPath<T> addFieldReference(SubAccessPath<T>... fieldReferences) {
 		return addFieldReference(true, fieldReferences);
+	}
+
+	public boolean hasAllExclusionsOf(AccessPath<T> accPath) {
+		return exclusions.containsAll(accPath.exclusions);
 	}
 	
 	AccessPath<T> addFieldReference(boolean merge, SubAccessPath<T>... fieldReferences) {
@@ -113,7 +121,7 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 		}
 		
 		public AccessPath<T> build() {
-			return new AccessPath<>(newAccesses, newExclusions);
+			return new AccessPath<>(newAccesses, newExclusions, resolver);
 		}
 
 		public void removeExclusions() {
@@ -178,7 +186,7 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 		for(int i=0; i<accesses.length; i++) {
 			if(accesses[i].contains(field)) {
 				if(accesses[i] instanceof SpecificFieldAccess)
-					return new AccessPath<T>(Arrays.copyOfRange(accesses, i+1, accesses.length), exclusions);
+					return new AccessPath<T>(Arrays.copyOfRange(accesses, i+1, accesses.length), exclusions, resolver);
 				else
 					return this;
 			}
@@ -192,11 +200,17 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 	public AccessPath<T> appendExcludedFieldReference(T... fieldReferences) {
 		HashSet<T> newExclusions = Sets.newHashSet(fieldReferences);
 		newExclusions.addAll(exclusions);
-		return new AccessPath<>(accesses, newExclusions);
+		return new AccessPath<>(accesses, newExclusions, resolver);
+	}
+
+	public AccessPath<T> appendExcludedFieldReference(Collection<T> fieldReferences) {
+		HashSet<T> newExclusions = Sets.newHashSet(fieldReferences);
+		newExclusions.addAll(exclusions);
+		return new AccessPath<>(accesses, newExclusions, resolver);
 	}
 
 	public static enum PrefixTestResult {
-		GUARANTEED_PREFIX(2), POTENTIAL_PREFIX(1), NO_PREFIX(0);
+		GUARANTEED_PREFIX(3), POTENTIAL_PREFIX(2), NEEDS_RESOLVNG(1), NO_PREFIX(0);
 		
 		private int value;
 
@@ -268,7 +282,7 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 		return result;
 	}
 	
-	public SubAccessPath<T>[] getDeltaTo(AccessPath<T> accPath) {
+	public Delta<T> getDeltaTo(AccessPath<T> accPath) {
 		int currIndex = 0;
 		int otherIndex = 0;
 		
@@ -292,13 +306,57 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 			break;
 		}
 		
-		return Arrays.copyOfRange(accPath.accesses, otherIndex, accPath.accesses.length);
+		return new Delta<T>(Arrays.copyOfRange(accPath.accesses, otherIndex, accPath.accesses.length), accPath.exclusions, accPath.resolver);
+	}
+	
+	public static class Delta<T extends FieldRef<T>> {
+		final SubAccessPath<T>[] accesses;
+		final Set<T> exclusions;
+		final SubPathResolver<T> resolver;
+
+		protected Delta(SubAccessPath<T>[] accesses, Set<T> exclusions, SubPathResolver<T> resolver) {
+			this.accesses = accesses;
+			this.exclusions = exclusions;
+			this.resolver = resolver;
+		}
+		
+		public boolean canBeAppliedTo(AccessPath<T> accPath) {
+			return !accPath.isAccessInExclusions(accesses);
+		}
+		
+		public AccessPath<T> applyTo(AccessPath<T> accPath) {
+			return applyTo(accPath, true);
+		}
+		
+		public AccessPath<T> applyTo(AccessPath<T> accPath, boolean merge) {
+			AccessPath<T> result = accPath.addFieldReference(merge, accesses).appendExcludedFieldReference(exclusions);
+			if(resolver != null) {
+				if(result.hasResolver())
+					throw new AssertionError();
+				result = result.setResolver(resolver);
+			}
+			return result;
+		}
+		
+		public static <T extends FieldRef<T>> Delta<T> empty() {
+			return new Delta<T>(new SubAccessPath[0], Sets.<T> newHashSet(), null);
+		}
+		
+		@Override
+		public String toString() {
+			String result = accesses.length > 0 ? "."+Joiner.on(".").join(accesses) : "";
+			if(!exclusions.isEmpty())
+				result += "^" + Joiner.on(",").join(exclusions);
+			if(resolver != null)
+				result+="["+resolver+"]";
+			return result;
+		}
 	}
 	
 	public AccessPath<T> mergeExcludedFieldReferences(AccessPath<T> accPath) {
 		HashSet<T> newExclusions = Sets.newHashSet(exclusions);
 		newExclusions.addAll(accPath.exclusions);
-		return new AccessPath<>(accesses, newExclusions);
+		return new AccessPath<>(accesses, newExclusions, resolver);
 	}
 	
 	public boolean mayHaveEmptyAccessPath() {
@@ -306,7 +364,7 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 	}
 	
 	public boolean isEmpty() {
-		return exclusions.isEmpty() && accesses.length == 0;
+		return exclusions.isEmpty() && accesses.length == 0 && !hasResolver();
 	}
 	
 	@Override
@@ -315,6 +373,7 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 		int result = 1;
 		result = prime * result + Arrays.hashCode(accesses);
 		result = prime * result + ((exclusions == null) ? 0 : exclusions.hashCode());
+		result = prime * result + ((resolver == null) ? 0 : resolver.hashCode());
 		return result;
 	}
 
@@ -324,7 +383,7 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 			return true;
 		if (obj == null)
 			return false;
-		if (!(obj instanceof AccessPath))
+		if (getClass() != obj.getClass())
 			return false;
 		AccessPath other = (AccessPath) obj;
 		if (!Arrays.equals(accesses, other.accesses))
@@ -334,6 +393,11 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 				return false;
 		} else if (!exclusions.equals(other.exclusions))
 			return false;
+		if (resolver == null) {
+			if (other.resolver != null)
+				return false;
+		} else if (!resolver.equals(other.resolver))
+			return false;
 		return true;
 	}
 
@@ -342,6 +406,8 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 		String result = accesses.length > 0 ? "."+Joiner.on(".").join(accesses) : "";
 		if(!exclusions.isEmpty())
 			result += "^" + Joiner.on(",").join(exclusions);
+		if(resolver != null)
+			result+="["+resolver+"]";
 		return result;
 	}
 	
@@ -353,12 +419,12 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 		Set<U> newExclusions = Sets.newHashSet();
 		for(T f : exclusions)
 			newExclusions.add(function.apply(f));
-		return new AccessPath<U>(newAccesses, newExclusions);
+		return new AccessPath<U>(newAccesses, newExclusions, null /*FIXME*/);
 	}
 	
 	public AccessPath<T> removeAnyAccess() {
 		if(accesses.length > 0)
-			return new AccessPath<T>(new SubAccessPath[0], exclusions);
+			return new AccessPath<T>(new SubAccessPath[0], exclusions, resolver);
 		else
 			return this;
 	}
@@ -370,6 +436,14 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 	public boolean subsumes(AccessPath<T> accPath) {
 		int currIndex = 0;
 		int otherIndex = 0;
+		
+		if(resolver != null) {
+			if(!resolver.equals(accPath.resolver)) {
+				return false;
+			}
+		}
+		else if(accPath.resolver != null)
+			return false;
 		
 		
 		outer: while(true) {
@@ -422,7 +496,7 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 	}
 
 	public AccessPath<T> removeExclusions() {
-		return new AccessPath<T>(accesses, Sets.<T>newHashSet());
+		return new AccessPath<T>(accesses, Sets.<T>newHashSet(), resolver);
 	}
 
 	public SubAccessPath<T> getFirstAccess() {
@@ -435,13 +509,79 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 			throw new IllegalArgumentException();
 		
 		if(elements.size() == 1) {
-			return new AccessPath<>(Arrays.copyOfRange(accesses, 1, accesses.length), exclusions);
+			return new AccessPath<>(Arrays.copyOfRange(accesses, 1, accesses.length), exclusions, resolver);
 		}
 		
 		HashSet<T> newSet = Sets.newHashSet(elements);
 		newSet.remove(field);
 		SubAccessPath<T>[] newAccesses = Arrays.copyOf(accesses, accesses.length);
 		newAccesses[0] = new SetOfPossibleFieldAccesses<>(newSet);
-		return new AccessPath<T>(newAccesses, exclusions);
+		return new AccessPath<T>(newAccesses, exclusions, resolver);
+	}
+
+	public AccessPath<T> setResolver(SubPathResolver<T> resolver) {
+		return new AccessPath<T>(accesses, exclusions, resolver);
+	}
+	
+	public SubPathResolver<T> getResolver() {
+		return resolver;
+	}
+	
+	public boolean hasResolver() {
+		return resolver != null;
+	}
+	
+	public AccessPath<T> decorateResolver(Constraint<T> constraint) {
+		return new AccessPath<T>(accesses, exclusions, resolver.decorate(constraint));
+	}
+	
+	public class Iterator {
+		private int currentIndex = 0;
+		
+		public boolean hasNext(T field) {
+			for(int i=0; i+currentIndex < accesses.length; i++) {
+				if(accesses[currentIndex+i].contains(field))
+					return true;
+				if(accesses[currentIndex+i] instanceof SpecificFieldAccess)
+					return false;
+			}
+			return false;
+		}
+		
+		public void next(T field) {
+			for(int i=0; i+currentIndex < accesses.length; i++) {
+				if(accesses[currentIndex+i].contains(field)) {
+					currentIndex+=i;
+					return;
+				}
+				if(accesses[currentIndex+i] instanceof SpecificFieldAccess)
+					throw new IllegalStateException();
+			}
+			throw new IllegalStateException();
+		}
+		
+		public boolean maybeAtEnd() {
+			for(int i=0; i+currentIndex < accesses.length; i++) {
+				if(accesses[currentIndex+i] instanceof SpecificFieldAccess)
+					return false;
+			}
+			return true;
+		}
+		
+		public boolean isExcluded(T field) {
+			return exclusions.contains(field);
+		}
+		
+		public boolean hasResolver() {
+			return resolver != null;
+		}
+
+		public Object getResolver() {
+			return resolver;
+		}
+	}
+
+	public AccessPath<T>.Iterator iterator() {
+		return new Iterator();
 	}
 }

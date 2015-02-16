@@ -12,6 +12,7 @@ package heros.alias;
 
 import java.util.Set;
 
+import heros.alias.AccessPath.Delta;
 import heros.alias.AccessPath.PrefixTestResult;
 
 import com.google.common.base.Optional;
@@ -30,6 +31,24 @@ public class AccessPathUtil {
 		return prefixCandidate.getAccessPath().isPrefixOf(fact.getAccessPath());
 	}
 
+	public static <FieldRef extends AccessPath.FieldRef<FieldRef>, D extends FieldSensitiveFact<?, FieldRef, D>> Optional<Delta<FieldRef>> getDelta(D sourceFact, SummaryEdge<D, ?> summary) {
+		if(!isPrefixOf(summary.getSourceFact(), sourceFact).atLeast(PrefixTestResult.GUARANTEED_PREFIX))
+			throw new IllegalArgumentException(String.format("Source fact in given summary edge '%s' is not a prefix of the given source fact '%s'", summary, sourceFact));
+		
+		AccessPath<FieldRef> concreteAccessPath = sourceFact.getAccessPath();
+		AccessPath<FieldRef> abstractAccessPath = summary.getSourceFact().getAccessPath();
+		AccessPath<FieldRef> targetAccessPath = summary.getTargetFact().getAccessPath();
+		
+		if(abstractAccessPath.equals(concreteAccessPath))
+			return Optional.of(AccessPath.Delta.<FieldRef> empty());
+
+		Delta<FieldRef> delta = abstractAccessPath.getDeltaTo(concreteAccessPath);
+		if(!delta.canBeAppliedTo(targetAccessPath))
+			return Optional.absent();
+		else
+			return Optional.of(delta);
+	}
+	
 	public static <FieldRef extends AccessPath.FieldRef<FieldRef>, D extends FieldSensitiveFact<?, FieldRef, D>> Optional<D> applyAbstractedSummary(D sourceFact, SummaryEdge<D, ?> summary) {
 		if(!isPrefixOf(summary.getSourceFact(), sourceFact).atLeast(PrefixTestResult.GUARANTEED_PREFIX))
 			throw new IllegalArgumentException(String.format("Source fact in given summary edge '%s' is not a prefix of the given source fact '%s'", summary, sourceFact));
@@ -41,13 +60,11 @@ public class AccessPathUtil {
 		if(abstractAccessPath.equals(concreteAccessPath))
 			return Optional.of(summary.getTargetFact());
 		
-		SubAccessPath<FieldRef>[] delta = abstractAccessPath.getDeltaTo(concreteAccessPath);
-		if(targetAccessPath.isAccessInExclusions(delta))
+		Delta<FieldRef> delta = abstractAccessPath.getDeltaTo(concreteAccessPath);
+		if(!delta.canBeAppliedTo(targetAccessPath))
 			return Optional.absent();
 		
-		AccessPath<FieldRef> result = targetAccessPath.addFieldReference(delta);
-		result = result.mergeExcludedFieldReferences(concreteAccessPath);
-		
+		AccessPath<FieldRef> result = delta.applyTo(targetAccessPath);
 		return Optional.of(summary.getTargetFact().cloneWithAccessPath(result));
 	}
 
