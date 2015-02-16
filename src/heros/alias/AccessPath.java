@@ -424,4 +424,24 @@ public class AccessPath<T extends AccessPath.FieldRef<T>> {
 	public AccessPath<T> removeExclusions() {
 		return new AccessPath<T>(accesses, Sets.<T>newHashSet());
 	}
+
+	public SubAccessPath<T> getFirstAccess() {
+		return accesses[0];
+	}
+
+	public AccessPath<T> removeRepeatableFirstAccess(T field) {
+		Collection<? extends T> elements = accesses[0].elements();
+		if(!elements.contains(field))
+			throw new IllegalArgumentException();
+		
+		if(elements.size() == 1) {
+			return new AccessPath<>(Arrays.copyOfRange(accesses, 1, accesses.length), exclusions);
+		}
+		
+		HashSet<T> newSet = Sets.newHashSet(elements);
+		newSet.remove(field);
+		SubAccessPath<T>[] newAccesses = Arrays.copyOf(accesses, accesses.length);
+		newAccesses[0] = new SetOfPossibleFieldAccesses<>(newSet);
+		return new AccessPath<T>(newAccesses, exclusions);
+	}
 }
