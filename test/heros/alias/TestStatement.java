@@ -10,19 +10,19 @@
  ******************************************************************************/
 package heros.alias;
 
-public class Method {
+public class TestStatement {
 
-	public final String name;
+	public final String identifier;
 	
-	public Method(String name) {
-		this.name = name;
+	public TestStatement(String identifier) {
+		this.identifier = identifier;
 	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((name == null) ? 0 : name.hashCode());
+		result = prime * result + ((identifier == null) ? 0 : identifier.hashCode());
 		return result;
 	}
 
@@ -32,19 +32,19 @@ public class Method {
 			return true;
 		if (obj == null)
 			return false;
-		if (!(obj instanceof Method))
+		if (!(obj instanceof TestStatement))
 			return false;
-		Method other = (Method) obj;
-		if (name == null) {
-			if (other.name != null)
+		TestStatement other = (TestStatement) obj;
+		if (identifier == null) {
+			if (other.identifier != null)
 				return false;
-		} else if (!name.equals(other.name))
+		} else if (!identifier.equals(other.identifier))
 			return false;
 		return true;
 	}
 	
 	@Override
 	public String toString() {
-		return "[Method "+name+"]";
+		return "[Statement "+identifier+"]";
 	}
 }

@@ -32,43 +32,44 @@ public abstract class EdgeBuilder {
 
 	public static class CallSiteBuilder extends EdgeBuilder {
 
-		private Statement callSite;
+		private TestStatement callSite;
 
-		public CallSiteBuilder(Statement callSite) {
+		public CallSiteBuilder(TestStatement callSite) {
 			this.callSite = callSite;
 		}
 
 		public CallSiteBuilder calls(String method, ExpectedFlowFunction...flows) {
-			edges.add(new TestHelper.CallEdge(callSite, new Method(method), flows));
+			edges.add(new TestHelper.CallEdge(callSite, new TestMethod(method), flows));
 			return this;
 		}
 		
 		public CallSiteBuilder retSite(String returnSite, ExpectedFlowFunction...flows) {
-			edges.add(new TestHelper.Call2ReturnEdge(callSite, new Statement(returnSite), flows));
+			edges.add(new TestHelper.Call2ReturnEdge(callSite, new TestStatement(returnSite), flows));
 			return this;
 		}
 	}
 	
 	public static class NormalStmtBuilder extends EdgeBuilder {
 
-		private Statement stmt;
+		private TestStatement stmt;
+		private ExpectedFlowFunction[] flowFunctions;
 
-		public NormalStmtBuilder(Statement stmt) {
+		public NormalStmtBuilder(TestStatement stmt, ExpectedFlowFunction[] flowFunctions) {
 			this.stmt = stmt;
+			this.flowFunctions = flowFunctions;
 		}
 
-		public NormalStmtBuilder succ(String succ, ExpectedFlowFunction... flows) {
-			edges.add(new TestHelper.NormalEdge(stmt, new Statement(succ), flows));
+		public NormalStmtBuilder succ(String succ) {
+			edges.add(new TestHelper.NormalEdge(stmt, new TestStatement(succ), flowFunctions));
 			return this;
 		}
-		
 	}
 	
 	public static class ExitStmtBuilder extends EdgeBuilder {
 
-		private Statement exitStmt;
+		private TestStatement exitStmt;
 
-		public ExitStmtBuilder(Statement exitStmt) {
+		public ExitStmtBuilder(TestStatement exitStmt) {
 			this.exitStmt = exitStmt;
 		}
 		
@@ -77,7 +78,7 @@ public abstract class EdgeBuilder {
 			return this;
 		}
 
-		public ExitStmtBuilder returns(Statement callSite, Statement returnSite, ExpectedFlowFunction... flows) {
+		public ExitStmtBuilder returns(TestStatement callSite, TestStatement returnSite, ExpectedFlowFunction... flows) {
 			edges.add(new TestHelper.ReturnEdge(callSite, exitStmt, returnSite, flows));
 			return this;
 		}

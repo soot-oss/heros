@@ -1,23 +1,18 @@
 /*******************************************************************************
- * Copyright (c) 2014 Johannes Lerch, Johannes Späth.
+ * Copyright (c) 2015 Johannes Lerch.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the GNU Lesser Public License v2.1
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  * 
  * Contributors:
- *     Johannes Lerch, Johannes Späth - initial API and implementation
+ *     Johannes Lerch - initial API and implementation
  ******************************************************************************/
 package heros.alias;
 
-import heros.solver.LinkedNode;
+public interface FactMergeHandler<Fact> {
 
-public interface FieldSensitiveFact<BaseValue, FieldRef extends AccessPath.FieldRef<FieldRef>, D> extends LinkedNode<D>{
-
-	BaseValue getBaseValue();
+	void merge(Fact previousFact, Fact currentFact);
 	
-	AccessPath<FieldRef> getAccessPath();
-	
-	D cloneWithAccessPath(AccessPath<FieldRef> accessPath);
-	
+	void restoreCallingContext(Fact factAtReturnSite, Fact factAtCallSite);
 }

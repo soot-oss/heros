@@ -21,13 +21,13 @@ public class DeltaConstraint<FieldRef extends AccessPath.FieldRef<FieldRef>> imp
 		delta = accPathAtCaller.getDeltaTo(accPathAtCallee);
 	}
 
+	public DeltaConstraint(Delta<FieldRef> delta) {
+		this.delta = delta;
+	}
+	
 	@Override
 	public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath, boolean sourceFact) {
-		if(accPath.hasResolver()) {
-			return delta.applyTo(accPath, sourceFact).decorateResolver(this);
-		}
-		else
-			return delta.applyTo(accPath, sourceFact);
+		return delta.applyTo(accPath, !sourceFact);
 	}
 
 	@Override
@@ -35,4 +35,35 @@ public class DeltaConstraint<FieldRef extends AccessPath.FieldRef<FieldRef>> imp
 		return delta.canBeAppliedTo(accPath);
 	}
 
+	@Override
+	public String toString() {
+		return delta.toString();
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((delta == null) ? 0 : delta.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		DeltaConstraint other = (DeltaConstraint) obj;
+		if (delta == null) {
+			if (other.delta != null)
+				return false;
+		} else if (!delta.equals(other.delta))
+			return false;
+		return true;
+	}
+	
+	
 }

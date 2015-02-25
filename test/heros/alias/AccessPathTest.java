@@ -19,6 +19,7 @@ import org.junit.Test;
 
 import com.google.common.collect.Sets;
 
+import heros.alias.AccessPath.Delta;
 import heros.alias.AccessPath.PrefixTestResult;
 import heros.alias.SubAccessPath.*;
 
@@ -36,7 +37,7 @@ public class AccessPathTest {
 		}
 		return result;
 	}
-	
+
 	private static SetOfPossibleFieldAccesses<TestFieldRef> anyOf(String...fields) {
 		Set<TestFieldRef> set = Sets.newHashSet();
 		for(String f : fields)
@@ -49,7 +50,7 @@ public class AccessPathTest {
 	}
 	
 	private static AccessPath<TestFieldRef> ap(SubAccessPath<TestFieldRef>... path) {
-		return new AccessPath<TestFieldRef>(path, Sets.<TestFieldRef> newHashSet(), null);
+		return new AccessPath<TestFieldRef>(path, Sets.<TestFieldRef> newHashSet());
 	}
 	
 	@Test
@@ -62,6 +63,12 @@ public class AccessPathTest {
 	public void addAndMergeSuffix() {
 		AccessPath<TestFieldRef> sut = AccessPath.<TestFieldRef>empty().addFieldReference(f("a", "b", "c"));
 		assertEquals(ap(s("a"), anyOf("b","c")), sut.addFieldReference(f("b")));
+	}
+	
+	@Test
+	public void addMultipleFieldsAndMerge() {
+		AccessPath<TestFieldRef> sut = AccessPath.<TestFieldRef>empty().addFieldReference(f("a"));
+		assertEquals(ap(anyOf("a", "b")), sut.addFieldReference(f("b", "a")));
 	}
 	
 	@Test
@@ -191,6 +198,20 @@ public class AccessPathTest {
 	}
 	
 	@Test
+	public void deltaFromSetToSet() {
+		Delta<TestFieldRef> actual = ap(anyOf("a")).appendExcludedFieldReference(f("f")).getDeltaTo(ap(anyOf("a")).appendExcludedFieldReference(f("g")));
+		assertArrayEquals(new SubAccessPath[] { anyOf("a") }, actual.accesses);
+		assertEquals(Sets.newHashSet(f("g")), actual.exclusions);
+	}
+	
+	@Test
+	public void emptyDeltaOnEqualExclusions() {
+		AccessPath<TestFieldRef> actual = ap().appendExcludedFieldReference(f("f"));
+		assertEquals(0, actual.getDeltaTo(ap().appendExcludedFieldReference(f("f"))).accesses.length);
+		assertTrue(actual.getDeltaTo(ap().appendExcludedFieldReference(f("f"))).exclusions.equals(Sets.newHashSet(f("f"))));
+	}
+	
+	@Test
 	public void deltaMatchingMergedField() {
 		SubAccessPath<TestFieldRef>[] actual = ap(s("a"), s("b")).getDeltaTo(ap(s("a"), anyOf("b"))).accesses;
 		assertArrayEquals(new SubAccessPath[] { anyOf("b") }, actual);
@@ -225,6 +246,12 @@ public class AccessPathTest {
 		assertEquals(PrefixTestResult.NO_PREFIX, sut.isPrefixOf(ap(anyOf("f"))));
 		assertEquals(PrefixTestResult.NO_PREFIX, sut.isPrefixOf(ap(anyOf("f", "g"))));
 		assertEquals(PrefixTestResult.GUARANTEED_PREFIX, sut.isPrefixOf(ap(anyOf("f"), s("h"))));
+	}
+	
+	@Test
+	public void multipleExclPrefixOfMultipleExcl() {
+		AccessPath<TestFieldRef> sut = ap().appendExcludedFieldReference(f("f", "g"));
+		assertEquals(PrefixTestResult.POTENTIAL_PREFIX, sut.isPrefixOf(ap().appendExcludedFieldReference(f("f", "h"))));
 	}
 	
 	@Test

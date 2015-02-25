@@ -28,6 +28,8 @@ public interface InterproceduralCFG<N,M>  {
 	 */
 	public M getMethodOf(N n);
 
+	public List<N> getPredsOf(N u);
+	
 	/**
 	 * Returns the successor nodes.
 	 */

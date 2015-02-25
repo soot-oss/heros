@@ -37,16 +37,21 @@ import com.google.common.collect.Sets;
 
 public class TestHelper {
 
-	private Multimap<Method, Statement> method2startPoint = HashMultimap.create();
+	private Multimap<TestMethod, TestStatement> method2startPoint = HashMultimap.create();
 	private List<NormalEdge> normalEdges = Lists.newLinkedList();
 	private List<CallEdge> callEdges = Lists.newLinkedList();
 	private List<Call2ReturnEdge> call2retEdges = Lists.newLinkedList();
 	private List<ReturnEdge> returnEdges = Lists.newLinkedList();
-	private Map<Statement, Method> stmt2method = Maps.newHashMap();
+	private Map<TestStatement, TestMethod> stmt2method = Maps.newHashMap();
 	private Multiset<ExpectedFlowFunction> remainingFlowFunctions = HashMultiset.create();
+	private TestDebugger<TestFieldRef, TestFact, TestStatement, TestMethod, InterproceduralCFG<TestStatement, TestMethod>> debugger;
 
-	public MethodHelper method(String methodName, Statement[] startingPoints, EdgeBuilder... edgeBuilders) {
-		MethodHelper methodHelper = new MethodHelper(new Method(methodName));
+	public TestHelper(TestDebugger<TestFieldRef, TestFact, TestStatement, TestMethod, InterproceduralCFG<TestStatement, TestMethod>> debugger) {
+		this.debugger = debugger;
+	}
+
+	public MethodHelper method(String methodName, TestStatement[] startingPoints, EdgeBuilder... edgeBuilders) {
+		MethodHelper methodHelper = new MethodHelper(new TestMethod(methodName));
 		methodHelper.startPoints(startingPoints);
 		for(EdgeBuilder edgeBuilder : edgeBuilders){
 			methodHelper.edges(edgeBuilder.edges());
@@ -54,32 +59,32 @@ public class TestHelper {
 		return methodHelper;
 	}
 
-	public static Statement[] startPoints(String... startingPoints) {
-		Statement[] result = new Statement[startingPoints.length];
+	public static TestStatement[] startPoints(String... startingPoints) {
+		TestStatement[] result = new TestStatement[startingPoints.length];
 		for (int i = 0; i < result.length; i++) {
-			result[i] = new Statement(startingPoints[i]);
+			result[i] = new TestStatement(startingPoints[i]);
 		}
 		return result;
 	}
 
-	public static EdgeBuilder.NormalStmtBuilder normalStmt(String stmt) {
-		return new EdgeBuilder.NormalStmtBuilder(new Statement(stmt));
+	public static EdgeBuilder.NormalStmtBuilder normalStmt(String stmt, ExpectedFlowFunction...flowFunctions) {
+		return new EdgeBuilder.NormalStmtBuilder(new TestStatement(stmt), flowFunctions);
 	}
 	
 	public static EdgeBuilder.CallSiteBuilder callSite(String callSite) {
-		return new EdgeBuilder.CallSiteBuilder(new Statement(callSite));
+		return new EdgeBuilder.CallSiteBuilder(new TestStatement(callSite));
 	}
 	
 	public static EdgeBuilder.ExitStmtBuilder exitStmt(String exitStmt) {
-		return new EdgeBuilder.ExitStmtBuilder(new Statement(exitStmt));
+		return new EdgeBuilder.ExitStmtBuilder(new TestStatement(exitStmt));
 	}
 	
-	public static Statement over(String callSite) {
-		return new Statement(callSite);
+	public static TestStatement over(String callSite) {
+		return new TestStatement(callSite);
 	}
 	
-	public static Statement to(String returnSite) {
-		return new Statement(returnSite);
+	public static TestStatement to(String returnSite) {
+		return new TestStatement(returnSite);
 	}
 	
 	public static ExpectedFlowFunction kill(String source) {
@@ -87,27 +92,87 @@ public class TestHelper {
 	}
 	
 	public static ExpectedFlowFunction kill(int times, String source) {
-		return new ExpectedFlowFunction(times, new Fact(source));
+		return new ExpectedFlowFunction(times, new TestFact(source)) {
+			@Override
+			public ConstrainedFact<TestFieldRef, TestFact, TestStatement, TestMethod> apply(TestFact target, AccessPathHandler<TestFieldRef, TestFact, TestStatement, TestMethod> accPathHandler) {
+				throw new IllegalStateException();
+			}
+			
+			@Override
+			public String transformerString() {
+				return "";
+			}
+		};
 	}
 
-	public static Constraint<TestFieldRef> readField(String fieldName) {
-		return new FlowFunction.ReadFieldConstraint<TestFieldRef>(new TestFieldRef(fieldName));
+	public static AccessPathTransformer readField(final String fieldName) {
+		return new AccessPathTransformer() {
+			@Override
+			public ConstrainedFact<TestFieldRef, TestFact, TestStatement, TestMethod> apply(TestFact target, AccessPathHandler<TestFieldRef, TestFact, TestStatement, TestMethod> accPathHandler) {
+				return accPathHandler.read(new TestFieldRef(fieldName)).generate(target);
+			}
+
+			@Override
+			public String toString() {
+				return "read("+fieldName+")";
+			}
+		};
 	}
 	
-	public static Constraint<TestFieldRef> writeField(String fieldName) {
-		return new FlowFunction.WriteFieldConstraint<TestFieldRef>(new TestFieldRef(fieldName));
+	public static AccessPathTransformer prependField(final String fieldName) {
+		return new AccessPathTransformer() {
+			@Override
+			public ConstrainedFact<TestFieldRef, TestFact, TestStatement, TestMethod> apply(TestFact target, AccessPathHandler<TestFieldRef, TestFact, TestStatement, TestMethod> accPathHandler) {
+				return accPathHandler.prepend(new TestFieldRef(fieldName)).generate(target);
+			}
+			
+			@Override
+			public String toString() {
+				return "prepend("+fieldName+")";
+			}
+		};
 	}
 	
-	public static ExpectedFlowFunction flow(String source, Constraint<TestFieldRef> constraint, String... targets) {
-		return flow(1, source, constraint, targets);
+	public static AccessPathTransformer overwriteField(final String fieldName) {
+		return new AccessPathTransformer() {
+			@Override
+			public ConstrainedFact<TestFieldRef, TestFact, TestStatement, TestMethod> apply(TestFact target, AccessPathHandler<TestFieldRef, TestFact, TestStatement, TestMethod> accPathHandler) {
+				return accPathHandler.overwrite(new TestFieldRef(fieldName)).generate(target);
+			}
+			
+			@Override
+			public String toString() {
+				return "write("+fieldName+")";
+			}
+		};
 	}
 	
-	public static ExpectedFlowFunction flow(int times, String source, Constraint<TestFieldRef> constraint, String... targets) {
-		ConstrainedFact<TestFieldRef, Fact>[] targetFacts = new ConstrainedFact[targets.length];
+	public static ExpectedFlowFunction flow(String source, final AccessPathTransformer transformer, String... targets) {
+		return flow(1, source, transformer, targets);
+	}
+	
+	public static ExpectedFlowFunction flow(int times, String source, final AccessPathTransformer transformer, String... targets) {
+		TestFact[] targetFacts = new TestFact[targets.length];
 		for(int i=0; i<targets.length; i++) {
-			targetFacts[i] = new ConstrainedFact<TestFieldRef, Fact>(new Fact(targets[i]), constraint);
+			targetFacts[i] = new TestFact(targets[i]);
 		}
-		return new ExpectedFlowFunction(times, new Fact(source), targetFacts);
+		return new ExpectedFlowFunction(times, new TestFact(source), targetFacts) {
+			@Override
+			public ConstrainedFact<TestFieldRef, TestFact, TestStatement, TestMethod> apply(TestFact target, AccessPathHandler<TestFieldRef, TestFact, TestStatement, TestMethod> accPathHandler) {
+				return transformer.apply(target, accPathHandler);
+			}
+			
+			@Override
+			public String transformerString() {
+				return transformer.toString();
+			}
+		};
+	}
+	
+	private static interface AccessPathTransformer {
+
+		ConstrainedFact<TestFieldRef, TestFact, TestStatement, TestMethod> apply(TestFact target, AccessPathHandler<TestFieldRef, TestFact, TestStatement, TestMethod> accPathHandler); 
+		
 	}
 	
 	public static ExpectedFlowFunction flow(String source, String... targets) {
@@ -115,28 +180,39 @@ public class TestHelper {
 	}
 	
 	public static ExpectedFlowFunction flow(int times, String source, String... targets) {
-		return flow(times, source, null, targets);
+		return flow(times, source, new AccessPathTransformer() {
+			@Override
+			public ConstrainedFact<TestFieldRef, TestFact, TestStatement, TestMethod> apply(TestFact target, AccessPathHandler<TestFieldRef, TestFact, TestStatement, TestMethod> accPathHandler) {
+				return accPathHandler.generate(target);
+			}
+			
+			@Override
+			public String toString() {
+				return "";
+			}
+			
+		}, targets);
 	}
 	
 	public static int times(int times) {
 		return times;
 	}
 
-	public InterproceduralCFG<Statement, Method> buildIcfg() {
-		return new InterproceduralCFG<Statement, Method>() {
+	public InterproceduralCFG<TestStatement, TestMethod> buildIcfg() {
+		return new InterproceduralCFG<TestStatement, TestMethod>() {
 
 			@Override
-			public boolean isStartPoint(Statement stmt) {
+			public boolean isStartPoint(TestStatement stmt) {
 				return method2startPoint.values().contains(stmt);
 			}
 
 			@Override
-			public boolean isFallThroughSuccessor(Statement stmt, Statement succ) {
+			public boolean isFallThroughSuccessor(TestStatement stmt, TestStatement succ) {
 				throw new IllegalStateException();
 			}
 
 			@Override
-			public boolean isExitStmt(Statement stmt) {
+			public boolean isExitStmt(TestStatement stmt) {
 				for(ReturnEdge edge : returnEdges) {
 					if(edge.exitStmt.equals(stmt))
 						return true;
@@ -145,7 +221,7 @@ public class TestHelper {
 			}
 
 			@Override
-			public boolean isCallStmt(final Statement stmt) {
+			public boolean isCallStmt(final TestStatement stmt) {
 				return Iterables.any(callEdges, new Predicate<CallEdge>() {
 					@Override
 					public boolean apply(CallEdge edge) {
@@ -155,13 +231,13 @@ public class TestHelper {
 			}
 
 			@Override
-			public boolean isBranchTarget(Statement stmt, Statement succ) {
+			public boolean isBranchTarget(TestStatement stmt, TestStatement succ) {
 				throw new IllegalStateException();
 			}
 
 			@Override
-			public List<Statement> getSuccsOf(Statement n) {
-				LinkedList<Statement> result = Lists.newLinkedList();
+			public List<TestStatement> getSuccsOf(TestStatement n) {
+				LinkedList<TestStatement> result = Lists.newLinkedList();
 				for (NormalEdge edge : normalEdges) {
 					if (edge.includeInCfg && edge.unit.equals(n))
 						result.add(edge.succUnit);
@@ -170,13 +246,23 @@ public class TestHelper {
 			}
 
 			@Override
-			public Collection<Statement> getStartPointsOf(Method m) {
+			public List<TestStatement> getPredsOf(TestStatement stmt) {
+				LinkedList<TestStatement> result = Lists.newLinkedList();
+				for (NormalEdge edge : normalEdges) {
+					if (edge.includeInCfg && edge.succUnit.equals(stmt))
+						result.add(edge.unit);
+				}
+				return result;
+			}
+
+			@Override
+			public Collection<TestStatement> getStartPointsOf(TestMethod m) {
 				return method2startPoint.get(m);
 			}
 
 			@Override
-			public Collection<Statement> getReturnSitesOfCallAt(Statement n) {
-				Set<Statement> result = Sets.newHashSet();
+			public Collection<TestStatement> getReturnSitesOfCallAt(TestStatement n) {
+				Set<TestStatement> result = Sets.newHashSet();
 				for (Call2ReturnEdge edge : call2retEdges) {
 					if (edge.includeInCfg && edge.callSite.equals(n))
 						result.add(edge.returnSite);
@@ -189,18 +275,21 @@ public class TestHelper {
 			}
 
 			@Override
-			public Method getMethodOf(Statement n) {
-				return stmt2method.get(n);
+			public TestMethod getMethodOf(TestStatement n) {
+				if(stmt2method.containsKey(n))
+					return stmt2method.get(n);
+				else
+					throw new IllegalArgumentException("Statement "+n+" is not defined in any method.");
 			}
 
 			@Override
-			public Set<Statement> getCallsFromWithin(Method m) {
+			public Set<TestStatement> getCallsFromWithin(TestMethod m) {
 				throw new IllegalStateException();
 			}
 
 			@Override
-			public Collection<Statement> getCallersOf(Method m) {
-				Set<Statement> result = Sets.newHashSet();
+			public Collection<TestStatement> getCallersOf(TestMethod m) {
+				Set<TestStatement> result = Sets.newHashSet();
 				for (CallEdge edge : callEdges) {
 					if (edge.includeInCfg && edge.destinationMethod.equals(m)) {
 						result.add(edge.callSite);
@@ -215,8 +304,8 @@ public class TestHelper {
 			}
 
 			@Override
-			public Collection<Method> getCalleesOfCallAt(Statement n) {
-				List<Method> result = Lists.newLinkedList();
+			public Collection<TestMethod> getCalleesOfCallAt(TestStatement n) {
+				List<TestMethod> result = Lists.newLinkedList();
 				for (CallEdge edge : callEdges) {
 					if (edge.includeInCfg && edge.callSite.equals(n)) {
 						result.add(edge.destinationMethod);
@@ -226,7 +315,7 @@ public class TestHelper {
 			}
 
 			@Override
-			public Set<Statement> allNonCallStartNodes() {
+			public Set<TestStatement> allNonCallStartNodes() {
 				throw new IllegalStateException();
 			}
 		};
@@ -237,30 +326,31 @@ public class TestHelper {
 				remainingFlowFunctions.isEmpty());
 	}
 
-	private void addOrVerifyStmt2Method(Statement stmt, Method m) {
+	private void addOrVerifyStmt2Method(TestStatement stmt, TestMethod m) {
 		if (stmt2method.containsKey(stmt) && !stmt2method.get(stmt).equals(m)) {
 			throw new IllegalArgumentException("Statement " + stmt + " is used in multiple methods: " + m + " and " + stmt2method.get(stmt));
 		}
 		stmt2method.put(stmt, m);
 	}
 
-	public MethodHelper method(Method method) {
+	public MethodHelper method(TestMethod method) {
 		MethodHelper h = new MethodHelper(method);
 		return h;
 	}
 
 	public class MethodHelper {
 
-		private Method method;
+		private TestMethod method;
 
-		public MethodHelper(Method method) {
+		public MethodHelper(TestMethod method) {
 			this.method = method;
 		}
 
 		public void edges(Collection<Edge> edges) {
 			for(Edge edge : edges) {
 				for(ExpectedFlowFunction ff : edge.flowFunctions) {
-					remainingFlowFunctions.add(ff, ff.times);
+					if(!remainingFlowFunctions.contains(ff))
+						remainingFlowFunctions.add(ff, ff.times);
 				}
 				
 				edge.accept(new EdgeVisitor() {
@@ -294,19 +384,26 @@ public class TestHelper {
 			}
 		}
 
-		public void startPoints(Statement[] startingPoints) {
+		public void startPoints(TestStatement[] startingPoints) {
 			method2startPoint.putAll(method, Lists.newArrayList(startingPoints));
 		}
 	}
 	
-	public static class ExpectedFlowFunction {
+	private static String expectedFlowFunctionsToString(ExpectedFlowFunction[] flowFunctions) {
+		String result = "";
+		for(ExpectedFlowFunction ff : flowFunctions)
+			result += ff.source+"->"+Joiner.on(",").join(ff.targets)+ff.transformerString()+", ";
+		return result;
+	}
+	
+	public static abstract class ExpectedFlowFunction {
 
-		public final Fact source;
-		public final ConstrainedFact<TestFieldRef, Fact>[] targets;
+		public final TestFact source;
+		public final TestFact[] targets;
 		public Edge edge;
 		private int times;
 
-		public ExpectedFlowFunction(int times, Fact source, ConstrainedFact<TestFieldRef, Fact>... targets) {
+		public ExpectedFlowFunction(int times, TestFact source, TestFact... targets) {
 			this.times = times;
 			this.source = source;
 			this.targets = targets;
@@ -316,6 +413,10 @@ public class TestHelper {
 		public String toString() {
 			return String.format("%s: %s -> {%s}", edge, source, Joiner.on(",").join(targets));
 		}
+		
+		public abstract String transformerString();
+
+		public abstract FlowFunction.ConstrainedFact<TestFieldRef, TestFact, TestStatement, TestMethod> apply(TestFact target, AccessPathHandler<TestFieldRef, TestFact, TestStatement, TestMethod> accPathHandler);
 	}
 	
 	private static interface EdgeVisitor {
@@ -341,10 +442,10 @@ public class TestHelper {
 
 	public static class NormalEdge extends Edge {
 
-		private Statement unit;
-		private Statement succUnit;
+		private TestStatement unit;
+		private TestStatement succUnit;
 
-		public NormalEdge(Statement unit, Statement succUnit, ExpectedFlowFunction...flowFunctions) {
+		public NormalEdge(TestStatement unit, TestStatement succUnit, ExpectedFlowFunction...flowFunctions) {
 			super(flowFunctions);
 			this.unit = unit;
 			this.succUnit = succUnit;
@@ -363,10 +464,10 @@ public class TestHelper {
 
 	public static class CallEdge extends Edge {
 
-		private Statement callSite;
-		private Method destinationMethod;
+		private TestStatement callSite;
+		private TestMethod destinationMethod;
 
-		public CallEdge(Statement callSite, Method destinationMethod, ExpectedFlowFunction...flowFunctions) {
+		public CallEdge(TestStatement callSite, TestMethod destinationMethod, ExpectedFlowFunction...flowFunctions) {
 			super(flowFunctions);
 			this.callSite = callSite;
 			this.destinationMethod = destinationMethod;
@@ -384,10 +485,10 @@ public class TestHelper {
 	}
 
 	public static class Call2ReturnEdge extends Edge {
-		private Statement callSite;
-		private Statement returnSite;
+		private TestStatement callSite;
+		private TestStatement returnSite;
 
-		public Call2ReturnEdge(Statement callSite, Statement returnSite, ExpectedFlowFunction...flowFunctions) {
+		public Call2ReturnEdge(TestStatement callSite, TestStatement returnSite, ExpectedFlowFunction...flowFunctions) {
 			super(flowFunctions);
 			this.callSite = callSite;
 			this.returnSite = returnSite;
@@ -406,12 +507,12 @@ public class TestHelper {
 
 	public static class ReturnEdge extends Edge {
 
-		private Statement exitStmt;
-		private Statement returnSite;
-		private Statement callSite;
-		private Method calleeMethod;
+		private TestStatement exitStmt;
+		private TestStatement returnSite;
+		private TestStatement callSite;
+		private TestMethod calleeMethod;
 
-		public ReturnEdge(Statement callSite, Statement exitStmt, Statement returnSite, ExpectedFlowFunction...flowFunctions) {
+		public ReturnEdge(TestStatement callSite, TestStatement exitStmt, TestStatement returnSite, ExpectedFlowFunction...flowFunctions) {
 			super(flowFunctions);
 			this.callSite = callSite;
 			this.exitStmt = exitStmt;
@@ -438,11 +539,11 @@ public class TestHelper {
 			return a.equals(b);
 	}
 
-	public FlowFunctions<Statement, TestFieldRef, Fact, Method> flowFunctions() {
-		return new FlowFunctions<Statement, TestFieldRef, Fact, Method>() {
+	public FlowFunctions<TestStatement, TestFieldRef, TestFact, TestMethod> flowFunctions() {
+		return new FlowFunctions<TestStatement, TestFieldRef, TestFact, TestMethod>() {
 
 			@Override
-			public FlowFunction<TestFieldRef, Fact> getReturnFlowFunction(Statement callSite, Method calleeMethod, Statement exitStmt, Statement returnSite) {
+			public FlowFunction<TestFieldRef, TestFact, TestStatement, TestMethod> getReturnFlowFunction(TestStatement callSite, TestMethod calleeMethod, TestStatement exitStmt, TestStatement returnSite) {
 				for (final ReturnEdge edge : returnEdges) {
 					if (nullAwareEquals(callSite, edge.callSite) && edge.calleeMethod.equals(calleeMethod)
 							&& edge.exitStmt.equals(exitStmt) && nullAwareEquals(edge.returnSite, returnSite)) {
@@ -454,17 +555,17 @@ public class TestHelper {
 			}
 
 			@Override
-			public FlowFunction<TestFieldRef, Fact> getNormalFlowFunction(final Statement curr, final Statement succ) {
+			public FlowFunction<TestFieldRef, TestFact, TestStatement, TestMethod> getNormalFlowFunction(final TestStatement curr) {
 				for (final NormalEdge edge : normalEdges) {
-					if (edge.unit.equals(curr) && edge.succUnit.equals(succ)) {
+					if (edge.unit.equals(curr)) {
 						return createFlowFunction(edge);
 					}
 				}
-				throw new AssertionError(String.format("No Flow Function expected for %s -> %s", curr, succ));
+				throw new AssertionError(String.format("No Flow Function expected for %s", curr));
 			}
 
 			@Override
-			public FlowFunction<TestFieldRef, Fact> getCallToReturnFlowFunction(Statement callSite, Statement returnSite) {
+			public FlowFunction<TestFieldRef, TestFact, TestStatement, TestMethod> getCallToReturnFlowFunction(TestStatement callSite, TestStatement returnSite) {
 				for (final Call2ReturnEdge edge : call2retEdges) {
 					if (edge.callSite.equals(callSite) && edge.returnSite.equals(returnSite)) {
 						return createFlowFunction(edge);
@@ -474,7 +575,7 @@ public class TestHelper {
 			}
 
 			@Override
-			public FlowFunction<TestFieldRef, Fact> getCallFlowFunction(Statement callStmt, Method destinationMethod) {
+			public FlowFunction<TestFieldRef, TestFact, TestStatement, TestMethod> getCallFlowFunction(TestStatement callStmt, TestMethod destinationMethod) {
 				for (final CallEdge edge : callEdges) {
 					if (edge.callSite.equals(callStmt) && edge.destinationMethod.equals(destinationMethod)) {
 						return createFlowFunction(edge);
@@ -483,20 +584,18 @@ public class TestHelper {
 				throw new AssertionError(String.format("No Flow Function expected for call %s -> %s", callStmt, destinationMethod));
 			}
 
-			private FlowFunction<TestFieldRef, Fact> createFlowFunction(final Edge edge) {
-				return new FlowFunction<TestFieldRef, Fact>() {
+			private FlowFunction<TestFieldRef, TestFact, TestStatement, TestMethod> createFlowFunction(final Edge edge) {
+				return new FlowFunction<TestFieldRef, TestFact, TestStatement, TestMethod>() {
 					@Override
-					public Set<ConstrainedFact<TestFieldRef, Fact>> computeTargets(Fact source) {
-						Set<ConstrainedFact<TestFieldRef, Fact>> result = Sets.newHashSet();
+					public Set<FlowFunction.ConstrainedFact<TestFieldRef, TestFact, TestStatement, TestMethod>> computeTargets(TestFact source,
+							AccessPathHandler<TestFieldRef, TestFact, TestStatement, TestMethod> accPathHandler) {
+						Set<ConstrainedFact<TestFieldRef, TestFact, TestStatement, TestMethod>> result = Sets.newHashSet();
 						boolean found = false;
 						for (ExpectedFlowFunction ff : edge.flowFunctions) {
-							if (ff.source.equals(source.cloneWithAccessPath(source.getAccessPath().setResolver(null)))) {
+							if (ff.source.equals(source)) {
 								if (remainingFlowFunctions.remove(ff)) {
-									for(ConstrainedFact<TestFieldRef, Fact> target : ff.targets) {
-										result.add(new ConstrainedFact<TestFieldRef, Fact>(
-												target.getFact().cloneWithAccessPath(
-														target.getFact().accessPath.setResolver(source.getAccessPath().getResolver())), 
-												target.getConstraint()));
+									for(TestFact target : ff.targets) {
+										result.add(ff.apply(target, accPathHandler));
 									}
 									found = true;
 								} else {
@@ -515,17 +614,44 @@ public class TestHelper {
 	}
 
 	public void runSolver(final boolean followReturnsPastSeeds, final String...initialSeeds) {
-		FieldSensitiveIFDSSolver<Statement, String, TestFieldRef, Fact, Method, InterproceduralCFG<Statement,Method>> solver = new FieldSensitiveIFDSSolver<Statement,String, TestFieldRef ,Fact, Method, InterproceduralCFG<Statement,Method>>(createTabulationProblem(followReturnsPastSeeds, initialSeeds));
+		FieldSensitiveIFDSSolver<TestStatement, TestFieldRef, TestFact, TestMethod, InterproceduralCFG<TestStatement,TestMethod>> solver = new FieldSensitiveIFDSSolver<TestStatement, TestFieldRef ,TestFact, TestMethod, InterproceduralCFG<TestStatement,TestMethod>>(
+				createTabulationProblem(followReturnsPastSeeds, initialSeeds), new FactMergeHandler<TestFact>() {
+					@Override
+					public void merge(TestFact previousFact, TestFact currentFact) {
+					}
+
+					@Override
+					public void restoreCallingContext(TestFact factAtReturnSite, TestFact factAtCallSite) {
+					}
+					
+				}, debugger);
+		addExpectationsToDebugger();
 		solver.solve();
+		
 		assertAllFlowFunctionsUsed();
 	}
 	
 	
-	private IFDSTabulationProblem<Statement, TestFieldRef, Fact, Method, InterproceduralCFG<Statement, Method>> createTabulationProblem(final boolean followReturnsPastSeeds, final String[] initialSeeds) {
-		final InterproceduralCFG<Statement, Method> icfg = buildIcfg();
-		final FlowFunctions<Statement, TestFieldRef, Fact, Method> flowFunctions = flowFunctions();
+	private void addExpectationsToDebugger() {
+		for(NormalEdge edge : normalEdges) {
+			debugger.expectNormalFlow(edge.unit, expectedFlowFunctionsToString(edge.flowFunctions));
+		}
+		for(CallEdge edge : callEdges) {
+			debugger.expectCallFlow(edge.callSite, edge.destinationMethod, expectedFlowFunctionsToString(edge.flowFunctions));
+		}
+		for(Call2ReturnEdge edge : call2retEdges) {
+			debugger.expectNormalFlow(edge.callSite, expectedFlowFunctionsToString(edge.flowFunctions));
+		}
+		for(ReturnEdge edge : returnEdges) {
+			debugger.expectReturnFlow(edge.exitStmt, edge.returnSite, expectedFlowFunctionsToString(edge.flowFunctions));
+		}
+	}
+
+	private IFDSTabulationProblem<TestStatement, TestFieldRef, TestFact, TestMethod, InterproceduralCFG<TestStatement, TestMethod>> createTabulationProblem(final boolean followReturnsPastSeeds, final String[] initialSeeds) {
+		final InterproceduralCFG<TestStatement, TestMethod> icfg = buildIcfg();
+		final FlowFunctions<TestStatement, TestFieldRef, TestFact, TestMethod> flowFunctions = flowFunctions();
 		
-		return new IFDSTabulationProblem<Statement,TestFieldRef,  Fact, Method, InterproceduralCFG<Statement, Method>>() {
+		return new IFDSTabulationProblem<TestStatement,TestFieldRef,  TestFact, TestMethod, InterproceduralCFG<TestStatement, TestMethod>>() {
 
 			@Override
 			public boolean followReturnsPastSeeds() {
@@ -548,27 +674,37 @@ public class TestHelper {
 			}
 
 			@Override
-			public FlowFunctions<Statement,TestFieldRef,  Fact, Method> flowFunctions() {
+			public FlowFunctions<TestStatement,TestFieldRef,  TestFact, TestMethod> flowFunctions() {
 				return flowFunctions;
 			}
 
 			@Override
-			public InterproceduralCFG<Statement, Method> interproceduralCFG() {
+			public InterproceduralCFG<TestStatement, TestMethod> interproceduralCFG() {
 				return icfg;
 			}
 
 			@Override
-			public Map<Statement, Set<Fact>> initialSeeds() {
-				Map<Statement, Set<Fact>> result = Maps.newHashMap();
+			public Map<TestStatement, Set<TestFact>> initialSeeds() {
+				Map<TestStatement, Set<TestFact>> result = Maps.newHashMap();
 				for (String stmt : initialSeeds) {
-					result.put(new Statement(stmt), Sets.newHashSet(new Fact("0")));
+					result.put(new TestStatement(stmt), Sets.newHashSet(new TestFact("0")));
 				}
 				return result;
 			}
 
 			@Override
-			public Fact zeroValue() {
-				return new Fact("0");
+			public TestFact zeroValue() {
+				return new TestFact("0");
+			}
+			
+			@Override
+			public ZeroHandler<TestFieldRef> zeroHandler() {
+				return new ZeroHandler<TestFieldRef>() {
+					@Override
+					public boolean shouldGenerateAccessPath(AccessPath<TestFieldRef> accPath) {
+						return true;
+					}
+				};
 			}
 		};
 	}

@@ -72,14 +72,16 @@ public interface Transition<FieldRef> {
 			} else {
 				Set<FieldRef> otherExcludedFields = ((ExclusionPathTransition<FieldRef>) t).excludedFields;
 				boolean intersection = false;
-				boolean containsAll = true;
+				boolean containsAll = excludedFields.containsAll(otherExcludedFields);
+				boolean oppositeContainsAll = otherExcludedFields.containsAll(excludedFields);
 				for(FieldRef field : excludedFields) {
-					if(otherExcludedFields.contains(field))
+					if(otherExcludedFields.contains(field)) {
 						intersection = true;
-					else
-						containsAll = false;
+						break;
+					}
 				}
-				return new MatchResult<>(containsAll || !intersection, containsAll);
+				boolean potentialMatch = oppositeContainsAll || !intersection || (!containsAll && !oppositeContainsAll);
+				return new MatchResult<>(potentialMatch, oppositeContainsAll);
 			}
 			
 			return new MatchResult<>(false, false);

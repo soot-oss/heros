@@ -48,7 +48,7 @@ import com.google.common.collect.Sets;
  * @param <M> see {@link IFDSSolver}
  * @param <I> see {@link IFDSSolver}
  */
-public class BiDiFieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.FieldRef<FieldRef>, D extends FieldSensitiveFact<BaseValue, FieldRef, D>, M, I extends InterproceduralCFG<N, M>> {
+public class BiDiFieldSensitiveIFDSSolver<N, BaseValue, FieldRef extends AccessPath.FieldRef<FieldRef>, D, M, I extends InterproceduralCFG<N, M>> {
 
 	private final IFDSTabulationProblem<N, FieldRef, AbstractionWithSourceStmt, M, I> forwardProblem;
 	private final IFDSTabulationProblem<N, FieldRef, AbstractionWithSourceStmt, M, I> backwardProblem;

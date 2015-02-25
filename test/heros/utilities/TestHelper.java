@@ -15,13 +15,17 @@ import heros.FlowFunction;
 import heros.FlowFunctions;
 import heros.IFDSTabulationProblem;
 import heros.InterproceduralCFG;
+import heros.alias.TestStatement;
+import heros.alias.TestHelper.NormalEdge;
 import heros.solver.BiDiIFDSSolver;
 import heros.solver.IFDSSolver;
+
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.HashMultimap;
@@ -147,6 +151,16 @@ public class TestHelper {
 				for (NormalEdge edge : normalEdges) {
 					if (edge.includeInCfg && edge.unit.equals(n))
 						result.add(edge.succUnit);
+				}
+				return result;
+			}
+			
+			@Override
+			public List<Statement> getPredsOf(Statement stmt) {
+				LinkedList<Statement> result = Lists.newLinkedList();
+				for (NormalEdge edge : normalEdges) {
+					if (edge.includeInCfg && edge.succUnit.equals(stmt))
+						result.add(edge.unit);
 				}
 				return result;
 			}

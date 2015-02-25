@@ -31,29 +31,30 @@ import java.util.Set;
  * 
  * @param <D> The type of data-flow facts to be computed by the tabulation problem.
  */
-public interface FlowFunction<FieldRef extends AccessPath.FieldRef<FieldRef>, D extends FieldSensitiveFact<?, FieldRef, D>> {
+public interface FlowFunction<FieldRef extends AccessPath.FieldRef<FieldRef>, D, Stmt, Method> {
 
 	/**
 	 * Returns the target values reachable from the source.
 	 */
-	Set<ConstrainedFact<FieldRef, D>> computeTargets(D source);
+	Set<ConstrainedFact<FieldRef, D, Stmt, Method>> computeTargets(D source, AccessPathHandler<FieldRef, D, Stmt, Method> accPathHandler);
 	
-	public static class ConstrainedFact<FieldRef extends AccessPath.FieldRef<FieldRef>, D extends FieldSensitiveFact<?, FieldRef, D>> {
+	
+	public static class ConstrainedFact<FieldRef extends AccessPath.FieldRef<FieldRef>, D, Stmt, Method> {
 		
-		private D fact;
+		private WrappedFact<FieldRef, D, Stmt, Method> fact;
 		private Constraint<FieldRef> constraint;
 		
-		public ConstrainedFact(D fact) {
+		ConstrainedFact(WrappedFact<FieldRef, D, Stmt, Method> fact) {
 			this.fact = fact;
 			this.constraint = null;
 		}
 		
-		public ConstrainedFact(D fact, Constraint<FieldRef> constraint) {
+		ConstrainedFact(WrappedFact<FieldRef, D, Stmt, Method> fact, Constraint<FieldRef> constraint) {
 			this.fact = fact;
 			this.constraint = constraint;
 		}
 		
-		public D getFact() {
+		public WrappedFact<FieldRef, D, Stmt, Method> getFact() {
 			return fact;
 		}
 		

@@ -10,50 +10,81 @@
  ******************************************************************************/
 package heros.alias;
 
-public class IncomingEdge<D, N> {
+import heros.alias.AccessPath.Delta;
+import heros.alias.AccessPath.PrefixTestResult;
 
-	private D calleeSourceFact;
-	private N callSite;
-	private D callerSourceFact;
-	private D callerCallSiteFact;
+public class IncomingEdge<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Method> {
+
+	private WrappedFact<Field, Fact, Stmt, Method> calleeSourceFact;
+	private PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> callerAnalyzer;
+	private WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtCallSite;
 	
-	public IncomingEdge(D calleeSourceFact, N callSite, D callerSourceFact, D callerCallSiteFact) {
-		super();
+	public IncomingEdge(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> callerAnalyzer, 
+			WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtCallSite,
+			WrappedFact<Field, Fact, Stmt, Method> calleeSourceFact) {
+		this.callerAnalyzer = callerAnalyzer;
+		this.factAtCallSite = factAtCallSite;
 		this.calleeSourceFact = calleeSourceFact;
-		this.callSite = callSite;
-		this.callerSourceFact = callerSourceFact;
-		this.callerCallSiteFact = callerCallSiteFact;
 	}
 	
-	public D getCalleeSourceFact() {
+	public WrappedFact<Field, Fact, Stmt, Method> getCalleeSourceFact() {
 		return calleeSourceFact;
 	}
 	
-	public D getCallerCallSiteFact() {
-		return callerCallSiteFact;
+	public WrappedFact<Field, Fact, Stmt, Method> getCallerCallSiteFact() {
+		return factAtCallSite.getFact();
 	}
 	
-	public D getCallerSourceFact() {
-		return callerSourceFact;
+	public WrappedFact<Field, Fact, Stmt, Method> getCallerSourceFact() {
+		return callerAnalyzer.wrappedSource();
 	}
 	
-	public N getCallSite() {
-		return callSite;
+	public Stmt getCallSite() {
+		return factAtCallSite.getStatement();
+	}
+	
+	public PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> getCallerAnalyzer() {
+		return callerAnalyzer;
+	}
+	
+	public void registerInterestCallback(final PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> interestedAnalyzer) {
+		final Delta<Field> delta = calleeSourceFact.getAccessPath().getDeltaTo(interestedAnalyzer.getAccessPath());
+		
+		if(!factAtCallSite.canDeltaBeApplied(delta))
+			return;
+		
+		factAtCallSite.getFact().getResolver().resolve(new DeltaConstraint<Field>(delta), new InterestCallback<Field, Fact, Stmt, Method>() {
+			
+			@Override
+			public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver) {
+				WrappedFact<Field, Fact, Stmt, Method> calleeSourceFactWithDelta = new WrappedFact<>(calleeSourceFact.getFact(), delta.applyTo(calleeSourceFact.getAccessPath(), false), resolver);
+				if(interestedAnalyzer.getAccessPath().isPrefixOf(calleeSourceFactWithDelta.getAccessPath()) != PrefixTestResult.GUARANTEED_PREFIX)
+					throw new AssertionError();
+				interestedAnalyzer.addIncomingEdge(new IncomingEdge<>(analyzer, 
+						new WrappedFactAtStatement<>(factAtCallSite.getStatement(), 
+											new WrappedFact<>(factAtCallSite.getFact().getFact(), delta.applyTo(factAtCallSite.getFact().getAccessPath(), false), resolver)), 
+						calleeSourceFactWithDelta));
+			}
+			
+			@Override
+			public void canBeResolvedEmpty() {
+				callerAnalyzer.getCallEdgeResolver().resolve(new DeltaConstraint<Field>(delta), this);
+			}
+		});
 	}
 	
 	@Override
 	public String toString() {
-		return "[IncEdge CSite:"+callSite+", Caller-Edge: "+callerSourceFact+"->"+callerCallSiteFact+",  CalleeFact: "+calleeSourceFact+"]";
+		return "[IncEdge CSite:"+getCallSite()+", Caller-Edge: "+getCallerSourceFact()+"->"+getCallerCallSiteFact()+",  CalleeFact: "+calleeSourceFact+"]";
 	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
 		result = prime * result + ((calleeSourceFact == null) ? 0 : calleeSourceFact.hashCode());
-		result = prime * result + ((callerCallSiteFact == null) ? 0 : callerCallSiteFact.hashCode());
-		result = prime * result + ((callerSourceFact == null) ? 0 : callerSourceFact.hashCode());
+		result = prime * result + ((callerAnalyzer == null) ? 0 : callerAnalyzer.hashCode());
+		result = prime * result + ((factAtCallSite == null) ? 0 : factAtCallSite.hashCode());
 		return result;
 	}
 
@@ -63,28 +94,23 @@ public class IncomingEdge<D, N> {
 			return true;
 		if (obj == null)
 			return false;
-		if (!(obj instanceof IncomingEdge))
+		if (getClass() != obj.getClass())
 			return false;
 		IncomingEdge other = (IncomingEdge) obj;
-		if (callSite == null) {
-			if (other.callSite != null)
-				return false;
-		} else if (!callSite.equals(other.callSite))
-			return false;
 		if (calleeSourceFact == null) {
 			if (other.calleeSourceFact != null)
 				return false;
 		} else if (!calleeSourceFact.equals(other.calleeSourceFact))
 			return false;
-		if (callerCallSiteFact == null) {
-			if (other.callerCallSiteFact != null)
+		if (callerAnalyzer == null) {
+			if (other.callerAnalyzer != null)
 				return false;
-		} else if (!callerCallSiteFact.equals(other.callerCallSiteFact))
+		} else if (!callerAnalyzer.equals(other.callerAnalyzer))
 			return false;
-		if (callerSourceFact == null) {
-			if (other.callerSourceFact != null)
+		if (factAtCallSite == null) {
+			if (other.factAtCallSite != null)
 				return false;
-		} else if (!callerSourceFact.equals(other.callerSourceFact))
+		} else if (!factAtCallSite.equals(other.factAtCallSite))
 			return false;
 		return true;
 	}
