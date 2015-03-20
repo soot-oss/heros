@@ -10,39 +10,11 @@
  ******************************************************************************/
 package heros.alias;
 
+public interface MethodAnalyzer<Field extends AccessPath.FieldRef<Field>,Fact,Stmt,Method>  {
 
-public class MethodAnalyzer<Field extends AccessPath.FieldRef<Field>,
-							Fact, 
-							Stmt, 
-							Method> {
-
-	private Method method;
-	private CacheMap<Fact, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method>> perSourceAnalyzer = 
-			new CacheMap<Fact, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method>>() {
-		@Override
-		protected PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> createItem(Fact key) {
-			return new PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method>(method, key, context);
-		}
-	};
-	private Context<Field, Fact, Stmt, Method> context;
+	public void addIncomingEdge(IncomingEdge<Field, Fact, Stmt, Method> incEdge);
 	
-	MethodAnalyzer(Method method, Context<Field, Fact, Stmt, Method> context) {
-		this.method = method;
-		this.context = context;
-	}
+	public void addInitialSeed(Stmt startPoint, Fact val);
 	
-	public void addIncomingEdge(IncomingEdge<Field, Fact, Stmt, Method> incEdge) {
-		WrappedFact<Field, Fact, Stmt, Method> calleeSourceFact = incEdge.getCalleeSourceFact();
-		PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer = perSourceAnalyzer.getOrCreate(calleeSourceFact.getFact());
-		analyzer.bootstrapAtMethodStartPoints();
-		analyzer.addIncomingEdge(incEdge);
-	}
-
-	public void addInitialSeed(Stmt startPoint, Fact val) {
-		perSourceAnalyzer.getOrCreate(val).addInitialSeed(startPoint);
-	}
-	
-	public void addUnbalancedReturnFlow(WrappedFactAtStatement<Field, Fact, Stmt, Method> target) {
-		perSourceAnalyzer.getOrCreate(context.zeroValue).scheduleUnbalancedReturnEdgeTo(target);
-	}
+	public void addUnbalancedReturnFlow(WrappedFactAtStatement<Field, Fact, Stmt, Method> target, Stmt callSite);
 }

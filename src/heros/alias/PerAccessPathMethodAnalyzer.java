@@ -137,7 +137,7 @@ public class PerAccessPathMethodAnalyzer<Field extends AccessPath.FieldRef<Field
 			throw new AssertionError();
 
 		
-		for(IncomingEdge<Field, Fact, Stmt, Method> incEdge : incomingEdges) {
+		for(IncomingEdge<Field, Fact, Stmt, Method> incEdge : Lists.newLinkedList(incomingEdges)) {
 			applySummary(incEdge, factAtStmt);
 		}
 
@@ -150,7 +150,7 @@ public class PerAccessPathMethodAnalyzer<Field extends AccessPath.FieldRef<Field
 							sourceFact, factAtStmt, method, returnSite, callSite);
 					for (ConstrainedFact<Field, Fact, Stmt, Method> targetFact : targetFacts) {
 						//TODO handle constraint
-						context.getAnalyzer(context.icfg.getMethodOf(callSite)).addUnbalancedReturnFlow(new WrappedFactAtStatement<>(returnSite, targetFact.getFact()));
+						context.getAnalyzer(context.icfg.getMethodOf(callSite)).addUnbalancedReturnFlow(new WrappedFactAtStatement<>(returnSite, targetFact.getFact()), callSite);
 					}
 				}
 			}
@@ -299,7 +299,7 @@ public class PerAccessPathMethodAnalyzer<Field extends AccessPath.FieldRef<Field
 		}
 	}
 
-	void scheduleUnbalancedReturnEdgeTo(WrappedFactAtStatement<Field, Fact, Stmt, Method> fact) {
+	public void scheduleUnbalancedReturnEdgeTo(WrappedFactAtStatement<Field, Fact, Stmt, Method> fact) {
 		ReturnSiteResolver<Field,Fact,Stmt,Method> resolver = returnSiteResolvers.getOrCreate(fact.getAsFactAtStatement());
 		resolver.addIncoming(new WrappedFact<>(fact.getFact().getFact(), fact.getFact().getAccessPath(), 
 				fact.getFact().getResolver()), null, Delta.<Field>empty());

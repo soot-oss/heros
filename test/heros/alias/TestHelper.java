@@ -614,7 +614,8 @@ public class TestHelper {
 	}
 
 	public void runSolver(final boolean followReturnsPastSeeds, final String...initialSeeds) {
-		FieldSensitiveIFDSSolver<TestStatement, TestFieldRef, TestFact, TestMethod, InterproceduralCFG<TestStatement,TestMethod>> solver = new FieldSensitiveIFDSSolver<TestStatement, TestFieldRef ,TestFact, TestMethod, InterproceduralCFG<TestStatement,TestMethod>>(
+		Scheduler scheduler = new Scheduler();
+		FieldSensitiveIFDSSolver<TestFieldRef, TestFact, TestStatement, TestMethod, InterproceduralCFG<TestStatement,TestMethod>> solver = new FieldSensitiveIFDSSolver<TestFieldRef ,TestFact, TestStatement, TestMethod, InterproceduralCFG<TestStatement,TestMethod>>(
 				createTabulationProblem(followReturnsPastSeeds, initialSeeds), new FactMergeHandler<TestFact>() {
 					@Override
 					public void merge(TestFact previousFact, TestFact currentFact) {
@@ -624,9 +625,9 @@ public class TestHelper {
 					public void restoreCallingContext(TestFact factAtReturnSite, TestFact factAtCallSite) {
 					}
 					
-				}, debugger);
+				}, debugger, scheduler);
 		addExpectationsToDebugger();
-		solver.solve();
+		scheduler.runAndAwaitCompletion();
 		
 		assertAllFlowFunctionsUsed();
 	}
