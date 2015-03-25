@@ -18,7 +18,7 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class FieldSensitiveIFDSSolver<FieldRef extends AccessPath.FieldRef<FieldRef>, D, N, M, I extends InterproceduralCFG<N, M>> {
+public class FieldSensitiveIFDSSolver<FieldRef, D, N, M, I extends InterproceduralCFG<N, M>> {
 
 	protected static final Logger logger = LoggerFactory.getLogger(FieldSensitiveIFDSSolver.class);
 	private FlowFunctionProcessor<D, N, M, FieldRef> flowProcessor;

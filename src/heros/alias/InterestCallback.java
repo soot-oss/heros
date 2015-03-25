@@ -10,14 +10,10 @@
  ******************************************************************************/
 package heros.alias;
 
-import heros.alias.AccessPath.Delta;
-import heros.alias.FlowFunction.Constraint;
 
-public interface InterestCallback<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Method> {
+public interface InterestCallback<Field, Fact, Stmt, Method> {
 
 	void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver);
-	
-//	void partiallyResolved(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver, AccessPath<Field> resolvedAccPath);
 	
 	void canBeResolvedEmpty();
 }

@@ -19,7 +19,7 @@ import com.google.common.collect.Lists;
 import heros.alias.FlowFunction.ConstrainedFact;
 import heros.alias.FlowFunction.Constraint;
 
-public abstract class Resolver<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Method> {
+public abstract class Resolver<Field, Fact, Stmt, Method> {
 
 	private boolean interest = false;
 	private List<InterestCallback<Field, Fact, Stmt, Method>> interestCallbacks = Lists.newLinkedList();

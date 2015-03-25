@@ -10,7 +10,7 @@
  ******************************************************************************/
 package heros.alias;
 
-public interface ZeroHandler<Field extends AccessPath.FieldRef<Field>> {
+public interface ZeroHandler<Field> {
 
 	boolean shouldGenerateAccessPath(AccessPath<Field> accPath);
 }

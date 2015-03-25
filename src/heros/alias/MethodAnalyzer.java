@@ -10,7 +10,7 @@
  ******************************************************************************/
 package heros.alias;
 
-public interface MethodAnalyzer<Field extends AccessPath.FieldRef<Field>,Fact,Stmt,Method>  {
+public interface MethodAnalyzer<Field,Fact,Stmt,Method>  {
 
 	public void addIncomingEdge(IncomingEdge<Field, Fact, Stmt, Method> incEdge);
 	

@@ -12,7 +12,7 @@ package heros.alias;
 
 import heros.alias.FlowFunction.Constraint;
 
-public class WrappedFact<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Method>{
+public class WrappedFact<Field, Fact, Stmt, Method>{
 
 	private final Fact fact;
 	private final AccessPath<Field> accessPath;
@@ -32,19 +32,19 @@ public class WrappedFact<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, M
 		return fact;
 	}
 	
-	public WrappedFact<Field, Fact, Stmt, Method> applyDelta(AccessPath.Delta<Field> delta, boolean merge) {
-		return new WrappedFact<>(fact, delta.applyTo(accessPath, merge), resolver); //TODO keep resolver?
+	public WrappedFact<Field, Fact, Stmt, Method> applyDelta(AccessPath.Delta<Field> delta) {
+		return new WrappedFact<>(fact, delta.applyTo(accessPath), resolver); //TODO keep resolver?
 	}
 
 	public AccessPath<Field> getAccessPath() {
 		return accessPath;
 	}
 	
-	public WrappedFact<Field, Fact, Stmt, Method> applyConstraint(Constraint<Field> constraint, Fact zeroValue, boolean sourceFact) {
+	public WrappedFact<Field, Fact, Stmt, Method> applyConstraint(Constraint<Field> constraint, Fact zeroValue) {
 		if(fact.equals(zeroValue))
 			return this;
 		else
-			return new WrappedFact<>(fact, constraint.applyToAccessPath(accessPath, sourceFact), resolver);
+			return new WrappedFact<>(fact, constraint.applyToAccessPath(accessPath), resolver);
 	}
 	
 	@Override

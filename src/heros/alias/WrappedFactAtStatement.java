@@ -10,7 +10,7 @@
  ******************************************************************************/
 package heros.alias;
 
-public class WrappedFactAtStatement<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Method> {
+public class WrappedFactAtStatement<Field, Fact, Stmt, Method> {
 
 	private WrappedFact<Field,Fact, Stmt, Method> fact;
 	private Stmt stmt;

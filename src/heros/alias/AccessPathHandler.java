@@ -13,9 +13,8 @@ package heros.alias;
 import heros.alias.FlowFunction.ConstrainedFact;
 import heros.alias.FlowFunction.ReadFieldConstraint;
 import heros.alias.FlowFunction.WriteFieldConstraint;
-import heros.alias.SubAccessPath.SetOfPossibleFieldAccesses;
 
-public class AccessPathHandler<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Method> {
+public class AccessPathHandler<Field, Fact, Stmt, Method> {
 
 	private AccessPath<Field> accessPath;
 	private Resolver<Field, Fact, Stmt, Method> resolver;
@@ -30,18 +29,18 @@ public class AccessPathHandler<Field extends AccessPath.FieldRef<Field>, Fact, S
 	}
 	
 	public boolean mayCanRead(Field field) {
-		return accessPath.canRead(field) || (accessPath.mayHaveEmptyAccessPath() && !accessPath.isAccessInExclusions(field));
+		return accessPath.canRead(field) || (accessPath.hasEmptyAccessPath() && !accessPath.isAccessInExclusions(field));
 	}
 	
 	public boolean mayBeEmpty() {
-		return accessPath.mayHaveEmptyAccessPath();
+		return accessPath.hasEmptyAccessPath();
 	}
 
 	public boolean canOverwrite(Field fieldRef) {
 		if(accessPath.hasEmptyAccessPath())
 			return true;
-		if(accessPath.getFirstAccess().contains(fieldRef))
-			return accessPath.getFirstAccess() instanceof SetOfPossibleFieldAccesses;
+		if(accessPath.getFirstAccess().equals(fieldRef))
+			return true;
 		return false;
 	}
 	
@@ -68,7 +67,7 @@ public class AccessPathHandler<Field extends AccessPath.FieldRef<Field>, Fact, S
 				@Override
 				public ConstrainedFact<Field, Fact, Stmt, Method> generate(Fact fact) {
 					if(canRead(field))
-						return new ConstrainedFact<>(new WrappedFact<>(fact, accessPath.removeFirst(field), resolver));
+						return new ConstrainedFact<>(new WrappedFact<>(fact, accessPath.removeFirst(), resolver));
 					else
 						return new ConstrainedFact<>(new WrappedFact<>(fact, new AccessPath<Field>(), resolver), new ReadFieldConstraint<>(field));
 				}
@@ -84,7 +83,7 @@ public class AccessPathHandler<Field extends AccessPath.FieldRef<Field>, Fact, S
 				@Override
 				public ConstrainedFact<Field, Fact, Stmt, Method> generate(Fact fact) {
 					if(accessPath.canRead(field)) {
-						AccessPath<Field> tempAccPath = accessPath.removeRepeatableFirstAccess(field);
+						AccessPath<Field> tempAccPath = accessPath.removeFirst();
 						if(tempAccPath.hasEmptyAccessPath())
 							return new ConstrainedFact<>(new WrappedFact<>(fact, tempAccPath.appendExcludedFieldReference(field), resolver));
 						else
@@ -99,7 +98,7 @@ public class AccessPathHandler<Field extends AccessPath.FieldRef<Field>, Fact, S
 			throw new IllegalArgumentException("Cannot write field "+field);
 	}
 	
-	public static interface ResultBuilder<FieldRef extends AccessPath.FieldRef<FieldRef>, FactAbstraction, Stmt, Method> {
+	public static interface ResultBuilder<FieldRef, FactAbstraction, Stmt, Method> {
 		public ConstrainedFact<FieldRef, FactAbstraction, Stmt, Method> generate(FactAbstraction fact);
 	}
 

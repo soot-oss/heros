@@ -13,7 +13,7 @@ package heros.alias;
 import heros.alias.AccessPath.Delta;
 import heros.alias.AccessPath.PrefixTestResult;
 
-public class IncomingEdge<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Method> {
+public class IncomingEdge<Field, Fact, Stmt, Method> {
 
 	private WrappedFact<Field, Fact, Stmt, Method> calleeSourceFact;
 	private PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> callerAnalyzer;
@@ -57,12 +57,12 @@ public class IncomingEdge<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, 
 			
 			@Override
 			public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver) {
-				WrappedFact<Field, Fact, Stmt, Method> calleeSourceFactWithDelta = new WrappedFact<>(calleeSourceFact.getFact(), delta.applyTo(calleeSourceFact.getAccessPath(), false), resolver);
+				WrappedFact<Field, Fact, Stmt, Method> calleeSourceFactWithDelta = new WrappedFact<>(calleeSourceFact.getFact(), delta.applyTo(calleeSourceFact.getAccessPath()), resolver);
 				if(interestedAnalyzer.getAccessPath().isPrefixOf(calleeSourceFactWithDelta.getAccessPath()) != PrefixTestResult.GUARANTEED_PREFIX)
 					throw new AssertionError();
 				interestedAnalyzer.addIncomingEdge(new IncomingEdge<>(analyzer, 
 						new WrappedFactAtStatement<>(factAtCallSite.getStatement(), 
-											new WrappedFact<>(factAtCallSite.getFact().getFact(), delta.applyTo(factAtCallSite.getFact().getAccessPath(), false), resolver)), 
+											new WrappedFact<>(factAtCallSite.getFact().getFact(), delta.applyTo(factAtCallSite.getFact().getAccessPath()), resolver)), 
 						calleeSourceFactWithDelta));
 			}
 			

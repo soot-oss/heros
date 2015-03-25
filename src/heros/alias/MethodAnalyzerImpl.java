@@ -10,7 +10,7 @@
  ******************************************************************************/
 package heros.alias;
 
-public class MethodAnalyzerImpl<Field extends AccessPath.FieldRef<Field>,Fact, Stmt, Method> 
+public class MethodAnalyzerImpl<Field,Fact, Stmt, Method> 
 		implements MethodAnalyzer<Field, Fact, Stmt, Method> {
 
 	private Method method;

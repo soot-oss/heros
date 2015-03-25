@@ -19,7 +19,7 @@ import heros.alias.PerAccessPathMethodAnalyzer;
 import heros.alias.WrappedFact;
 import heros.alias.WrappedFactAtStatement;
 
-public class SourceStmtAnnotatedMethodAnalyzer<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Method>
+public class SourceStmtAnnotatedMethodAnalyzer<Field, Fact, Stmt, Method>
 		implements MethodAnalyzer<Field, Fact, Stmt, Method> {
 
 	private Method method;

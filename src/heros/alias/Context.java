@@ -12,7 +12,7 @@ package heros.alias;
 
 import heros.InterproceduralCFG;
 
-public abstract class Context<FieldRef extends AccessPath.FieldRef<FieldRef>, FactAbstraction, Statement, Method> {
+public abstract class Context<FieldRef, FactAbstraction, Statement, Method> {
 
 	public final InterproceduralCFG<Statement, Method> icfg;
 	public final FlowFunctionProcessor<FactAbstraction, Statement, Method, FieldRef> flowProcessor;

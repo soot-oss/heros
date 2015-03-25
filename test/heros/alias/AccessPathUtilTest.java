@@ -24,10 +24,10 @@ import org.junit.Test;
 
 public class AccessPathUtilTest {
 
-	public static AccessPath<TestFieldRef> ap(String ap) {
+	public static AccessPath<String> ap(String ap) {
 		Pattern pattern = Pattern.compile("(\\.|\\^)?([^\\.\\^]+)");
 		Matcher matcher = pattern.matcher(ap);
-		AccessPath<TestFieldRef> accessPath = new AccessPath<>();
+		AccessPath<String> accessPath = new AccessPath<>();
 		boolean addedExclusions = false;
 		
 		while(matcher.find()) {
@@ -37,14 +37,11 @@ public class AccessPathUtilTest {
 			if(".".equals(separator) || separator == null) {
 				if(addedExclusions)
 					throw new IllegalArgumentException("Access path contains field references after exclusions.");
-				accessPath = accessPath.addFieldReference(new TestFieldRef(identifier));
+				accessPath = accessPath.append(identifier);
 			} else {
 				addedExclusions=true;
 				String[] excl = identifier.split(",");
-				TestFieldRef[] fExcl = new TestFieldRef[excl.length];
-				for(int i=0; i<excl.length; i++)
-					fExcl[i] = new TestFieldRef(excl[i]);
-				accessPath = accessPath.appendExcludedFieldReference(fExcl);
+				accessPath = accessPath.appendExcludedFieldReference(excl);
 			}
 		}
 		return accessPath;
@@ -107,7 +104,7 @@ public class AccessPathUtilTest {
 	@Test
 	public void testExclusionRequiresFieldAccess() {
 		assertEquals(GUARANTEED_PREFIX,ap("").isPrefixOf(ap("^f")));
-		assertEquals(NO_PREFIX,ap("^f").isPrefixOf(ap("")));
+		assertEquals(NO_PREFIX, ap("^f").isPrefixOf(ap("")));
 		
 		assertEquals(GUARANTEED_PREFIX,ap("f").isPrefixOf(ap("f^g")));
 		assertEquals(NO_PREFIX,ap("f^g").isPrefixOf(ap("f")));

@@ -12,14 +12,14 @@ package heros.alias;
 
 import heros.InterproceduralCFG;
 
-public interface Debugger<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Method, I extends InterproceduralCFG<Stmt, Method>> {
+public interface Debugger<Field, Fact, Stmt, Method, I extends InterproceduralCFG<Stmt, Method>> {
 
 	public abstract void setICFG(I icfg);
 
 	public abstract void initialSeed(Stmt stmt);
 
 	
-	public static class NullDebugger <Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Method, I extends InterproceduralCFG<Stmt, Method>> implements Debugger<Field, Fact, Stmt, Method, I> {
+	public static class NullDebugger <Field, Fact, Stmt, Method, I extends InterproceduralCFG<Stmt, Method>> implements Debugger<Field, Fact, Stmt, Method, I> {
 
 		@Override
 		public void setICFG(I icfg) {

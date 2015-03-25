@@ -24,29 +24,29 @@ import org.mockito.verification.VerificationMode;
 
 public class ControlFlowJoinResolverTest {
 
-	private static DeltaConstraint<TestFieldRef> getDeltaConstraint(String... fieldRefs) {
+	private static DeltaConstraint<String> getDeltaConstraint(String... fieldRefs) {
 		return new DeltaConstraint<>(getDelta(fieldRefs));
 	}
 
-	private static Delta<TestFieldRef> getDelta(String... fieldRefs) {
-		AccessPath<TestFieldRef> accPath = createAccessPath(fieldRefs);
-		return new AccessPath<TestFieldRef>().getDeltaTo(accPath);
+	private static Delta<String> getDelta(String... fieldRefs) {
+		AccessPath<String> accPath = createAccessPath(fieldRefs);
+		return new AccessPath<String>().getDeltaTo(accPath);
 	}
 
-	protected static AccessPath<TestFieldRef> createAccessPath(String... fieldRefs) {
-		AccessPath<TestFieldRef> accPath = new AccessPath<>();
+	protected static AccessPath<String> createAccessPath(String... fieldRefs) {
+		AccessPath<String> accPath = new AccessPath<>();
 		for (String fieldRef : fieldRefs) {
-			accPath = accPath.addFieldReference(new TestFieldRef(fieldRef));
+			accPath = accPath.append(fieldRef);
 		}
 		return accPath;
 	}
 
-	private PerAccessPathMethodAnalyzer<TestFieldRef, TestFact, TestStatement, TestMethod> analyzer;
+	private PerAccessPathMethodAnalyzer<String, TestFact, TestStatement, TestMethod> analyzer;
 	private TestStatement joinStmt;
-	private ControlFlowJoinResolver<TestFieldRef, TestFact, TestStatement, TestMethod> sut;
+	private ControlFlowJoinResolver<String, TestFact, TestStatement, TestMethod> sut;
 	private TestFact fact;
-	private InterestCallback<TestFieldRef, TestFact, TestStatement, TestMethod> callback;
-	private Resolver<TestFieldRef, TestFact, TestStatement, TestMethod> callEdgeResolver;
+	private InterestCallback<String, TestFact, TestStatement, TestMethod> callback;
+	private Resolver<String, TestFact, TestStatement, TestMethod> callEdgeResolver;
 
 	@Before
 	public void before() {
@@ -74,7 +74,7 @@ public class ControlFlowJoinResolverTest {
 
 	@Test
 	public void registerCallbackAtIncomingResolver() {
-		Resolver<TestFieldRef, TestFact, TestStatement, TestMethod> resolver = mock(Resolver.class);
+		Resolver<String, TestFact, TestStatement, TestMethod> resolver = mock(Resolver.class);
 		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), resolver));
 		sut.resolve(getDeltaConstraint("a"), callback);
 		verify(resolver).resolve(eq(getDeltaConstraint("a")), any(InterestCallback.class));
@@ -82,13 +82,13 @@ public class ControlFlowJoinResolverTest {
 	
 	@Test
 	public void resolveViaIncomingResolver() {
-		Resolver<TestFieldRef, TestFact, TestStatement, TestMethod> resolver = mock(Resolver.class);
-		final Resolver<TestFieldRef, TestFact, TestStatement, TestMethod> nestedResolver = mock(Resolver.class);
+		Resolver<String, TestFact, TestStatement, TestMethod> resolver = mock(Resolver.class);
+		final Resolver<String, TestFact, TestStatement, TestMethod> nestedResolver = mock(Resolver.class);
 		Mockito.doAnswer(new Answer(){
 			@Override
 			public Object answer(InvocationOnMock invocation) throws Throwable {
-				InterestCallback<TestFieldRef, TestFact, TestStatement, TestMethod> argCallback = 
-						(InterestCallback<TestFieldRef, TestFact, TestStatement, TestMethod>) invocation.getArguments()[1];
+				InterestCallback<String, TestFact, TestStatement, TestMethod> argCallback = 
+						(InterestCallback<String, TestFact, TestStatement, TestMethod>) invocation.getArguments()[1];
 				argCallback.interest(null, nestedResolver);
 				return null;
 			}
@@ -102,11 +102,11 @@ public class ControlFlowJoinResolverTest {
 	
 	
 	private class ResolverArgumentMatcher extends
-			ArgumentMatcher<ReturnSiteResolver<TestFieldRef, TestFact, TestStatement, TestMethod>> {
+			ArgumentMatcher<ReturnSiteResolver<String, TestFact, TestStatement, TestMethod>> {
 
-		private AccessPath<TestFieldRef> accPath;
+		private AccessPath<String> accPath;
 
-		public ResolverArgumentMatcher(AccessPath<TestFieldRef> accPath) {
+		public ResolverArgumentMatcher(AccessPath<String> accPath) {
 			this.accPath = accPath;
 		}
 

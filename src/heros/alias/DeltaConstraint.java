@@ -13,7 +13,7 @@ package heros.alias;
 import heros.alias.AccessPath.Delta;
 import heros.alias.FlowFunction.Constraint;
 
-public class DeltaConstraint<FieldRef extends AccessPath.FieldRef<FieldRef>> implements Constraint<FieldRef> {
+public class DeltaConstraint<FieldRef> implements Constraint<FieldRef> {
 
 	private Delta<FieldRef> delta;
 
@@ -26,8 +26,8 @@ public class DeltaConstraint<FieldRef extends AccessPath.FieldRef<FieldRef>> imp
 	}
 	
 	@Override
-	public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath, boolean sourceFact) {
-		return delta.applyTo(accPath, !sourceFact);
+	public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath) {
+		return delta.applyTo(accPath);
 	}
 
 	@Override

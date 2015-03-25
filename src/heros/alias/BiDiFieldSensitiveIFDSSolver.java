@@ -19,7 +19,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Sets;
 
 
-public class BiDiFieldSensitiveIFDSSolver<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Method, I extends InterproceduralCFG<Stmt, Method>> {
+public class BiDiFieldSensitiveIFDSSolver<Field, Fact, Stmt, Method, I extends InterproceduralCFG<Stmt, Method>> {
 
 	private FieldSensitiveIFDSSolver<Field, Fact, Stmt, Method, I> forwardSolver;
 	private FieldSensitiveIFDSSolver<Field, Fact, Stmt, Method, I> backwardSolver;

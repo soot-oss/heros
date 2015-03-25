@@ -28,7 +28,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-public class PerAccessPathMethodAnalyzer<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Method> {
+public class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 
 	protected static final Logger logger = LoggerFactory.getLogger(PerAccessPathMethodAnalyzer.class);
 	private Fact sourceFact;

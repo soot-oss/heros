@@ -20,7 +20,7 @@ import java.util.Set;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-public class ReturnSiteResolver<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Method> extends Resolver<Field, Fact, Stmt, Method> {
+public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends Resolver<Field, Fact, Stmt, Method> {
 
 	private Stmt returnSite;
 	private AccessPath<Field> resolvedAccPath;
@@ -91,9 +91,9 @@ public class ReturnSiteResolver<Field extends AccessPath.FieldRef<Field>, Fact, 
 		if(!constraint.canBeAppliedTo(resolvedAccPath))
 			return;
 		
-		AccessPath<Field> candidateAccPath = constraint.applyToAccessPath(resolvedAccPath, false);
+		AccessPath<Field> candidateAccPath = constraint.applyToAccessPath(resolvedAccPath);
 		ReturnSiteResolver<Field, Fact, Stmt, Method> nestedResolver = getOrCreateNestedResolver(candidateAccPath);
-		if(!nestedResolver.resolvedAccPath.equals(constraint.applyToAccessPath(resolvedAccPath, false)))
+		if(!nestedResolver.resolvedAccPath.equals(constraint.applyToAccessPath(resolvedAccPath)))
 			throw new AssertionError();
 		
 		nestedResolver.registerCallback(callback);
@@ -151,7 +151,7 @@ public class ReturnSiteResolver<Field extends AccessPath.FieldRef<Field>, Fact, 
 				resolveViaDeltaAndPotentiallyDelegateToCallSite();
 			} else {
 				//resolve via incoming facts resolver
-				Delta<Field> delta = usedAccessPathOfIncResolver.applyTo(incAccessPath, true).getDeltaTo(resolvedAccPath);
+				Delta<Field> delta = usedAccessPathOfIncResolver.applyTo(incAccessPath).getDeltaTo(resolvedAccPath);
 				assert delta.accesses.length <= 1;
 				incResolver.resolve(new DeltaConstraint<>(delta), new InterestCallback<Field, Fact, Stmt, Method>() {
 
@@ -170,7 +170,7 @@ public class ReturnSiteResolver<Field extends AccessPath.FieldRef<Field>, Fact, 
 		}
 
 		private void resolveViaDeltaAndPotentiallyDelegateToCallSite() {
-			final AccessPath<Field> currAccPath = callDelta.applyTo(usedAccessPathOfIncResolver.applyTo(incAccessPath, true), true);
+			final AccessPath<Field> currAccPath = callDelta.applyTo(usedAccessPathOfIncResolver.applyTo(incAccessPath));
 			if(resolvedAccPath.isPrefixOf(currAccPath) == PrefixTestResult.GUARANTEED_PREFIX) {
 				incomingFacts.add(new ReturnEdge(incFact, incAccessPath, null, resolverAtCaller, callDelta, usedAccessPathOfIncResolver));
 				ReturnSiteResolver.this.interest(analyzer, ReturnSiteResolver.this);

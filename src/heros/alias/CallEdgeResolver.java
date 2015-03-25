@@ -10,11 +10,10 @@
  ******************************************************************************/
 package heros.alias;
 
-import heros.alias.AccessPath.Delta;
 import heros.alias.FlowFunction.Constraint;
 
 
-class CallEdgeResolver<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Method> extends Resolver<Field, Fact, Stmt, Method>  {
+class CallEdgeResolver<Field, Fact, Stmt, Method> extends Resolver<Field, Fact, Stmt, Method>  {
 
 	public CallEdgeResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer) {
 		super(analyzer);
@@ -24,7 +23,7 @@ class CallEdgeResolver<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Met
 	public void resolve(Constraint<Field> constraint, InterestCallback<Field, Fact, Stmt, Method> callback) {		
 		log("Resolve: "+constraint);
 		if(constraint.canBeAppliedTo(analyzer.getAccessPath()) && !analyzer.isLocked() && !doesContain(constraint)) {
-			AccessPath<Field> newAccPath = constraint.applyToAccessPath(analyzer.getAccessPath(), true);
+			AccessPath<Field> newAccPath = constraint.applyToAccessPath(analyzer.getAccessPath());
 			PerAccessPathMethodAnalyzer<Field,Fact,Stmt,Method> nestedAnalyzer = analyzer.getOrCreateNestedAnalyzer(newAccPath);
 			nestedAnalyzer.getCallEdgeResolver().registerCallback(callback);
 		}
@@ -32,7 +31,7 @@ class CallEdgeResolver<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Met
 	
 	//FIXME: this is a dirty hack (and unsound?!)
 	private boolean doesContain(Constraint<Field> constraint) {
-		AccessPath<Field> accPath = constraint.applyToAccessPath(new AccessPath<Field>(), true);
+		AccessPath<Field> accPath = constraint.applyToAccessPath(new AccessPath<Field>());
 		return analyzer.getAccessPath().contains(accPath);
 	}
 

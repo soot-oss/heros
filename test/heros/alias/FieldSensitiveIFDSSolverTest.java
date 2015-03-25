@@ -25,7 +25,7 @@ import static heros.alias.TestHelper.*;
 public class FieldSensitiveIFDSSolverTest {
 
 	private TestHelper helper;
-	private TestDebugger<TestFieldRef, TestFact, TestStatement, TestMethod, InterproceduralCFG<TestStatement, TestMethod>> debugger;
+	private TestDebugger<String, TestFact, TestStatement, TestMethod, InterproceduralCFG<TestStatement, TestMethod>> debugger;
 
 	@Before
 	public void before() {

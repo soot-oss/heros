@@ -13,7 +13,7 @@ package heros.alias;
 import heros.alias.AccessPath.Delta;
 import heros.alias.FlowFunction.Constraint;
 
-public class ZeroCallEdgeResolver<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Method> extends CallEdgeResolver<Field, Fact, Stmt, Method> {
+public class ZeroCallEdgeResolver<Field, Fact, Stmt, Method> extends CallEdgeResolver<Field, Fact, Stmt, Method> {
 
 	private ZeroHandler<Field> zeroHandler;
 
@@ -24,7 +24,7 @@ public class ZeroCallEdgeResolver<Field extends AccessPath.FieldRef<Field>, Fact
 
 	@Override
 	public void resolve(Constraint<Field> constraint, InterestCallback<Field, Fact, Stmt, Method> callback) {
-		if(zeroHandler.shouldGenerateAccessPath(constraint.applyToAccessPath(new AccessPath<Field>(), true)))
+		if(zeroHandler.shouldGenerateAccessPath(constraint.applyToAccessPath(new AccessPath<Field>())))
 			callback.interest(analyzer, this);
 	}
 	

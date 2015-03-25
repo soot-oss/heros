@@ -20,7 +20,7 @@ import heros.alias.AccessPath.Delta;
 import heros.alias.AccessPath.PrefixTestResult;
 import heros.alias.FlowFunction.Constraint;
 
-public class ControlFlowJoinResolver<Field extends AccessPath.FieldRef<Field>, Fact, Stmt, Method> extends Resolver<Field, Fact, Stmt, Method> {
+public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends Resolver<Field, Fact, Stmt, Method> {
 
 	private boolean recursiveLock = false;
 	private Stmt joinStmt;
@@ -88,10 +88,10 @@ public class ControlFlowJoinResolver<Field extends AccessPath.FieldRef<Field>, F
 		if(!constraint.canBeAppliedTo(resolvedAccPath) || isLocked())
 			return;
 		
-		AccessPath<Field> candidateAccPath = constraint.applyToAccessPath(resolvedAccPath, false);
+		AccessPath<Field> candidateAccPath = constraint.applyToAccessPath(resolvedAccPath);
 		recursiveLock = true;
 		ControlFlowJoinResolver<Field, Fact, Stmt, Method> nestedResolver = getOrCreateNestedResolver(candidateAccPath);
-		if(!nestedResolver.resolvedAccPath.equals(constraint.applyToAccessPath(resolvedAccPath, false)))
+		if(!nestedResolver.resolvedAccPath.equals(constraint.applyToAccessPath(resolvedAccPath)))
 			throw new AssertionError();
 		
 		nestedResolver.registerCallback(callback);

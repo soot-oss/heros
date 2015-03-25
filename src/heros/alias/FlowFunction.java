@@ -31,7 +31,7 @@ import java.util.Set;
  * 
  * @param <D> The type of data-flow facts to be computed by the tabulation problem.
  */
-public interface FlowFunction<FieldRef extends AccessPath.FieldRef<FieldRef>, D, Stmt, Method> {
+public interface FlowFunction<FieldRef, D, Stmt, Method> {
 
 	/**
 	 * Returns the target values reachable from the source.
@@ -39,7 +39,7 @@ public interface FlowFunction<FieldRef extends AccessPath.FieldRef<FieldRef>, D,
 	Set<ConstrainedFact<FieldRef, D, Stmt, Method>> computeTargets(D source, AccessPathHandler<FieldRef, D, Stmt, Method> accPathHandler);
 	
 	
-	public static class ConstrainedFact<FieldRef extends AccessPath.FieldRef<FieldRef>, D, Stmt, Method> {
+	public static class ConstrainedFact<FieldRef, D, Stmt, Method> {
 		
 		private WrappedFact<FieldRef, D, Stmt, Method> fact;
 		private Constraint<FieldRef> constraint;
@@ -99,13 +99,13 @@ public interface FlowFunction<FieldRef extends AccessPath.FieldRef<FieldRef>, D,
 		}
 	}
 	
-	public interface Constraint<FieldRef extends AccessPath.FieldRef<FieldRef>> {
-		AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath, boolean sourceFact);
+	public interface Constraint<FieldRef> {
+		AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath);
 		
 		boolean canBeAppliedTo(AccessPath<FieldRef> accPath);
 	}
 	
-	public class WriteFieldConstraint<FieldRef extends AccessPath.FieldRef<FieldRef>> implements Constraint<FieldRef> {
+	public class WriteFieldConstraint<FieldRef> implements Constraint<FieldRef> {
 		private FieldRef fieldRef;
 
 		public WriteFieldConstraint(FieldRef fieldRef) {
@@ -113,7 +113,7 @@ public interface FlowFunction<FieldRef extends AccessPath.FieldRef<FieldRef>, D,
 		}
 
 		@Override
-		public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath, boolean sourceFact) {
+		public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath) {
 			return accPath.appendExcludedFieldReference(fieldRef);
 		}
 		
@@ -153,7 +153,7 @@ public interface FlowFunction<FieldRef extends AccessPath.FieldRef<FieldRef>, D,
 		}
 	}
 	
-	public class ReadFieldConstraint<FieldRef extends AccessPath.FieldRef<FieldRef>> implements Constraint<FieldRef> {
+	public class ReadFieldConstraint<FieldRef> implements Constraint<FieldRef> {
 
 		private FieldRef fieldRef;
 
@@ -162,8 +162,8 @@ public interface FlowFunction<FieldRef extends AccessPath.FieldRef<FieldRef>, D,
 		}
 		
 		@Override
-		public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath, boolean sourceFact) {
-			return accPath.addFieldReference(!sourceFact, new SubAccessPath.SpecificFieldAccess<FieldRef>(fieldRef));
+		public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath) {
+			return accPath.append(fieldRef);
 		}
 		
 		@Override
@@ -198,7 +198,7 @@ public interface FlowFunction<FieldRef extends AccessPath.FieldRef<FieldRef>, D,
 
 		@Override
 		public boolean canBeAppliedTo(AccessPath<FieldRef> accPath) {
-			return !accPath.isAccessInExclusions(new SubAccessPath.SpecificFieldAccess<FieldRef>(fieldRef));
+			return !accPath.isAccessInExclusions(fieldRef);
 		}
 	}
 }

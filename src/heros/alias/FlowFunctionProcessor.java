@@ -16,7 +16,7 @@ import java.util.Set;
 
 import com.google.common.collect.Sets;
 
-public class FlowFunctionProcessor<Fact, Stmt, Method, Field extends AccessPath.FieldRef<Field>> {
+public class FlowFunctionProcessor<Fact, Stmt, Method, Field> {
 
 	private FlowFunctions<Stmt, Field, Fact, Method> flowFunctions;
 
