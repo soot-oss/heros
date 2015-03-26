@@ -8,21 +8,26 @@
  * Contributors:
  *     Johannes Lerch - initial API and implementation
  ******************************************************************************/
-package heros.alias;
+package heros.utilities;
 
-public class TestStatement {
+public class TestFact {
 
-	public final String identifier;
+	public final String baseValue;
 	
-	public TestStatement(String identifier) {
-		this.identifier = identifier;
+	public TestFact(String baseValue) {
+		this.baseValue = baseValue;
+	}
+	
+	@Override
+	public String toString() {
+		return "[Fact "+baseValue+"]";
 	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((identifier == null) ? 0 : identifier.hashCode());
+		result = prime * result + ((baseValue == null) ? 0 : baseValue.hashCode());
 		return result;
 	}
 
@@ -32,19 +37,14 @@ public class TestStatement {
 			return true;
 		if (obj == null)
 			return false;
-		if (!(obj instanceof TestStatement))
+		if (!(obj instanceof TestFact))
 			return false;
-		TestStatement other = (TestStatement) obj;
-		if (identifier == null) {
-			if (other.identifier != null)
+		TestFact other = (TestFact) obj;
+		if (baseValue == null) {
+			if (other.baseValue != null)
 				return false;
-		} else if (!identifier.equals(other.identifier))
+		} else if (!baseValue.equals(other.baseValue))
 			return false;
 		return true;
-	}
-	
-	@Override
-	public String toString() {
-		return "[Statement "+identifier+"]";
-	}
+	}	
 }

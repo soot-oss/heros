@@ -15,10 +15,16 @@ import heros.FlowFunction;
 import heros.FlowFunctions;
 import heros.IFDSTabulationProblem;
 import heros.InterproceduralCFG;
-import heros.alias.TestStatement;
-import heros.alias.TestHelper.NormalEdge;
+import heros.alias.AccessPathHandler;
+import heros.alias.FlowFunction.ConstrainedFact;
 import heros.solver.BiDiIFDSSolver;
 import heros.solver.IFDSSolver;
+import heros.utilities.Edge.Call2ReturnEdge;
+import heros.utilities.Edge.CallEdge;
+import heros.utilities.Edge.EdgeVisitor;
+import heros.utilities.Edge.NormalEdge;
+import heros.utilities.Edge.ReturnEdge;
+import heros.utilities.EdgeBuilder.NormalStmtBuilder;
 
 import java.util.Collection;
 import java.util.LinkedList;
@@ -39,16 +45,16 @@ import com.google.common.collect.Sets;
 
 public class TestHelper {
 
-	private Multimap<Method, Statement> method2startPoint = HashMultimap.create();
+	private Multimap<TestMethod, Statement> method2startPoint = HashMultimap.create();
 	private List<NormalEdge> normalEdges = Lists.newLinkedList();
 	private List<CallEdge> callEdges = Lists.newLinkedList();
 	private List<Call2ReturnEdge> call2retEdges = Lists.newLinkedList();
 	private List<ReturnEdge> returnEdges = Lists.newLinkedList();
-	private Map<Statement, Method> stmt2method = Maps.newHashMap();
-	private Multiset<ExpectedFlowFunction> remainingFlowFunctions = HashMultiset.create();
+	private Map<Statement, TestMethod> stmt2method = Maps.newHashMap();
+	private Multiset<ExpectedFlowFunction<JoinableFact>> remainingFlowFunctions = HashMultiset.create();
 
 	public MethodHelper method(String methodName, Statement[] startingPoints, EdgeBuilder... edgeBuilders) {
-		MethodHelper methodHelper = new MethodHelper(new Method(methodName));
+		MethodHelper methodHelper = new MethodHelper(new TestMethod(methodName));
 		methodHelper.startPoints(startingPoints);
 		for(EdgeBuilder edgeBuilder : edgeBuilders){
 			methodHelper.edges(edgeBuilder.edges());
@@ -64,8 +70,9 @@ public class TestHelper {
 		return result;
 	}
 
-	public static EdgeBuilder.NormalStmtBuilder normalStmt(String stmt) {
-		return new EdgeBuilder.NormalStmtBuilder(new Statement(stmt));
+	@SafeVarargs
+	public static EdgeBuilder.NormalStmtBuilder normalStmt(String stmt, ExpectedFlowFunction<JoinableFact>...flowFunctions) {
+		return new NormalStmtBuilder(new Statement(stmt), flowFunctions);
 	}
 	
 	public static EdgeBuilder.CallSiteBuilder callSite(String callSite) {
@@ -84,32 +91,55 @@ public class TestHelper {
 		return new Statement(returnSite);
 	}
 	
-	public static ExpectedFlowFunction kill(String source) {
+	public static ExpectedFlowFunction<JoinableFact> kill(String source) {
 		return kill(1, source);
 	}
 	
-	public static ExpectedFlowFunction kill(int times, String source) {
-		return new ExpectedFlowFunction(times, new Fact(source));
+	public static ExpectedFlowFunction<JoinableFact> kill(int times, String source) {
+		return new ExpectedFlowFunction<JoinableFact>(times, new JoinableFact(source)) {
+
+			@Override
+			public String transformerString() {
+				throw new IllegalStateException();
+			}
+
+			@Override
+			public ConstrainedFact<String, TestFact, Statement, TestMethod> apply(TestFact target,
+					AccessPathHandler<String, TestFact, Statement, TestMethod> accPathHandler) {
+				throw new IllegalStateException();
+			}
+		};
 	}
 
-	public static ExpectedFlowFunction flow(String source, String... targets) {
+	public static ExpectedFlowFunction<JoinableFact> flow(String source, String... targets) {
 		return flow(1, source, targets);
 	}
 	
-	public static ExpectedFlowFunction flow(int times, String source, String... targets) {
-		Fact[] targetFacts = new Fact[targets.length];
+	public static ExpectedFlowFunction<JoinableFact> flow(int times, String source, String... targets) {
+		JoinableFact[] targetFacts = new JoinableFact[targets.length];
 		for(int i=0; i<targets.length; i++) {
-			targetFacts[i] = new Fact(targets[i]);
+			targetFacts[i] = new JoinableFact(targets[i]);
 		}
-		return new ExpectedFlowFunction(times, new Fact(source), targetFacts);
+		return new ExpectedFlowFunction<JoinableFact>(times, new JoinableFact(source), targetFacts) {
+			@Override
+			public String transformerString() {
+				throw new IllegalStateException();
+			}
+
+			@Override
+			public ConstrainedFact<String, TestFact, Statement, TestMethod> apply(TestFact target,
+					AccessPathHandler<String, TestFact, Statement, TestMethod> accPathHandler) {
+				throw new IllegalStateException();
+			}
+		};
 	}
 	
 	public static int times(int times) {
 		return times;
 	}
 
-	public InterproceduralCFG<Statement, Method> buildIcfg() {
-		return new InterproceduralCFG<Statement, Method>() {
+	public InterproceduralCFG<Statement, TestMethod> buildIcfg() {
+		return new InterproceduralCFG<Statement, TestMethod>() {
 
 			@Override
 			public boolean isStartPoint(Statement stmt) {
@@ -166,7 +196,7 @@ public class TestHelper {
 			}
 
 			@Override
-			public Collection<Statement> getStartPointsOf(Method m) {
+			public Collection<Statement> getStartPointsOf(TestMethod m) {
 				return method2startPoint.get(m);
 			}
 
@@ -184,18 +214,19 @@ public class TestHelper {
 				return result;
 			}
 
+			
 			@Override
-			public Method getMethodOf(Statement n) {
+			public TestMethod getMethodOf(Statement n) {
 				return stmt2method.get(n);
 			}
 
 			@Override
-			public Set<Statement> getCallsFromWithin(Method m) {
+			public Set<Statement> getCallsFromWithin(TestMethod m) {
 				throw new IllegalStateException();
 			}
 
 			@Override
-			public Collection<Statement> getCallersOf(Method m) {
+			public Collection<Statement> getCallersOf(TestMethod m) {
 				Set<Statement> result = Sets.newHashSet();
 				for (CallEdge edge : callEdges) {
 					if (edge.includeInCfg && edge.destinationMethod.equals(m)) {
@@ -211,8 +242,8 @@ public class TestHelper {
 			}
 
 			@Override
-			public Collection<Method> getCalleesOfCallAt(Statement n) {
-				List<Method> result = Lists.newLinkedList();
+			public Collection<TestMethod> getCalleesOfCallAt(Statement n) {
+				List<TestMethod> result = Lists.newLinkedList();
 				for (CallEdge edge : callEdges) {
 					if (edge.includeInCfg && edge.callSite.equals(n)) {
 						result.add(edge.destinationMethod);
@@ -233,55 +264,55 @@ public class TestHelper {
 				remainingFlowFunctions.isEmpty());
 	}
 
-	private void addOrVerifyStmt2Method(Statement stmt, Method m) {
+	private void addOrVerifyStmt2Method(Statement stmt, TestMethod m) {
 		if (stmt2method.containsKey(stmt) && !stmt2method.get(stmt).equals(m)) {
-			throw new IllegalArgumentException("Statement " + stmt + " is used in multiple methods: " + m + " and " + stmt2method.get(stmt));
+			throw new IllegalArgumentException("Statement " + stmt + " is used in multiple TestMethods: " + m + " and " + stmt2method.get(stmt));
 		}
 		stmt2method.put(stmt, m);
 	}
 
-	public MethodHelper method(Method method) {
+	public MethodHelper method(TestMethod method) {
 		MethodHelper h = new MethodHelper(method);
 		return h;
 	}
 
 	public class MethodHelper {
 
-		private Method method;
+		private TestMethod method;
 
-		public MethodHelper(Method method) {
+		public MethodHelper(TestMethod method) {
 			this.method = method;
 		}
 
 		public void edges(Collection<Edge> edges) {
 			for(Edge edge : edges) {
-				for(ExpectedFlowFunction ff : edge.flowFunctions) {
+				for(ExpectedFlowFunction<JoinableFact> ff : edge.flowFunctions) {
 					remainingFlowFunctions.add(ff, ff.times);
 				}
 				
 				edge.accept(new EdgeVisitor() {
 					@Override
-					public void visit(heros.utilities.TestHelper.ReturnEdge edge) {
+					public void visit(ReturnEdge edge) {
 						addOrVerifyStmt2Method(edge.exitStmt, method);
 						edge.calleeMethod = method;
 						returnEdges.add(edge);
 					}
 					
 					@Override
-					public void visit(heros.utilities.TestHelper.Call2ReturnEdge edge) {
+					public void visit(Call2ReturnEdge edge) {
 						addOrVerifyStmt2Method(edge.callSite, method);
 						addOrVerifyStmt2Method(edge.returnSite, method);
 						call2retEdges.add(edge);
 					}
 					
 					@Override
-					public void visit(heros.utilities.TestHelper.CallEdge edge) {
+					public void visit(CallEdge edge) {
 						addOrVerifyStmt2Method(edge.callSite, method);
 						callEdges.add(edge);
 					}
 					
 					@Override
-					public void visit(heros.utilities.TestHelper.NormalEdge edge) {
+					public void visit(NormalEdge edge) {
 						addOrVerifyStmt2Method(edge.unit, method);
 						addOrVerifyStmt2Method(edge.succUnit, method);
 						normalEdges.add(edge);
@@ -295,138 +326,6 @@ public class TestHelper {
 		}
 	}
 	
-	public static class ExpectedFlowFunction {
-
-		public final Fact source;
-		public final Fact[] targets;
-		public Edge edge;
-		private int times;
-
-		public ExpectedFlowFunction(int times, Fact source, Fact... targets) {
-			this.times = times;
-			this.source = source;
-			this.targets = targets;
-		}
-
-		@Override
-		public String toString() {
-			return String.format("%s: %s -> {%s}", edge, source, Joiner.on(",").join(targets));
-		}
-	}
-	
-	private static interface EdgeVisitor {
-		void visit(NormalEdge edge);
-		void visit(CallEdge edge);
-		void visit(Call2ReturnEdge edge);
-		void visit(ReturnEdge edge);
-	}
-
-	public static abstract class Edge {
-		public final ExpectedFlowFunction[] flowFunctions;
-		public boolean includeInCfg = true;
-
-		public Edge(ExpectedFlowFunction...flowFunctions) {
-			this.flowFunctions = flowFunctions;
-			for(ExpectedFlowFunction ff : flowFunctions) {
-				ff.edge = this;
-			}
-		}
-		
-		public abstract void accept(EdgeVisitor visitor);
-	}
-
-	public static class NormalEdge extends Edge {
-
-		private Statement unit;
-		private Statement succUnit;
-
-		public NormalEdge(Statement unit, Statement succUnit, ExpectedFlowFunction...flowFunctions) {
-			super(flowFunctions);
-			this.unit = unit;
-			this.succUnit = succUnit;
-		}
-
-		@Override
-		public String toString() {
-			return String.format("%s -normal-> %s", unit, succUnit);
-		}
-
-		@Override
-		public void accept(EdgeVisitor visitor) {
-			visitor.visit(this);
-		}
-	}
-
-	public static class CallEdge extends Edge {
-
-		private Statement callSite;
-		private Method destinationMethod;
-
-		public CallEdge(Statement callSite, Method destinationMethod, ExpectedFlowFunction...flowFunctions) {
-			super(flowFunctions);
-			this.callSite = callSite;
-			this.destinationMethod = destinationMethod;
-		}
-
-		@Override
-		public String toString() {
-			return String.format("%s -call-> %s", callSite, destinationMethod);
-		}
-		
-		@Override
-		public void accept(EdgeVisitor visitor) {
-			visitor.visit(this);
-		}
-	}
-
-	public static class Call2ReturnEdge extends Edge {
-		private Statement callSite;
-		private Statement returnSite;
-
-		public Call2ReturnEdge(Statement callSite, Statement returnSite, ExpectedFlowFunction...flowFunctions) {
-			super(flowFunctions);
-			this.callSite = callSite;
-			this.returnSite = returnSite;
-		}
-
-		@Override
-		public String toString() {
-			return String.format("%s -call2ret-> %s", callSite, returnSite);
-		}
-		
-		@Override
-		public void accept(EdgeVisitor visitor) {
-			visitor.visit(this);
-		}
-	}
-
-	public static class ReturnEdge extends Edge {
-
-		private Statement exitStmt;
-		private Statement returnSite;
-		private Statement callSite;
-		private Method calleeMethod;
-
-		public ReturnEdge(Statement callSite, Statement exitStmt, Statement returnSite, ExpectedFlowFunction...flowFunctions) {
-			super(flowFunctions);
-			this.callSite = callSite;
-			this.exitStmt = exitStmt;
-			this.returnSite = returnSite;
-			if(callSite == null || returnSite == null)
-				includeInCfg = false;
-		}
-
-		@Override
-		public String toString() {
-			return String.format("%s -return-> %s", exitStmt, returnSite);
-		}
-		
-		@Override
-		public void accept(EdgeVisitor visitor) {
-			visitor.visit(this);
-		}
-	}
-	
 	private static boolean nullAwareEquals(Object a, Object b) {
 		if(a == null)
 			return b==null;
@@ -434,11 +333,11 @@ public class TestHelper {
 			return a.equals(b);
 	}
 
-	public FlowFunctions<Statement, Fact, Method> flowFunctions() {
-		return new FlowFunctions<Statement, Fact, Method>() {
+	public FlowFunctions<Statement, JoinableFact, TestMethod> flowFunctions() {
+		return new FlowFunctions<Statement, JoinableFact, TestMethod>() {
 
 			@Override
-			public FlowFunction<Fact> getReturnFlowFunction(Statement callSite, Method calleeMethod, Statement exitStmt, Statement returnSite) {
+			public FlowFunction<JoinableFact> getReturnFlowFunction(Statement callSite, TestMethod calleeMethod, Statement exitStmt, Statement returnSite) {
 				for (final ReturnEdge edge : returnEdges) {
 					if (nullAwareEquals(callSite, edge.callSite) && edge.calleeMethod.equals(calleeMethod)
 							&& edge.exitStmt.equals(exitStmt) && nullAwareEquals(edge.returnSite, returnSite)) {
@@ -450,7 +349,7 @@ public class TestHelper {
 			}
 
 			@Override
-			public FlowFunction<Fact> getNormalFlowFunction(final Statement curr, final Statement succ) {
+			public FlowFunction<JoinableFact> getNormalFlowFunction(final Statement curr, final Statement succ) {
 				for (final NormalEdge edge : normalEdges) {
 					if (edge.unit.equals(curr) && edge.succUnit.equals(succ)) {
 						return createFlowFunction(edge);
@@ -460,7 +359,7 @@ public class TestHelper {
 			}
 
 			@Override
-			public FlowFunction<Fact> getCallToReturnFlowFunction(Statement callSite, Statement returnSite) {
+			public FlowFunction<JoinableFact> getCallToReturnFlowFunction(Statement callSite, Statement returnSite) {
 				for (final Call2ReturnEdge edge : call2retEdges) {
 					if (edge.callSite.equals(callSite) && edge.returnSite.equals(returnSite)) {
 						return createFlowFunction(edge);
@@ -470,7 +369,7 @@ public class TestHelper {
 			}
 
 			@Override
-			public FlowFunction<Fact> getCallFlowFunction(Statement callStmt, Method destinationMethod) {
+			public FlowFunction<JoinableFact> getCallFlowFunction(Statement callStmt, TestMethod destinationMethod) {
 				for (final CallEdge edge : callEdges) {
 					if (edge.callSite.equals(callStmt) && edge.destinationMethod.equals(destinationMethod)) {
 						return createFlowFunction(edge);
@@ -479,11 +378,11 @@ public class TestHelper {
 				throw new AssertionError(String.format("No Flow Function expected for call %s -> %s", callStmt, destinationMethod));
 			}
 
-			private FlowFunction<Fact> createFlowFunction(final Edge edge) {
-				return new FlowFunction<Fact>() {
+			private FlowFunction<JoinableFact> createFlowFunction(final Edge edge) {
+				return new FlowFunction<JoinableFact>() {
 					@Override
-					public Set<Fact> computeTargets(Fact source) {
-						for (ExpectedFlowFunction ff : edge.flowFunctions) {
+					public Set<JoinableFact> computeTargets(JoinableFact source) {
+						for (ExpectedFlowFunction<JoinableFact> ff : edge.flowFunctions) {
 							if (ff.source.equals(source)) {
 								if (remainingFlowFunctions.remove(ff)) {
 									return Sets.newHashSet(ff.targets);
@@ -500,8 +399,8 @@ public class TestHelper {
 	}
 
 	public void runSolver(final boolean followReturnsPastSeeds, final String...initialSeeds) {
-		IFDSSolver<Statement, Fact, Method, InterproceduralCFG<Statement, Method>> solver =
-				new IFDSSolver<Statement, Fact, Method, InterproceduralCFG<Statement, Method>>(
+		IFDSSolver<Statement, JoinableFact, TestMethod, InterproceduralCFG<Statement, TestMethod>> solver =
+				new IFDSSolver<Statement, JoinableFact, TestMethod, InterproceduralCFG<Statement, TestMethod>>(
 				createTabulationProblem(followReturnsPastSeeds, initialSeeds));
 
 		solver.solve();
@@ -511,11 +410,11 @@ public class TestHelper {
 	
 	public static enum TabulationProblemExchange {AsSpecified, ExchangeForwardAndBackward};
 	public void runBiDiSolver(TestHelper backwardHelper, TabulationProblemExchange direction, final String...initialSeeds) {
-		BiDiIFDSSolver<Statement, Fact, Method, InterproceduralCFG<Statement, Method>> solver =
+		BiDiIFDSSolver<Statement, JoinableFact, TestMethod, InterproceduralCFG<Statement, TestMethod>> solver =
 				direction == TabulationProblemExchange.AsSpecified ? 
-				new BiDiIFDSSolver<Statement, Fact, Method, InterproceduralCFG<Statement, Method>>(createTabulationProblem(true, initialSeeds), 
+				new BiDiIFDSSolver<Statement, JoinableFact, TestMethod, InterproceduralCFG<Statement, TestMethod>>(createTabulationProblem(true, initialSeeds), 
 									backwardHelper.createTabulationProblem(true, initialSeeds)) :
-				new BiDiIFDSSolver<Statement, Fact, Method, InterproceduralCFG<Statement, Method>>(backwardHelper.createTabulationProblem(true, initialSeeds), 
+				new BiDiIFDSSolver<Statement, JoinableFact, TestMethod, InterproceduralCFG<Statement, TestMethod>>(backwardHelper.createTabulationProblem(true, initialSeeds), 
 									createTabulationProblem(true, initialSeeds));
 		
 		solver.solve();
@@ -523,11 +422,11 @@ public class TestHelper {
 		backwardHelper.assertAllFlowFunctionsUsed();
 	}
 	
-	private IFDSTabulationProblem<Statement, Fact, Method, InterproceduralCFG<Statement, Method>> createTabulationProblem(final boolean followReturnsPastSeeds, final String[] initialSeeds) {
-		final InterproceduralCFG<Statement, Method> icfg = buildIcfg();
-		final FlowFunctions<Statement, Fact, Method> flowFunctions = flowFunctions();
+	private IFDSTabulationProblem<Statement, JoinableFact, TestMethod, InterproceduralCFG<Statement, TestMethod>> createTabulationProblem(final boolean followReturnsPastSeeds, final String[] initialSeeds) {
+		final InterproceduralCFG<Statement, TestMethod> icfg = buildIcfg();
+		final FlowFunctions<Statement, JoinableFact, TestMethod> flowFunctions = flowFunctions();
 		
-		return new IFDSTabulationProblem<Statement, Fact, Method, InterproceduralCFG<Statement, Method>>() {
+		return new IFDSTabulationProblem<Statement, JoinableFact, TestMethod, InterproceduralCFG<Statement, TestMethod>>() {
 
 			@Override
 			public boolean followReturnsPastSeeds() {
@@ -550,27 +449,27 @@ public class TestHelper {
 			}
 
 			@Override
-			public FlowFunctions<Statement, Fact, Method> flowFunctions() {
+			public FlowFunctions<Statement, JoinableFact, TestMethod> flowFunctions() {
 				return flowFunctions;
 			}
 
 			@Override
-			public InterproceduralCFG<Statement, Method> interproceduralCFG() {
+			public InterproceduralCFG<Statement, TestMethod> interproceduralCFG() {
 				return icfg;
 			}
 
 			@Override
-			public Map<Statement, Set<Fact>> initialSeeds() {
-				Map<Statement, Set<Fact>> result = Maps.newHashMap();
+			public Map<Statement, Set<JoinableFact>> initialSeeds() {
+				Map<Statement, Set<JoinableFact>> result = Maps.newHashMap();
 				for (String stmt : initialSeeds) {
-					result.put(new Statement(stmt), Sets.newHashSet(new Fact("0")));
+					result.put(new Statement(stmt), Sets.newHashSet(new JoinableFact("0")));
 				}
 				return result;
 			}
 
 			@Override
-			public Fact zeroValue() {
-				return new Fact("0");
+			public JoinableFact zeroValue() {
+				return new JoinableFact("0");
 			}
 		};
 	}

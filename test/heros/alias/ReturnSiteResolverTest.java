@@ -13,6 +13,9 @@ package heros.alias;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 import heros.alias.AccessPath.Delta;
+import heros.utilities.Statement;
+import heros.utilities.TestFact;
+import heros.utilities.TestMethod;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -41,17 +44,17 @@ public class ReturnSiteResolverTest {
 		return accPath;
 	}
 
-	private PerAccessPathMethodAnalyzer<String, TestFact, TestStatement, TestMethod> analyzer;
-	private TestStatement returnSite;
-	private ReturnSiteResolver<String, TestFact, TestStatement, TestMethod> sut;
+	private PerAccessPathMethodAnalyzer<String, TestFact, Statement, TestMethod> analyzer;
+	private Statement returnSite;
+	private ReturnSiteResolver<String, TestFact, Statement, TestMethod> sut;
 	private TestFact fact;
-	private InterestCallback<String, TestFact, TestStatement, TestMethod> callback;
-	private Resolver<String, TestFact, TestStatement, TestMethod> callEdgeResolver;
+	private InterestCallback<String, TestFact, Statement, TestMethod> callback;
+	private Resolver<String, TestFact, Statement, TestMethod> callEdgeResolver;
 
 	@Before
 	public void before() {
 		analyzer = mock(PerAccessPathMethodAnalyzer.class);
-		returnSite = new TestStatement("returnSite");
+		returnSite = new Statement("returnSite");
 		sut = new ReturnSiteResolver<>(analyzer, returnSite);
 		fact = new TestFact("value");
 		callback = mock(InterestCallback.class);
@@ -74,7 +77,7 @@ public class ReturnSiteResolverTest {
 
 	@Test
 	public void registerCallbackAtIncomingResolver() {
-		Resolver<String, TestFact, TestStatement, TestMethod> resolver = mock(Resolver.class);
+		Resolver<String, TestFact, Statement, TestMethod> resolver = mock(Resolver.class);
 		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), resolver), callEdgeResolver, getDelta());
 		sut.resolve(getDeltaConstraint("a"), callback);
 		verify(resolver).resolve(eq(getDeltaConstraint("a")), any(InterestCallback.class));
@@ -82,13 +85,13 @@ public class ReturnSiteResolverTest {
 	
 	@Test
 	public void resolveViaIncomingResolver() {
-		Resolver<String, TestFact, TestStatement, TestMethod> resolver = mock(Resolver.class);
-		final Resolver<String, TestFact, TestStatement, TestMethod> nestedResolver = mock(Resolver.class);
+		Resolver<String, TestFact, Statement, TestMethod> resolver = mock(Resolver.class);
+		final Resolver<String, TestFact, Statement, TestMethod> nestedResolver = mock(Resolver.class);
 		Mockito.doAnswer(new Answer(){
 			@Override
 			public Object answer(InvocationOnMock invocation) throws Throwable {
-				InterestCallback<String, TestFact, TestStatement, TestMethod> argCallback = 
-						(InterestCallback<String, TestFact, TestStatement, TestMethod>) invocation.getArguments()[1];
+				InterestCallback<String, TestFact, Statement, TestMethod> argCallback = 
+						(InterestCallback<String, TestFact, Statement, TestMethod>) invocation.getArguments()[1];
 				argCallback.interest(null, nestedResolver);
 				return null;
 			}
@@ -109,11 +112,11 @@ public class ReturnSiteResolverTest {
 	
 	@Test
 	public void resolveViaDeltaTwice() {
-		final InterestCallback<String, TestFact, TestStatement, TestMethod> innerCallback = mock(InterestCallback.class);
+		final InterestCallback<String, TestFact, Statement, TestMethod> innerCallback = mock(InterestCallback.class);
 		doAnswer(new Answer() {
 			@Override
 			public Object answer(InvocationOnMock invocation) throws Throwable {
-				ReturnSiteResolver<String, TestFact, TestStatement, TestMethod> resolver = (ReturnSiteResolver<String, TestFact, TestStatement, TestMethod>) invocation.getArguments()[1];
+				ReturnSiteResolver<String, TestFact, Statement, TestMethod> resolver = (ReturnSiteResolver<String, TestFact, Statement, TestMethod>) invocation.getArguments()[1];
 				resolver.resolve(getDeltaConstraint("b"), innerCallback);
 				return null;
 			}
@@ -127,11 +130,11 @@ public class ReturnSiteResolverTest {
 	
 	@Test
 	public void resolveViaDeltaAndThenViaCallSite() {
-		final InterestCallback<String, TestFact, TestStatement, TestMethod> innerCallback = mock(InterestCallback.class);
+		final InterestCallback<String, TestFact, Statement, TestMethod> innerCallback = mock(InterestCallback.class);
 		doAnswer(new Answer() {
 			@Override
 			public Object answer(InvocationOnMock invocation) throws Throwable {
-				ReturnSiteResolver<String, TestFact, TestStatement, TestMethod> resolver = (ReturnSiteResolver<String, TestFact, TestStatement, TestMethod>) invocation.getArguments()[1];
+				ReturnSiteResolver<String, TestFact, Statement, TestMethod> resolver = (ReturnSiteResolver<String, TestFact, Statement, TestMethod>) invocation.getArguments()[1];
 				resolver.resolve(getDeltaConstraint("b"), innerCallback);
 				return null;
 			}
@@ -151,7 +154,7 @@ public class ReturnSiteResolverTest {
 	
 	@Test
 	public void resolveViaResolverAtCallSite() {
-		Resolver<String, TestFact, TestStatement, TestMethod> resolver = mock(Resolver.class);
+		Resolver<String, TestFact, Statement, TestMethod> resolver = mock(Resolver.class);
 		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), callEdgeResolver), resolver, getDelta());
 		sut.resolve(getDeltaConstraint("a"), callback);
 		verify(resolver).resolve(eq(getDeltaConstraint("a")), any(InterestCallback.class));
@@ -159,8 +162,8 @@ public class ReturnSiteResolverTest {
 	
 	@Test
 	public void resolveViaResolverAtCallSiteTwice() {
-		Resolver<String, TestFact, TestStatement, TestMethod> resolver = mock(Resolver.class);
-		final Resolver<String, TestFact, TestStatement, TestMethod> nestedResolver = mock(Resolver.class);
+		Resolver<String, TestFact, Statement, TestMethod> resolver = mock(Resolver.class);
+		final Resolver<String, TestFact, Statement, TestMethod> nestedResolver = mock(Resolver.class);
 		doAnswer(new Answer() {
 			@Override
 			public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -178,11 +181,11 @@ public class ReturnSiteResolverTest {
 			}
 		}).when(nestedResolver).resolve(eq(getDeltaConstraint("b")), any(InterestCallback.class));
 		
-		final InterestCallback<String, TestFact, TestStatement, TestMethod> secondCallback = mock(InterestCallback.class);
+		final InterestCallback<String, TestFact, Statement, TestMethod> secondCallback = mock(InterestCallback.class);
 		doAnswer(new Answer() {
 			@Override
 			public Object answer(InvocationOnMock invocation) throws Throwable {
-				ReturnSiteResolver<String, TestFact, TestStatement, TestMethod> resolver = (ReturnSiteResolver) invocation.getArguments()[1];
+				ReturnSiteResolver<String, TestFact, Statement, TestMethod> resolver = (ReturnSiteResolver) invocation.getArguments()[1];
 				resolver.resolve(getDeltaConstraint("b"), secondCallback);
 				return null;
 			}
@@ -197,7 +200,7 @@ public class ReturnSiteResolverTest {
 	
 	@Test
 	public void resolveAsEmptyViaIncomingResolver() {
-		Resolver<String, TestFact, TestStatement, TestMethod> resolver = mock(Resolver.class);
+		Resolver<String, TestFact, Statement, TestMethod> resolver = mock(Resolver.class);
 		Delta<String> delta = new AccessPath<String>().getDeltaTo(new AccessPath<String>().appendExcludedFieldReference(new String("a")));
 		
 		doAnswer(new Answer() {
@@ -218,7 +221,7 @@ public class ReturnSiteResolverTest {
 	
 	@Test
 	public void resolveViaCallSiteResolver() {
-		Resolver<String, TestFact, TestStatement, TestMethod> resolver = mock(Resolver.class);
+		Resolver<String, TestFact, Statement, TestMethod> resolver = mock(Resolver.class);
 		
 		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), callEdgeResolver), resolver, getDelta());
 		sut.resolve(getDeltaConstraint("a"), callback);
@@ -227,7 +230,7 @@ public class ReturnSiteResolverTest {
 	}
 	
 	private class ReturnSiteResolverArgumentMatcher extends
-			ArgumentMatcher<ReturnSiteResolver<String, TestFact, TestStatement, TestMethod>> {
+			ArgumentMatcher<ReturnSiteResolver<String, TestFact, Statement, TestMethod>> {
 
 		private AccessPath<String> accPath;
 

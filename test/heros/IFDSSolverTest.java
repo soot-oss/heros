@@ -30,13 +30,13 @@ public class IFDSSolverTest {
 	public void happyPath() {
 		helper.method("bar", 
 				startPoints("a"),
-				normalStmt("a").succ("b", flow("0", "x")),
-				normalStmt("b").succ("c", flow("x", "x")),
+				normalStmt("a", flow("0", "x")).succ("b"),
+				normalStmt("b", flow("x", "x")).succ("c"),
 				callSite("c").calls("foo", flow("x", "y")).retSite("f", flow("x", "x")));
 		
 		helper.method("foo",
 				startPoints("d"),
-				normalStmt("d").succ("e", flow("y", "y", "z")),
+				normalStmt("d", flow("y", "y", "z")).succ("e"),
 				exitStmt("e").returns(over("c"), to("f"), flow("z", "u"), flow("y")));
 		
 		helper.runSolver(false, "a");
@@ -48,11 +48,11 @@ public class IFDSSolverTest {
 				startPoints("a"),
 				callSite("a").calls("bar", flow("0", "x")).retSite("b", flow("0", "y")),
 				callSite("b").calls("bar", flow("y", "x")).retSite("c", flow("y")),
-				normalStmt("c").succ("c0", flow("w", "0")));
+				normalStmt("c", flow("w", "0")).succ("c0"));
 		
 		helper.method("bar",
 				startPoints("d"),
-				normalStmt("d").succ("e", flow("x", "z")),
+				normalStmt("d", flow("x", "z")).succ("e"),
 				exitStmt("e").returns(over("a"), to("b"), flow("z", "y"))
 							  .returns(over("b"), to("c"), flow("z", "w")));
 		
@@ -64,11 +64,11 @@ public class IFDSSolverTest {
 		helper.method("foo",
 				startPoints("a"),
 				callSite("a").calls("bar", flow("0", "1")).retSite("b", flow("0")),
-				normalStmt("b").succ("c", flow("2", "3")));
+				normalStmt("b", flow("2", "3")).succ("c"));
 		
 		helper.method("bar",
 				startPoints("g"),
-				normalStmt("g").succ("h", flow("1", "1")).succ("i", flow("1", "1")),
+				normalStmt("g", flow("1", "1")).succ("i").succ("h"),
 				callSite("i").calls("bar", flow("1", "1")).retSite("h", flow("1")),
 				exitStmt("h").returns(over("a"), to("b"), flow("1"), flow("2" ,"2"))
 							.returns(over("i"), to("h"), flow("1","2"), flow("2", "2")));
@@ -80,11 +80,11 @@ public class IFDSSolverTest {
 	public void branch() {
 		helper.method("foo",
 				startPoints("a"),
-				normalStmt("a").succ("b1", flow("0", "x")).succ("b2", flow("0", "x")),
-				normalStmt("b1").succ("c", flow("x", "x", "y")),
-				normalStmt("b2").succ("c", flow("x", "x")),
-				normalStmt("c").succ("d", flow("x", "z"), flow("y", "w")),
-				normalStmt("d").succ("e", flow("z"), flow("w")));
+				normalStmt("a", flow("0", "x")).succ("b2").succ("b1"),
+				normalStmt("b1", flow("x", "x", "y")).succ("c"),
+				normalStmt("b2", flow("x", "x")).succ("c"),
+				normalStmt("c", flow("x", "z"), flow("y", "w")).succ("d"),
+				normalStmt("d", flow("z"), flow("w")).succ("e"));
 		
 		helper.runSolver(false, "a");
 	}
@@ -93,12 +93,12 @@ public class IFDSSolverTest {
 	public void unbalancedReturn() {
 		helper.method("foo",
 				startPoints("a"),
-				normalStmt("a").succ("b", flow("0", "1")),
+				normalStmt("a", flow("0", "1")).succ("b"),
 				exitStmt("b").returns(over("x"),  to("y"), flow("1", "1")));
 		
 		helper.method("bar", 
 				startPoints("unused"),
-				normalStmt("y").succ("z", flow("1", "2")));
+				normalStmt("y", flow("1", "2")).succ("z"));
 		
 		helper.runSolver(true, "a");
 	}
@@ -107,7 +107,7 @@ public class IFDSSolverTest {
 	public void artificalReturnEdgeForNoCallersCase() {
 		helper.method("foo",
 				startPoints("a"),
-				normalStmt("a").succ("b", flow("0", "1")),
+				normalStmt("a", flow("0", "1")).succ("b"),
 				exitStmt("b").returns(null, null, flow("1", "1")));
 		
 		helper.runSolver(true, "a");

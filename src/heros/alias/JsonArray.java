@@ -14,7 +14,7 @@ import java.util.List;
 
 import com.google.common.collect.Lists;
 
-class JsonArray {
+public class JsonArray {
 	
 	private List<String> items = Lists.newLinkedList();
 	
@@ -25,8 +25,8 @@ class JsonArray {
 	public void write(StringBuilder builder, int tabs) {
 		builder.append("[\n");
 		for(String item: items) {
-			TestDebugger.tabs(tabs+1, builder); builder.append("\""+item+"\",\n");
+			JsonDocument.tabs(tabs+1, builder); builder.append("\""+item+"\",\n");
 		}
-		TestDebugger.tabs(tabs, builder); builder.append("]");
+		JsonDocument.tabs(tabs, builder); builder.append("]");
 	}
 }

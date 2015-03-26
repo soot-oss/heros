@@ -13,6 +13,9 @@ package heros.alias;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 import heros.alias.AccessPath.Delta;
+import heros.utilities.Statement;
+import heros.utilities.TestFact;
+import heros.utilities.TestMethod;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -41,17 +44,17 @@ public class ControlFlowJoinResolverTest {
 		return accPath;
 	}
 
-	private PerAccessPathMethodAnalyzer<String, TestFact, TestStatement, TestMethod> analyzer;
-	private TestStatement joinStmt;
-	private ControlFlowJoinResolver<String, TestFact, TestStatement, TestMethod> sut;
+	private PerAccessPathMethodAnalyzer<String, TestFact, Statement, TestMethod> analyzer;
+	private Statement joinStmt;
+	private ControlFlowJoinResolver<String, TestFact, Statement, TestMethod> sut;
 	private TestFact fact;
-	private InterestCallback<String, TestFact, TestStatement, TestMethod> callback;
-	private Resolver<String, TestFact, TestStatement, TestMethod> callEdgeResolver;
+	private InterestCallback<String, TestFact, Statement, TestMethod> callback;
+	private Resolver<String, TestFact, Statement, TestMethod> callEdgeResolver;
 
 	@Before
 	public void before() {
 		analyzer = mock(PerAccessPathMethodAnalyzer.class);
-		joinStmt = new TestStatement("joinStmt");
+		joinStmt = new Statement("joinStmt");
 		sut = new ControlFlowJoinResolver<>(analyzer, joinStmt);
 		fact = new TestFact("value");
 		callback = mock(InterestCallback.class);
@@ -74,7 +77,7 @@ public class ControlFlowJoinResolverTest {
 
 	@Test
 	public void registerCallbackAtIncomingResolver() {
-		Resolver<String, TestFact, TestStatement, TestMethod> resolver = mock(Resolver.class);
+		Resolver<String, TestFact, Statement, TestMethod> resolver = mock(Resolver.class);
 		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), resolver));
 		sut.resolve(getDeltaConstraint("a"), callback);
 		verify(resolver).resolve(eq(getDeltaConstraint("a")), any(InterestCallback.class));
@@ -82,13 +85,13 @@ public class ControlFlowJoinResolverTest {
 	
 	@Test
 	public void resolveViaIncomingResolver() {
-		Resolver<String, TestFact, TestStatement, TestMethod> resolver = mock(Resolver.class);
-		final Resolver<String, TestFact, TestStatement, TestMethod> nestedResolver = mock(Resolver.class);
+		Resolver<String, TestFact, Statement, TestMethod> resolver = mock(Resolver.class);
+		final Resolver<String, TestFact, Statement, TestMethod> nestedResolver = mock(Resolver.class);
 		Mockito.doAnswer(new Answer(){
 			@Override
 			public Object answer(InvocationOnMock invocation) throws Throwable {
-				InterestCallback<String, TestFact, TestStatement, TestMethod> argCallback = 
-						(InterestCallback<String, TestFact, TestStatement, TestMethod>) invocation.getArguments()[1];
+				InterestCallback<String, TestFact, Statement, TestMethod> argCallback = 
+						(InterestCallback<String, TestFact, Statement, TestMethod>) invocation.getArguments()[1];
 				argCallback.interest(null, nestedResolver);
 				return null;
 			}
@@ -102,7 +105,7 @@ public class ControlFlowJoinResolverTest {
 	
 	
 	private class ResolverArgumentMatcher extends
-			ArgumentMatcher<ReturnSiteResolver<String, TestFact, TestStatement, TestMethod>> {
+			ArgumentMatcher<ReturnSiteResolver<String, TestFact, Statement, TestMethod>> {
 
 		private AccessPath<String> accPath;
 

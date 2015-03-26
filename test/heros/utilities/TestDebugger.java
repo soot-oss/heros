@@ -8,7 +8,7 @@
  * Contributors:
  *     Johannes Lerch - initial API and implementation
  ******************************************************************************/
-package heros.alias;
+package heros.utilities;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -17,7 +17,8 @@ import java.util.Set;
 import com.google.common.collect.Sets;
 
 import heros.InterproceduralCFG;
-import heros.alias.TestHelper.Edge;
+import heros.alias.Debugger;
+import heros.alias.JsonDocument;
 
 public class TestDebugger<Field, Fact, Stmt, Method, I extends InterproceduralCFG<Stmt, Method>> implements Debugger<Field, Fact, Stmt, Method, I> {
 
@@ -106,11 +107,6 @@ public class TestDebugger<Field, Fact, Stmt, Method, I extends InterproceduralCF
 	public void expectReturnFlow(Stmt exitStmt, Stmt returnSite, String expectedFlowFunctionsToString) {
 		if(returnSite != null)
 			stmt(exitStmt).doc("returns").doc(returnSite.toString()).keyValue("flow", expectedFlowFunctionsToString);
-	}
-
-	static void tabs(int tabs, StringBuilder builder) {
-		for(int i=0; i<tabs; i++)
-			builder.append("\t");
 	}
 
 }

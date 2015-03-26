@@ -10,15 +10,11 @@
  ******************************************************************************/
 package heros.utilities;
 
-import heros.solver.JoinHandlingNode;
-import heros.solver.LinkedNode;
-import heros.solver.JoinHandlingNode.JoinKey;
-
-public class Fact implements JoinHandlingNode<Fact> {
+public class TestMethod {
 
 	public final String name;
 	
-	public Fact(String name) {
+	public TestMethod(String name) {
 		this.name = name;
 	}
 
@@ -36,9 +32,9 @@ public class Fact implements JoinHandlingNode<Fact> {
 			return true;
 		if (obj == null)
 			return false;
-		if (!(obj instanceof Fact))
+		if (!(obj instanceof TestMethod))
 			return false;
-		Fact other = (Fact) obj;
+		TestMethod other = (TestMethod) obj;
 		if (name == null) {
 			if (other.name != null)
 				return false;
@@ -49,41 +45,6 @@ public class Fact implements JoinHandlingNode<Fact> {
 	
 	@Override
 	public String toString() {
-		return "[Fact "+name+"]";
-	}
-
-	@Override
-	public void setCallingContext(Fact callingContext) {
-		
-	}
-
-	@Override
-	public heros.solver.JoinHandlingNode.JoinKey createJoinKey() {
-		return new TestJoinKey();
-	}
-
-	@Override
-	public boolean handleJoin(Fact joiningNode) {
-		return true;
-	}
-
-	private class TestJoinKey extends JoinKey {
-
-		private Fact getFact() {
-			return Fact.this;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (obj instanceof TestJoinKey) {
-				return getFact().equals(((TestJoinKey) obj).getFact());
-			}
-			throw new IllegalArgumentException();
-		}
-
-		@Override
-		public int hashCode() {
-			return Fact.this.hashCode();
-		}
+		return "[Method "+name+"]";
 	}
 }

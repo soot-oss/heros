@@ -15,7 +15,7 @@ import java.util.Map.Entry;
 
 import com.google.common.collect.Maps;
 
-class JsonDocument {
+public class JsonDocument {
 	
 	private CacheMap<String, JsonDocument> documents = new CacheMap<String, JsonDocument>() {
 		@Override
@@ -47,23 +47,27 @@ class JsonDocument {
 		builder.append("{\n");
 		
 		for(Entry<String, String> entry : keyValuePairs.entrySet()) {
-			TestDebugger.tabs(tabs+1, builder); builder.append("\""+entry.getKey()+"\": \""+entry.getValue()+"\",\n");
+			tabs(tabs+1, builder); builder.append("\""+entry.getKey()+"\": \""+entry.getValue()+"\",\n");
 		}
 		
 		for(Entry<String, JsonArray> entry : arrays.entrySet()) {
-			TestDebugger.tabs(tabs+1, builder); builder.append("\""+entry.getKey()+"\": ");
+			tabs(tabs+1, builder); builder.append("\""+entry.getKey()+"\": ");
 			entry.getValue().write(builder, tabs+1);
 			builder.append(",\n");
 
 		}
 		
 		for(Entry<String, JsonDocument> entry : documents.entrySet()) {
-			TestDebugger.tabs(tabs+1, builder); builder.append("\""+entry.getKey()+"\": ");
+			tabs(tabs+1, builder); builder.append("\""+entry.getKey()+"\": ");
 			entry.getValue().write(builder, tabs+1);
 			builder.append(",\n");
 		}
 		
-		TestDebugger.tabs(tabs, builder); builder.append("}");
+		tabs(tabs, builder); builder.append("}");
 	}
 
+	static void tabs(int tabs, StringBuilder builder) {
+		for(int i=0; i<tabs; i++)
+			builder.append("\t");
+	}
 }

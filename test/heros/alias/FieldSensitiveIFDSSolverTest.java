@@ -13,6 +13,11 @@ package heros.alias;
 
 
 import heros.InterproceduralCFG;
+import heros.utilities.FieldSensitiveTestHelper;
+import heros.utilities.Statement;
+import heros.utilities.TestDebugger;
+import heros.utilities.TestFact;
+import heros.utilities.TestMethod;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -20,18 +25,18 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestWatcher;
 
-import static heros.alias.TestHelper.*;
+import static heros.utilities.FieldSensitiveTestHelper.*;
 
 public class FieldSensitiveIFDSSolverTest {
 
-	private TestHelper helper;
-	private TestDebugger<String, TestFact, TestStatement, TestMethod, InterproceduralCFG<TestStatement, TestMethod>> debugger;
+	private FieldSensitiveTestHelper helper;
+	private TestDebugger<String, TestFact, Statement, TestMethod, InterproceduralCFG<Statement, TestMethod>> debugger;
 
 	@Before
 	public void before() {
 		System.err.println("-----");
 		debugger = new TestDebugger<>();
-		helper = new TestHelper(debugger);
+		helper = new FieldSensitiveTestHelper(debugger);
 	}
 	
 	@Rule

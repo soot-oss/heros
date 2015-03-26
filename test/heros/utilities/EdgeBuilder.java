@@ -10,13 +10,12 @@
  ******************************************************************************/
 package heros.utilities;
 
+
 import java.util.Collection;
 import java.util.List;
 
 import com.google.common.collect.Lists;
 
-import heros.utilities.TestHelper.Edge;
-import heros.utilities.TestHelper.ExpectedFlowFunction;
 
 public abstract class EdgeBuilder {
 	
@@ -38,12 +37,12 @@ public abstract class EdgeBuilder {
 		}
 
 		public CallSiteBuilder calls(String method, ExpectedFlowFunction...flows) {
-			edges.add(new TestHelper.CallEdge(callSite, new Method(method), flows));
+			edges.add(new Edge.CallEdge(callSite, new TestMethod(method), flows));
 			return this;
 		}
 		
 		public CallSiteBuilder retSite(String returnSite, ExpectedFlowFunction...flows) {
-			edges.add(new TestHelper.Call2ReturnEdge(callSite, new Statement(returnSite), flows));
+			edges.add(new Edge.Call2ReturnEdge(callSite, new Statement(returnSite), flows));
 			return this;
 		}
 	}
@@ -51,16 +50,17 @@ public abstract class EdgeBuilder {
 	public static class NormalStmtBuilder extends EdgeBuilder {
 
 		private Statement stmt;
+		private ExpectedFlowFunction[] flowFunctions;
 
-		public NormalStmtBuilder(Statement stmt) {
+		public NormalStmtBuilder(Statement stmt, ExpectedFlowFunction[] flowFunctions) {
 			this.stmt = stmt;
+			this.flowFunctions = flowFunctions;
 		}
 
-		public NormalStmtBuilder succ(String succ, ExpectedFlowFunction... flows) {
-			edges.add(new TestHelper.NormalEdge(stmt, new Statement(succ), flows));
+		public NormalStmtBuilder succ(String succ) {
+			edges.add(new Edge.NormalEdge(stmt, new Statement(succ), flowFunctions));
 			return this;
 		}
-		
 	}
 	
 	public static class ExitStmtBuilder extends EdgeBuilder {
@@ -72,12 +72,12 @@ public abstract class EdgeBuilder {
 		}
 		
 		public ExitStmtBuilder expectArtificalFlow(ExpectedFlowFunction...flows) {
-			edges.add(new TestHelper.ReturnEdge(null, exitStmt, null, flows));
+			edges.add(new Edge.ReturnEdge(null, exitStmt, null, flows));
 			return this;
 		}
 
 		public ExitStmtBuilder returns(Statement callSite, Statement returnSite, ExpectedFlowFunction... flows) {
-			edges.add(new TestHelper.ReturnEdge(callSite, exitStmt, returnSite, flows));
+			edges.add(new Edge.ReturnEdge(callSite, exitStmt, returnSite, flows));
 			return this;
 		}
 		
