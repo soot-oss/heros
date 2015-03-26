@@ -64,11 +64,10 @@ public class AccessPath<T> {
 	}
 
 	public AccessPath<T> prepend(T fieldRef) {
-		assert accesses.length != 0 || !exclusions.contains(fieldRef);
 		T[] newAccesses = (T[]) new Object[accesses.length+1];
 		newAccesses[0] = fieldRef;
 		System.arraycopy(accesses, 0, newAccesses, 1, accesses.length);
-		return new AccessPath<>(newAccesses, Sets.<T>newHashSet());
+		return new AccessPath<>(newAccesses, exclusions);
 	}
 
 	public AccessPath<T> removeFirst() {

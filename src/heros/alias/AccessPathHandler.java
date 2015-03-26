@@ -36,14 +36,6 @@ public class AccessPathHandler<Field, Fact, Stmt, Method> {
 		return accessPath.hasEmptyAccessPath();
 	}
 
-	public boolean canOverwrite(Field fieldRef) {
-		if(accessPath.hasEmptyAccessPath())
-			return true;
-		if(accessPath.getFirstAccess().equals(fieldRef))
-			return true;
-		return false;
-	}
-	
 	public ConstrainedFact<Field, Fact, Stmt, Method> generate(Fact fact) {
 		return new ConstrainedFact<>(new WrappedFact<Field, Fact, Stmt, Method>(fact, accessPath, resolver));
 	}
@@ -78,7 +70,7 @@ public class AccessPathHandler<Field, Fact, Stmt, Method> {
 	}
 	
 	public ResultBuilder<Field, Fact, Stmt, Method> overwrite(final Field field) {
-		if(canOverwrite(field))
+		if(mayBeEmpty())
 			return new ResultBuilder<Field, Fact, Stmt, Method>() {
 				@Override
 				public ConstrainedFact<Field, Fact, Stmt, Method> generate(Fact fact) {
