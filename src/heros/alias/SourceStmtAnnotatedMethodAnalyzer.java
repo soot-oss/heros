@@ -8,16 +8,8 @@
  * Contributors:
  *     Johannes Lerch - initial API and implementation
  ******************************************************************************/
-package heros.alias.bidi;
+package heros.alias;
 
-import heros.alias.AccessPath;
-import heros.alias.CacheMap;
-import heros.alias.Context;
-import heros.alias.IncomingEdge;
-import heros.alias.MethodAnalyzer;
-import heros.alias.PerAccessPathMethodAnalyzer;
-import heros.alias.WrappedFact;
-import heros.alias.WrappedFactAtStatement;
 
 public class SourceStmtAnnotatedMethodAnalyzer<Field, Fact, Stmt, Method>
 		implements MethodAnalyzer<Field, Fact, Stmt, Method> {
@@ -40,11 +32,10 @@ public class SourceStmtAnnotatedMethodAnalyzer<Field, Fact, Stmt, Method>
 	}
 	
 	@Override
-	public void addIncomingEdge(IncomingEdge<Field, Fact, Stmt, Method> incEdge) {
+	public void addIncomingEdge(CallEdge<Field, Fact, Stmt, Method> incEdge) {
 		WrappedFact<Field, Fact, Stmt, Method> calleeSourceFact = incEdge.getCalleeSourceFact();
 		Key<Fact, Stmt> key = new Key<Fact, Stmt>(calleeSourceFact.getFact(), null);
 		PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer = perSourceAnalyzer.getOrCreate(key);
-		analyzer.bootstrapAtMethodStartPoints();
 		analyzer.addIncomingEdge(incEdge);		
 	}
 

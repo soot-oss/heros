@@ -144,22 +144,6 @@ public class AccessPath<T> {
 		return delta;
 	}
 	
-	//FIXME this is an unsound dirty hack
-	public boolean contains(AccessPath<T> accPath) {
-		assert accPath.accesses.length <= 1;
-		if(accPath.accesses.length == 1) {
-			for(T sub : accesses) {
-				if(sub.equals(accPath.accesses[0])) {
-					return true;
-				}
-			}
-			return false;
-		}
-		else
-			return exclusions.containsAll(accPath.exclusions);
-	}
-	
-	
 	public static class Delta<T> {
 		final T[] accesses;
 		final Set<T> exclusions;

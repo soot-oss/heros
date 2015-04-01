@@ -12,7 +12,17 @@ package heros.alias;
 
 public interface FactMergeHandler<Fact> {
 
+	/**
+	 * Called when propagating a Fact to a statement at which an equal Fact was already propagated to.
+	 * @param previousFact The Fact instance that was propagated to the statement first.
+	 * @param currentFact The Fact that was propagated to the statement last.
+	 */
 	void merge(Fact previousFact, Fact currentFact);
 	
+	/**
+	 * Called on Facts being propagated over a return edge. Via this method context can be restored that was abstracted when propagating over the call edge.
+	 * @param factAtReturnSite The fact being propagated over the return edge.
+	 * @param factAtCallSite The Fact that was present at the call site, i.e., the Fact used as input to the call flow function.
+	 */
 	void restoreCallingContext(Fact factAtReturnSite, Fact factAtCallSite);
 }

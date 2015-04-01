@@ -12,7 +12,7 @@ package heros.alias;
 
 public interface MethodAnalyzer<Field,Fact,Stmt,Method>  {
 
-	public void addIncomingEdge(IncomingEdge<Field, Fact, Stmt, Method> incEdge);
+	public void addIncomingEdge(CallEdge<Field, Fact, Stmt, Method> incEdge);
 	
 	public void addInitialSeed(Stmt startPoint, Fact val);
 	

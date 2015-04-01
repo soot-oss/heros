@@ -10,7 +10,6 @@
  ******************************************************************************/
 package heros.alias;
 
-import heros.alias.AccessPath.Delta;
 import heros.alias.FlowFunction.Constraint;
 
 public class ZeroCallEdgeResolver<Field, Fact, Stmt, Method> extends CallEdgeResolver<Field, Fact, Stmt, Method> {
@@ -30,5 +29,10 @@ public class ZeroCallEdgeResolver<Field, Fact, Stmt, Method> extends CallEdgeRes
 	
 	@Override
 	public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver) {
+	}
+	
+	@Override
+	protected ZeroCallEdgeResolver<Field, Fact, Stmt, Method> getOrCreateNestedResolver(AccessPath<Field> newAccPath) {
+		return this;
 	}
 }

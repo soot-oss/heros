@@ -12,9 +12,10 @@ package heros.alias;
 
 
 import heros.InterproceduralCFG;
-import heros.alias.bidi.SourceStmtAnnotatedMethodAnalyzer;
-import heros.alias.bidi.SourceStmtAnnotatedMethodAnalyzer.Synchronizer;
+import heros.alias.SourceStmtAnnotatedMethodAnalyzer.Synchronizer;
+
 import java.util.Set;
+
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Sets;
 

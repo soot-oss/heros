@@ -12,26 +12,26 @@ package heros.alias;
 
 import heros.InterproceduralCFG;
 
-public abstract class Context<FieldRef, FactAbstraction, Statement, Method> {
+public abstract class Context<Field, Fact, Stmt, Method> {
 
-	public final InterproceduralCFG<Statement, Method> icfg;
-	public final FlowFunctionProcessor<FactAbstraction, Statement, Method, FieldRef> flowProcessor;
+	public final InterproceduralCFG<Stmt, Method> icfg;
 	public final Scheduler scheduler;
-	public final FactAbstraction zeroValue;
+	public final Fact zeroValue;
 	public final boolean followReturnsPastSeeds;
-	public final FactMergeHandler<FactAbstraction> factHandler;
-	public final ZeroHandler<FieldRef> zeroHandler;
+	public final FactMergeHandler<Fact> factHandler;
+	public final ZeroHandler<Field> zeroHandler;
+	public final FlowFunctions<Stmt, Field, Fact, Method> flowFunctions;
 	
-	Context(InterproceduralCFG<Statement, Method> icfg, FlowFunctionProcessor<FactAbstraction, Statement, Method, FieldRef> flowProcessor, 
-			Scheduler scheduler, FactAbstraction zeroValue, boolean followReturnsPastSeeds, FactMergeHandler<FactAbstraction> factHandler, ZeroHandler<FieldRef> zeroHandler) {
-		this.icfg = icfg;
-		this.flowProcessor = flowProcessor;
+	Context(IFDSTabulationProblem<Stmt, Field, Fact, Method, ? extends InterproceduralCFG<Stmt, Method>> tabulationProblem, 
+			Scheduler scheduler, FactMergeHandler<Fact> factHandler) {
+		this.icfg = tabulationProblem.interproceduralCFG();
+		this.flowFunctions = tabulationProblem.flowFunctions();
 		this.scheduler = scheduler;
-		this.zeroValue = zeroValue;
-		this.followReturnsPastSeeds = followReturnsPastSeeds;
+		this.zeroValue = tabulationProblem.zeroValue();
+		this.followReturnsPastSeeds = tabulationProblem.followReturnsPastSeeds();
 		this.factHandler = factHandler;
-		this.zeroHandler = zeroHandler;
+		this.zeroHandler = tabulationProblem.zeroHandler();
 	}
 	
-	public abstract MethodAnalyzer<FieldRef, FactAbstraction, Statement, Method> getAnalyzer(Method method);
+	public abstract MethodAnalyzer<Field, Fact, Stmt, Method> getAnalyzer(Method method);
 }

@@ -10,31 +10,52 @@
  ******************************************************************************/
 package heros.alias;
 
-import heros.alias.FlowFunction.Constraint;
+import com.google.common.collect.Lists;
 
 
-class CallEdgeResolver<Field, Fact, Stmt, Method> extends Resolver<Field, Fact, Stmt, Method>  {
+class CallEdgeResolver<Field, Fact, Stmt, Method> extends ResolverTemplate<Field, Fact, Stmt, Method, CallEdge<Field, Fact, Stmt, Method>>  {
 
 	public CallEdgeResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer) {
-		super(analyzer);
+		this(analyzer, null);
+	}
+	
+	public CallEdgeResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, CallEdgeResolver<Field, Fact, Stmt, Method> parent) {
+		super(analyzer, parent);
 	}
 
 	@Override
-	public void resolve(Constraint<Field> constraint, InterestCallback<Field, Fact, Stmt, Method> callback) {		
-		log("Resolve: "+constraint);
-		if(constraint.canBeAppliedTo(analyzer.getAccessPath()) && !analyzer.isLocked() && !doesContain(constraint)) {
-			AccessPath<Field> newAccPath = constraint.applyToAccessPath(analyzer.getAccessPath());
-			PerAccessPathMethodAnalyzer<Field,Fact,Stmt,Method> nestedAnalyzer = analyzer.getOrCreateNestedAnalyzer(newAccPath);
-			nestedAnalyzer.getCallEdgeResolver().registerCallback(callback);
+	protected AccessPath<Field> getResolvedAccessPath() {
+		return analyzer.getAccessPath();
+	}
+	
+	@Override
+	protected AccessPath<Field> getAccessPathOf(CallEdge<Field, Fact, Stmt, Method> inc) {
+		return inc.getCalleeSourceFact().getAccessPath();
+	}
+	
+	@Override
+	protected void processIncomingGuaranteedPrefix(CallEdge<Field, Fact, Stmt, Method> inc) {
+		analyzer.applySummaries(inc);
+	}
+	
+	@Override
+	protected void processIncomingPotentialPrefix(CallEdge<Field, Fact, Stmt, Method> inc) {
+		lock();
+		inc.registerInterestCallback(analyzer);
+		unlock();
+	}
+
+	@Override
+	protected ResolverTemplate<Field, Fact, Stmt, Method, CallEdge<Field, Fact, Stmt, Method>> createNestedResolver(AccessPath<Field> newAccPath) {
+		return analyzer.createWithAccessPath(newAccPath).getCallEdgeResolver();
+	}
+	
+	public void applySummaries(WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
+		for(CallEdge<Field, Fact, Stmt, Method> incEdge : Lists.newLinkedList(incomingEdges)) {
+			analyzer.applySummary(incEdge, factAtStmt);
 		}
 	}
 	
-	//FIXME: this is a dirty hack (and unsound?!)
-	private boolean doesContain(Constraint<Field> constraint) {
-		AccessPath<Field> accPath = constraint.applyToAccessPath(new AccessPath<Field>());
-		return analyzer.getAccessPath().contains(accPath);
-	}
-
 	@Override
 	public String toString() {
 		return "";
@@ -43,6 +64,10 @@ class CallEdgeResolver<Field, Fact, Stmt, Method> extends Resolver<Field, Fact, 
 	@Override
 	protected void log(String message) {
 		analyzer.log(message);
+	}
+
+	public boolean hasIncomingEdges() {
+		return !incomingEdges.isEmpty();
 	}
 
 

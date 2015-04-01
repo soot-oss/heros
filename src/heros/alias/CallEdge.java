@@ -13,13 +13,13 @@ package heros.alias;
 import heros.alias.AccessPath.Delta;
 import heros.alias.AccessPath.PrefixTestResult;
 
-public class IncomingEdge<Field, Fact, Stmt, Method> {
+public class CallEdge<Field, Fact, Stmt, Method> {
 
 	private WrappedFact<Field, Fact, Stmt, Method> calleeSourceFact;
 	private PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> callerAnalyzer;
 	private WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtCallSite;
 	
-	public IncomingEdge(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> callerAnalyzer, 
+	public CallEdge(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> callerAnalyzer, 
 			WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtCallSite,
 			WrappedFact<Field, Fact, Stmt, Method> calleeSourceFact) {
 		this.callerAnalyzer = callerAnalyzer;
@@ -32,7 +32,7 @@ public class IncomingEdge<Field, Fact, Stmt, Method> {
 	}
 	
 	public WrappedFact<Field, Fact, Stmt, Method> getCallerCallSiteFact() {
-		return factAtCallSite.getFact();
+		return factAtCallSite.getWrappedFact();
 	}
 	
 	public WrappedFact<Field, Fact, Stmt, Method> getCallerSourceFact() {
@@ -53,16 +53,16 @@ public class IncomingEdge<Field, Fact, Stmt, Method> {
 		if(!factAtCallSite.canDeltaBeApplied(delta))
 			return;
 		
-		factAtCallSite.getFact().getResolver().resolve(new DeltaConstraint<Field>(delta), new InterestCallback<Field, Fact, Stmt, Method>() {
+		factAtCallSite.getWrappedFact().getResolver().resolve(new DeltaConstraint<Field>(delta), new InterestCallback<Field, Fact, Stmt, Method>() {
 			
 			@Override
 			public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver) {
 				WrappedFact<Field, Fact, Stmt, Method> calleeSourceFactWithDelta = new WrappedFact<>(calleeSourceFact.getFact(), delta.applyTo(calleeSourceFact.getAccessPath()), resolver);
 				if(interestedAnalyzer.getAccessPath().isPrefixOf(calleeSourceFactWithDelta.getAccessPath()) != PrefixTestResult.GUARANTEED_PREFIX)
 					throw new AssertionError();
-				interestedAnalyzer.addIncomingEdge(new IncomingEdge<>(analyzer, 
+				interestedAnalyzer.addIncomingEdge(new CallEdge<>(analyzer, 
 						new WrappedFactAtStatement<>(factAtCallSite.getStatement(), 
-											new WrappedFact<>(factAtCallSite.getFact().getFact(), delta.applyTo(factAtCallSite.getFact().getAccessPath()), resolver)), 
+											new WrappedFact<>(factAtCallSite.getWrappedFact().getFact(), delta.applyTo(factAtCallSite.getWrappedFact().getAccessPath()), resolver)), 
 						calleeSourceFactWithDelta));
 			}
 			
@@ -96,7 +96,7 @@ public class IncomingEdge<Field, Fact, Stmt, Method> {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		IncomingEdge other = (IncomingEdge) obj;
+		CallEdge other = (CallEdge) obj;
 		if (calleeSourceFact == null) {
 			if (other.calleeSourceFact != null)
 				return false;

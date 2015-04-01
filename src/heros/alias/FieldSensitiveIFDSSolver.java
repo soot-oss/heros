@@ -18,10 +18,11 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.sun.istack.internal.Nullable;
+
 public class FieldSensitiveIFDSSolver<FieldRef, D, N, M, I extends InterproceduralCFG<N, M>> {
 
 	protected static final Logger logger = LoggerFactory.getLogger(FieldSensitiveIFDSSolver.class);
-	private FlowFunctionProcessor<D, N, M, FieldRef> flowProcessor;
 	
 	private CacheMap<M, MethodAnalyzer<FieldRef, D, N, M>> methodAnalyzers = new CacheMap<M, MethodAnalyzer<FieldRef, D,N, M>>() {
 		@Override
@@ -35,19 +36,17 @@ public class FieldSensitiveIFDSSolver<FieldRef, D, N, M, I extends Interprocedur
 	private Debugger<FieldRef, D, N, M, I> debugger;
 	private Scheduler scheduler;
 
-	public FieldSensitiveIFDSSolver(IFDSTabulationProblem<N,FieldRef,D,M,I> tabulationProblem, FactMergeHandler<D> factHandler, Debugger<FieldRef, D, N, M, I> debugger, Scheduler scheduler) {
+	public FieldSensitiveIFDSSolver(IFDSTabulationProblem<N,FieldRef,D,M,I> tabulationProblem, FactMergeHandler<D> factHandler, @Nullable Debugger<FieldRef, D, N, M, I> debugger, Scheduler scheduler) {
 		this.tabulationProblem = tabulationProblem;
 		this.scheduler = scheduler;
 		this.debugger = debugger == null ? new Debugger.NullDebugger<FieldRef, D, N, M, I>() : debugger;
 		this.debugger.setICFG(tabulationProblem.interproceduralCFG());
-		flowProcessor = new FlowFunctionProcessor<>(tabulationProblem.flowFunctions());
 		context = initContext(tabulationProblem, factHandler);
 		submitInitialSeeds();
 	}
 
-	protected Context<FieldRef, D, N, M> initContext(IFDSTabulationProblem<N, FieldRef, D, M, I> tabulationProblem, FactMergeHandler<D> factHandler) {
-		 return new Context<FieldRef, D, N, M>(tabulationProblem.interproceduralCFG(), flowProcessor, scheduler, tabulationProblem.zeroValue(), 
-				tabulationProblem.followReturnsPastSeeds(), factHandler, tabulationProblem.zeroHandler()) {
+	private Context<FieldRef, D, N, M> initContext(IFDSTabulationProblem<N, FieldRef, D, M, I> tabulationProblem, FactMergeHandler<D> factHandler) {
+		 return new Context<FieldRef, D, N, M>(tabulationProblem, scheduler, factHandler) {
 			@Override
 			public MethodAnalyzer<FieldRef, D, N, M> getAnalyzer(M method) {
 				if(method == null)
@@ -63,10 +62,8 @@ public class FieldSensitiveIFDSSolver<FieldRef, D, N, M, I extends Interprocedur
 
 	/**
 	 * Schedules the processing of initial seeds, initiating the analysis.
-	 * Clients should only call this methods if performing synchronization on
-	 * their own. Normally, {@link #solve()} should be called instead.
 	 */
-	protected void submitInitialSeeds() {
+	private void submitInitialSeeds() {
 		for(Entry<N, Set<D>> seed: tabulationProblem.initialSeeds().entrySet()) {
 			N startPoint = seed.getKey();
 			MethodAnalyzer<FieldRef, D,N,M> analyzer = methodAnalyzers.getOrCreate(tabulationProblem.interproceduralCFG().getMethodOf(startPoint));

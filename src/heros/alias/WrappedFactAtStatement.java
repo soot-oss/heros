@@ -20,8 +20,20 @@ public class WrappedFactAtStatement<Field, Fact, Stmt, Method> {
 		this.fact = fact;
 	}
 
-	public WrappedFact<Field,Fact, Stmt, Method> getFact() {
+	public WrappedFact<Field,Fact, Stmt, Method> getWrappedFact() {
 		return fact;
+	}
+	
+	public Fact getFact() {
+		return fact.getFact();
+	}
+	
+	public AccessPath<Field> getAccessPath() {
+		return fact.getAccessPath();
+	}
+	
+	public Resolver<Field, Fact, Stmt, Method> getResolver() {
+		return fact.getResolver();
 	}
 
 	public Stmt getStatement() {

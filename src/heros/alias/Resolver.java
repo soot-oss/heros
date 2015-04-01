@@ -10,14 +10,11 @@
  ******************************************************************************/
 package heros.alias;
 
-import java.util.List;
-import java.util.Map;
-
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
-
-import heros.alias.FlowFunction.ConstrainedFact;
 import heros.alias.FlowFunction.Constraint;
+
+import java.util.List;
+
+import com.google.common.collect.Lists;
 
 public abstract class Resolver<Field, Fact, Stmt, Method> {
 

@@ -29,10 +29,9 @@ public class MethodAnalyzerImpl<Field,Fact, Stmt, Method>
 	}
 	
 	@Override
-	public void addIncomingEdge(IncomingEdge<Field, Fact, Stmt, Method> incEdge) {
+	public void addIncomingEdge(CallEdge<Field, Fact, Stmt, Method> incEdge) {
 		WrappedFact<Field, Fact, Stmt, Method> calleeSourceFact = incEdge.getCalleeSourceFact();
 		PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer = perSourceAnalyzer.getOrCreate(calleeSourceFact.getFact());
-		analyzer.bootstrapAtMethodStartPoints();
 		analyzer.addIncomingEdge(incEdge);
 	}
 

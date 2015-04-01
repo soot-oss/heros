@@ -12,5 +12,11 @@ package heros.alias;
 
 public interface ZeroHandler<Field> {
 
+	/**
+	 * If reading fields on a fact abstraction directly connected to a Zero fact, this handler is consulted
+	 * to decide if the field may be read. 
+	 * @param accPath The AccessPath consisting of fields already read in addition to a new field to be read.
+	 * @return true if the AccessPath can be generated from within the Zero fact, false otherwise.
+	 */
 	boolean shouldGenerateAccessPath(AccessPath<Field> accPath);
 }
