@@ -9,5 +9,6 @@
 	<classpathentry exported="true" kind="lib" path="slf4j-simple-1.7.5.jar"/>
 	<classpathentry kind="lib" path="junit.jar"/>
 	<classpathentry kind="lib" path="org.hamcrest.core_1.3.0.jar"/>
+	<classpathentry kind="lib" path="mockito-all-1.9.5.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
