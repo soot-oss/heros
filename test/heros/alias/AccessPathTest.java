@@ -89,6 +89,11 @@ public class AccessPathTest {
 	}
 	
 	@Test
+	public void deltaOnPotentialPrefix() {
+		assertEquals(Sets.newHashSet("f", "g"), ap("^f").getDeltaTo(ap("^g")).exclusions);
+	}
+	
+	@Test
 	public void emptyDeltaOnEqualExclusions() {
 		AccessPath<String> actual = ap("^f");
 		Object[] accesses = actual.getDeltaTo(ap("^f")).accesses;
