@@ -19,6 +19,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import heros.alias.AccessPath.Delta;
 import heros.alias.AccessPath.PrefixTestResult;
 
 import org.junit.Test;
@@ -86,6 +87,13 @@ public class AccessPathTest {
 	@Test
 	public void deltaDepth2() {
 		assertArrayEquals(new String[] { "b", "c" }, ap("a").getDeltaTo(ap("a.b.c")).accesses);
+	}
+	
+	@Test
+	public void deltaOnNonEmptyAccPathsWithExclusions() {
+		Delta<String> delta = ap("a^f").getDeltaTo(ap("a.b^g"));
+		assertArrayEquals(new Object[] { "b" }, delta.accesses);
+		assertEquals(Sets.newHashSet("g"), delta.exclusions);
 	}
 	
 	@Test

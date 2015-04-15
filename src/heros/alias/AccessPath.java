@@ -139,7 +139,8 @@ public class AccessPath<T> {
 	public Delta<T> getDeltaTo(AccessPath<T> accPath) {
 		assert isPrefixOf(accPath).atLeast(PrefixTestResult.POTENTIAL_PREFIX);
 		HashSet<T> mergedExclusions = Sets.newHashSet(accPath.exclusions);
-		mergedExclusions.addAll(exclusions);
+		if(accesses.length == accPath.accesses.length)
+			mergedExclusions.addAll(exclusions);
 		Delta<T> delta = new Delta<T>(Arrays.copyOfRange(accPath.accesses, accesses.length, accPath.accesses.length), mergedExclusions);
 		assert (isPrefixOf(accPath).atLeast(PrefixTestResult.POTENTIAL_PREFIX) && accPath.isPrefixOf(delta.applyTo(this)) == PrefixTestResult.GUARANTEED_PREFIX) 
 				|| (isPrefixOf(accPath) == PrefixTestResult.GUARANTEED_PREFIX && accPath.equals(delta.applyTo(this)));
