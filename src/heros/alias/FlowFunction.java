@@ -163,6 +163,7 @@ public interface FlowFunction<FieldRef, D, Stmt, Method> {
 		
 		@Override
 		public AccessPath<FieldRef> applyToAccessPath(AccessPath<FieldRef> accPath) {
+			assert accPath.hasEmptyAccessPath();
 			return accPath.append(fieldRef);
 		}
 		
