@@ -90,7 +90,7 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 	}
 
 	private void bootstrapAtMethodStartPoints() {
-		callEdgeResolver.interest(this, callEdgeResolver);
+		callEdgeResolver.interest();
 		for(Stmt startPoint : context.icfg.getStartPointsOf(method)) {
 			WrappedFactAtStatement<Field, Fact, Stmt, Method> target = new WrappedFactAtStatement<>(startPoint, wrappedSource());
 			if(!reachableStatements.containsKey(target))
@@ -109,6 +109,7 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 	}
 
 	void scheduleEdgeTo(WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
+		assert context.icfg.getMethodOf(factAtStmt.getStatement()).equals(method);
 		if (reachableStatements.containsKey(factAtStmt)) {
 			log("Merging "+factAtStmt);
 			context.factHandler.merge(reachableStatements.get(factAtStmt).getWrappedFact().getFact(), factAtStmt.getWrappedFact().getFact());
@@ -324,7 +325,7 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 //			JsonDocument currentMethodDoc = root.doc(current.method.toString()+ "___"+current.sourceFact);
 //			JsonDocument currentDoc = currentMethodDoc.doc("accPath").doc("_"+current.accessPath.toString());
 //			
-//			for(IncomingEdge<Field, Fact, Stmt, Method> incEdge : current.incomingEdges) {
+//			for(CallEdge<Field, Fact, Stmt, Method> incEdge : current.getCallEdgeResolver().incomingEdges) {
 //				currentDoc.doc("incoming").doc(incEdge.getCallerAnalyzer().method+"___"+incEdge.getCallerAnalyzer().sourceFact).doc("_"+incEdge.getCallerAnalyzer().accessPath.toString());
 //				worklist.add(incEdge.getCallerAnalyzer());
 //			}
@@ -364,8 +365,8 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 //
 //	private void debugNestings(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> current, JsonDocument parentDoc) {
 //		JsonDocument currentDoc = parentDoc.doc(current.accessPath.toString());
-//		for(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> nestedAnalyzer : current.nestedAnalyzers.values()) {
-//			debugNestings(nestedAnalyzer, currentDoc);
+//		for(ResolverTemplate<Field, Fact, Stmt, Method, CallEdge<Field, Fact, Stmt, Method>> nestedAnalyzer : current.getCallEdgeResolver().nestedResolvers.values()) {
+//			debugNestings(nestedAnalyzer.analyzer, currentDoc);
 //		}
 //	}
 }

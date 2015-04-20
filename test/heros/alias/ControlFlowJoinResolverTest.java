@@ -92,7 +92,7 @@ public class ControlFlowJoinResolverTest {
 			public Object answer(InvocationOnMock invocation) throws Throwable {
 				InterestCallback<String, TestFact, Statement, TestMethod> argCallback = 
 						(InterestCallback<String, TestFact, Statement, TestMethod>) invocation.getArguments()[1];
-				argCallback.interest(null, nestedResolver);
+				argCallback.interest(analyzer, nestedResolver);
 				return null;
 			}
 		}).when(resolver).resolve(eq(getDeltaConstraint("a")), any(InterestCallback.class));

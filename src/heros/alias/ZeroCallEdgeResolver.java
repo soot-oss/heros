@@ -28,7 +28,7 @@ public class ZeroCallEdgeResolver<Field, Fact, Stmt, Method> extends CallEdgeRes
 	}
 	
 	@Override
-	public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver) {
+	public void interest() {
 	}
 	
 	@Override

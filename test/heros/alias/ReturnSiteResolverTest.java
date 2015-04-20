@@ -10,8 +10,12 @@
  ******************************************************************************/
 package heros.alias;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
+
+import java.util.List;
+
 import heros.alias.AccessPath.Delta;
 import heros.utilities.Statement;
 import heros.utilities.TestFact;
@@ -23,7 +27,8 @@ import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.mockito.verification.VerificationMode;
+
+import com.google.common.collect.Lists;
 
 public class ReturnSiteResolverTest {
 
@@ -92,7 +97,7 @@ public class ReturnSiteResolverTest {
 			public Object answer(InvocationOnMock invocation) throws Throwable {
 				InterestCallback<String, TestFact, Statement, TestMethod> argCallback = 
 						(InterestCallback<String, TestFact, Statement, TestMethod>) invocation.getArguments()[1];
-				argCallback.interest(null, nestedResolver);
+				argCallback.interest(analyzer, nestedResolver);
 				return null;
 			}
 		}).when(resolver).resolve(eq(getDeltaConstraint("a")), any(InterestCallback.class));
@@ -100,6 +105,33 @@ public class ReturnSiteResolverTest {
 		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), resolver), callEdgeResolver, getDelta());
 		sut.resolve(getDeltaConstraint("a"), callback);
 		
+		verify(callback).interest(eq(analyzer), argThat(new ReturnSiteResolverArgumentMatcher(createAccessPath("a"))));
+	}
+	
+	@Test
+	public void resolveViaLateInterestAtIncomingResolver() {
+		Resolver<String, TestFact, Statement, TestMethod> resolver = mock(Resolver.class);
+		final Resolver<String, TestFact, Statement, TestMethod> nestedResolver = mock(Resolver.class);
+		final List<InterestCallback> callbacks = Lists.newLinkedList();
+		
+		Mockito.doAnswer(new Answer(){
+			@Override
+			public Object answer(InvocationOnMock invocation) throws Throwable {
+				InterestCallback<String, TestFact, Statement, TestMethod> argCallback = 
+						(InterestCallback<String, TestFact, Statement, TestMethod>) invocation.getArguments()[1];
+				callbacks.add(argCallback);
+				return null;
+			}
+		}).when(resolver).resolve(eq(getDeltaConstraint("a")), any(InterestCallback.class));
+		
+		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), resolver), callEdgeResolver, getDelta());
+		sut.resolve(getDeltaConstraint("a"), callback);
+		
+		verify(callback, never()).interest(any(PerAccessPathMethodAnalyzer.class), any(Resolver.class));
+		
+		assertEquals(1, callbacks.size());
+		Resolver transitiveResolver = mock(Resolver.class);
+		callbacks.get(0).interest(analyzer, transitiveResolver);
 		verify(callback).interest(eq(analyzer), argThat(new ReturnSiteResolverArgumentMatcher(createAccessPath("a"))));
 	}
 	

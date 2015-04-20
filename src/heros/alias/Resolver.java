@@ -29,14 +29,14 @@ public abstract class Resolver<Field, Fact, Stmt, Method> {
 
 	public abstract void resolve(Constraint<Field> constraint, InterestCallback<Field, Fact, Stmt, Method> callback);
 	
-	public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver) {
+	public void interest() {
 		if(interest)
 			return;
-		
+
 		log("Interest given");
 		interest = true;
 		for(InterestCallback<Field, Fact, Stmt, Method> callback : Lists.newLinkedList(interestCallbacks)) {
-			callback.interest(analyzer, resolver);
+			callback.interest(analyzer, this);
 		}
 		
 		if(canBeResolvedEmpty)

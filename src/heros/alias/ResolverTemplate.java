@@ -59,7 +59,7 @@ public abstract class ResolverTemplate<Field, Fact, Stmt, Method, Incoming>  ext
 			if(!incomingEdges.add(inc))
 				return;
 			
-			interest(analyzer, this);
+			interest();
 			
 			for(ResolverTemplate<Field, Fact, Stmt, Method, Incoming> nestedResolver : nestedResolvers.values()) {
 				nestedResolver.addIncoming(inc);
