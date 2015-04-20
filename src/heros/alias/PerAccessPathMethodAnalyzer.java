@@ -310,6 +310,28 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 		return callEdgeResolver;
 	}
 	
+//	public void debugReachables() {
+//		JsonDocument root = new JsonDocument();
+//		
+//		for(WrappedFactAtStatement<Field, Fact, Stmt, Method> fact : reachableStatements.keySet()) {
+//			JsonDocument doc = root.doc(fact.getStatement().toString()).doc(fact.getFact().toString()).doc(fact.getResolver().toString()).doc(String.valueOf(fact.hashCode()));
+//			doc.keyValue("fact", String.valueOf(fact.getFact().hashCode()));
+//			doc.keyValue("resolver", String.valueOf(fact.getResolver().hashCode()));
+//			doc.keyValue("resolver-analyzer", String.valueOf(fact.getResolver().analyzer.hashCode()));
+//			doc.keyValue("resolver-class", String.valueOf(fact.getResolver().getClass().toString()));
+//		}
+//		try {
+//			FileWriter writer = new FileWriter("debug/reachables.json");
+//			StringBuilder builder = new StringBuilder();
+//			builder.append("var root=");
+//			root.write(builder, 0);
+//			writer.write(builder.toString());
+//			writer.close();
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+//	}
+	
 //	public void debugInterest() {
 //		JsonDocument root = new JsonDocument();
 //		
