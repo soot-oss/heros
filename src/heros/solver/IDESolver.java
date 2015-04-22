@@ -751,7 +751,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		}
 	}
 
-	private Set<Cell<N, D, EdgeFunction<V>>> endSummary(N sP, D d3) {
+	protected Set<Cell<N, D, EdgeFunction<V>>> endSummary(N sP, D d3) {
 		Table<N, D, EdgeFunction<V>> map = endSummary.get(sP, d3);
 		if(map==null) return Collections.emptySet();
 		return map.cellSet();
