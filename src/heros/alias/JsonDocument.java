@@ -35,12 +35,26 @@ public class JsonDocument {
 		return documents.getOrCreate(key);
 	}
 	
+	public JsonDocument doc(String key, JsonDocument doc) {
+		if(documents.containsKey(key))
+			throw new IllegalArgumentException("There is already a document registered for key: "+key);
+		documents.put(key, doc);
+		return doc;
+	}
+	
 	public JsonArray array(String key) {
 		return arrays.getOrCreate(key);
 	}
 	
 	public void keyValue(String key, String value) {
 		keyValuePairs.put(key, value);
+	}
+	
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		write(builder, 0);
+		return builder.toString();
 	}
 	
 	public void write(StringBuilder builder, int tabs) {
@@ -54,7 +68,6 @@ public class JsonDocument {
 			tabs(tabs+1, builder); builder.append("\""+entry.getKey()+"\": ");
 			entry.getValue().write(builder, tabs+1);
 			builder.append(",\n");
-
 		}
 		
 		for(Entry<String, JsonDocument> entry : documents.entrySet()) {
@@ -62,6 +75,9 @@ public class JsonDocument {
 			entry.getValue().write(builder, tabs+1);
 			builder.append(",\n");
 		}
+		
+		if(!keyValuePairs.isEmpty() || !arrays.isEmpty() || !documents.isEmpty())
+			builder.delete(builder.length()-2, builder.length()-1); 
 		
 		tabs(tabs, builder); builder.append("}");
 	}
