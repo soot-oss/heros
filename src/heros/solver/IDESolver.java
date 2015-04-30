@@ -770,7 +770,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		summaries.put(eP,d2,f);
 	}	
 	
-	private Map<N, Set<D>> incoming(D d1, N sP) {
+	protected Map<N, Set<D>> incoming(D d1, N sP) {
 		synchronized (incoming) {
 			Map<N, Set<D>> map = incoming.get(sP, d1);
 			if(map==null) return Collections.emptyMap();
