@@ -11,6 +11,7 @@
 package heros.fieldsens;
 
 import heros.InterproceduralCFG;
+import heros.utilities.DefaultValueMap;
 
 import java.util.Map.Entry;
 import java.util.Set;
@@ -24,7 +25,7 @@ public class FieldSensitiveIFDSSolver<FieldRef, D, N, M, I extends Interprocedur
 
 	protected static final Logger logger = LoggerFactory.getLogger(FieldSensitiveIFDSSolver.class);
 	
-	private CacheMap<M, MethodAnalyzer<FieldRef, D, N, M>> methodAnalyzers = new CacheMap<M, MethodAnalyzer<FieldRef, D,N, M>>() {
+	private DefaultValueMap<M, MethodAnalyzer<FieldRef, D, N, M>> methodAnalyzers = new DefaultValueMap<M, MethodAnalyzer<FieldRef, D,N, M>>() {
 		@Override
 		protected MethodAnalyzer<FieldRef, D, N, M> createItem(M key) {
 			return createMethodAnalyzer(key);

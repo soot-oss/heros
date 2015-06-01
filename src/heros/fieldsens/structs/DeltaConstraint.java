@@ -8,8 +8,10 @@
  * Contributors:
  *     Johannes Lerch - initial API and implementation
  ******************************************************************************/
-package heros.fieldsens;
+package heros.fieldsens.structs;
 
+import heros.fieldsens.AccessPath;
+import heros.fieldsens.FlowFunction;
 import heros.fieldsens.AccessPath.Delta;
 import heros.fieldsens.FlowFunction.Constraint;
 

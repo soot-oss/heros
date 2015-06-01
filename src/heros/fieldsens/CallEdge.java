@@ -12,6 +12,9 @@ package heros.fieldsens;
 
 import heros.fieldsens.AccessPath.Delta;
 import heros.fieldsens.AccessPath.PrefixTestResult;
+import heros.fieldsens.structs.DeltaConstraint;
+import heros.fieldsens.structs.WrappedFact;
+import heros.fieldsens.structs.WrappedFactAtStatement;
 
 public class CallEdge<Field, Fact, Stmt, Method> {
 

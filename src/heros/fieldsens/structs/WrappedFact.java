@@ -8,8 +8,12 @@
  * Contributors:
  *     Johannes Lerch - initial API and implementation
  ******************************************************************************/
-package heros.fieldsens;
+package heros.fieldsens.structs;
 
+import heros.fieldsens.AccessPath;
+import heros.fieldsens.FlowFunction;
+import heros.fieldsens.Resolver;
+import heros.fieldsens.AccessPath.Delta;
 import heros.fieldsens.FlowFunction.Constraint;
 
 public class WrappedFact<Field, Fact, Stmt, Method>{
@@ -18,7 +22,7 @@ public class WrappedFact<Field, Fact, Stmt, Method>{
 	private final AccessPath<Field> accessPath;
 	private final Resolver<Field, Fact, Stmt, Method> resolver;
 	
-	WrappedFact(Fact fact, AccessPath<Field> accessPath, Resolver<Field, Fact, Stmt, Method> resolver) {
+	public WrappedFact(Fact fact, AccessPath<Field> accessPath, Resolver<Field, Fact, Stmt, Method> resolver) {
 		assert fact != null;
 		assert accessPath != null;
 		assert resolver != null;

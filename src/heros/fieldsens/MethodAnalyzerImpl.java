@@ -10,12 +10,16 @@
  ******************************************************************************/
 package heros.fieldsens;
 
+import heros.fieldsens.structs.WrappedFact;
+import heros.fieldsens.structs.WrappedFactAtStatement;
+import heros.utilities.DefaultValueMap;
+
 public class MethodAnalyzerImpl<Field,Fact, Stmt, Method> 
 		implements MethodAnalyzer<Field, Fact, Stmt, Method> {
 
 	private Method method;
-	private CacheMap<Fact, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method>> perSourceAnalyzer = 
-			new CacheMap<Fact, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method>>() {
+	private DefaultValueMap<Fact, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method>> perSourceAnalyzer = 
+			new DefaultValueMap<Fact, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method>>() {
 		@Override
 		protected PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> createItem(Fact key) {
 			return new PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method>(method, key, context);

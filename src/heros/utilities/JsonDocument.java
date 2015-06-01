@@ -10,8 +10,6 @@
  ******************************************************************************/
 package heros.utilities;
 
-import heros.fieldsens.CacheMap;
-
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -19,13 +17,13 @@ import com.google.common.collect.Maps;
 
 public class JsonDocument {
 	
-	private CacheMap<String, JsonDocument> documents = new CacheMap<String, JsonDocument>() {
+	private DefaultValueMap<String, JsonDocument> documents = new DefaultValueMap<String, JsonDocument>() {
 		@Override
 		protected JsonDocument createItem(String key) {
 			return new JsonDocument();
 		}
 	};
-	private CacheMap<String, JsonArray> arrays = new CacheMap<String, JsonArray>() {
+	private DefaultValueMap<String, JsonArray> arrays = new DefaultValueMap<String, JsonArray>() {
 		@Override
 		protected JsonArray createItem(String key) {
 			return new JsonArray();

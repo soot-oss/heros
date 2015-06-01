@@ -8,19 +8,21 @@
  * Contributors:
  *     Johannes Lerch - initial API and implementation
  ******************************************************************************/
-package heros.fieldsens;
+package heros.fieldsens.structs;
 
+import heros.fieldsens.AccessPath;
+import heros.fieldsens.Resolver;
 import heros.fieldsens.AccessPath.Delta;
 import heros.fieldsens.AccessPath.PrefixTestResult;
 
-class ReturnEdge<Field, Fact, Stmt, Method> {
+public class ReturnEdge<Field, Fact, Stmt, Method> {
 
-	final Fact incFact;
-	final Resolver<Field, Fact, Stmt, Method> resolverAtCaller;
-	final Delta<Field> callDelta;
-	final AccessPath<Field> incAccessPath;
-	final Resolver<Field, Fact, Stmt, Method> incResolver;
-	final Delta<Field> usedAccessPathOfIncResolver;
+	public final Fact incFact;
+	public final Resolver<Field, Fact, Stmt, Method> resolverAtCaller;
+	public final Delta<Field> callDelta;
+	public final AccessPath<Field> incAccessPath;
+	public final Resolver<Field, Fact, Stmt, Method> incResolver;
+	public final Delta<Field> usedAccessPathOfIncResolver;
 
 	public ReturnEdge(WrappedFact<Field, Fact, Stmt, Method> fact, 
 			Resolver<Field, Fact, Stmt, Method> resolverAtCaller,

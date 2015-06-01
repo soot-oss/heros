@@ -8,51 +8,18 @@
  * Contributors:
  *     Johannes Lerch - initial API and implementation
  ******************************************************************************/
-package heros.fieldsens;
+package heros.fieldsens.structs;
 
-public class WrappedFactAtStatement<Field, Fact, Stmt, Method> {
+public class FactAtStatement<Fact, Stmt> {
 
-	private WrappedFact<Field,Fact, Stmt, Method> fact;
-	private Stmt stmt;
+	public final Fact fact;
+	public final Stmt stmt;
 
-	public WrappedFactAtStatement(Stmt stmt, WrappedFact<Field, Fact, Stmt, Method> fact) {
-		this.stmt = stmt;
+	public FactAtStatement(Fact fact, Stmt stmt) {
 		this.fact = fact;
+		this.stmt = stmt;
 	}
 
-	public WrappedFact<Field,Fact, Stmt, Method> getWrappedFact() {
-		return fact;
-	}
-	
-	public Fact getFact() {
-		return fact.getFact();
-	}
-	
-	public AccessPath<Field> getAccessPath() {
-		return fact.getAccessPath();
-	}
-	
-	public Resolver<Field, Fact, Stmt, Method> getResolver() {
-		return fact.getResolver();
-	}
-
-	public Stmt getStatement() {
-		return stmt;
-	}
-	
-	public FactAtStatement<Fact, Stmt> getAsFactAtStatement() {
-		return new FactAtStatement<Fact, Stmt>(fact.getFact(), stmt);
-	}
-	
-	public boolean canDeltaBeApplied(AccessPath.Delta<Field> delta) {
-		return delta.canBeAppliedTo(fact.getAccessPath());
-	}
-	
-	@Override
-	public String toString() {
-		return fact+" @ "+stmt;
-	}
-	
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -70,7 +37,7 @@ public class WrappedFactAtStatement<Field, Fact, Stmt, Method> {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		WrappedFactAtStatement other = (WrappedFactAtStatement) obj;
+		FactAtStatement other = (FactAtStatement) obj;
 		if (fact == null) {
 			if (other.fact != null)
 				return false;
@@ -83,5 +50,4 @@ public class WrappedFactAtStatement<Field, Fact, Stmt, Method> {
 			return false;
 		return true;
 	}
-
 }

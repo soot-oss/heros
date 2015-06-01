@@ -13,6 +13,7 @@ package heros.fieldsens;
 import heros.fieldsens.FlowFunction.ConstrainedFact;
 import heros.fieldsens.FlowFunction.ReadFieldConstraint;
 import heros.fieldsens.FlowFunction.WriteFieldConstraint;
+import heros.fieldsens.structs.WrappedFact;
 
 public class AccessPathHandler<Field, Fact, Stmt, Method> {
 

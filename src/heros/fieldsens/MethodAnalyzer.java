@@ -10,6 +10,8 @@
  ******************************************************************************/
 package heros.fieldsens;
 
+import heros.fieldsens.structs.WrappedFactAtStatement;
+
 public interface MethodAnalyzer<Field,Fact,Stmt,Method>  {
 
 	public void addIncomingEdge(CallEdge<Field, Fact, Stmt, Method> incEdge);

@@ -8,18 +8,18 @@
  * Contributors:
  *     Johannes Lerch - initial API and implementation
  ******************************************************************************/
-package heros.fieldsens;
+package heros.utilities;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public abstract class CacheMap<K, V> implements Map<K, V> {
+public abstract class DefaultValueMap<K, V> implements Map<K, V> {
 
 	private HashMap<K, V> map;
 
-	public CacheMap() {
+	public DefaultValueMap() {
 		map = new HashMap<K, V>();
 	}
 

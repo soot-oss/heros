@@ -13,6 +13,10 @@ package heros.fieldsens;
 import heros.fieldsens.AccessPath.Delta;
 import heros.fieldsens.AccessPath.PrefixTestResult;
 import heros.fieldsens.FlowFunction.ConstrainedFact;
+import heros.fieldsens.structs.FactAtStatement;
+import heros.fieldsens.structs.WrappedFact;
+import heros.fieldsens.structs.WrappedFactAtStatement;
+import heros.utilities.DefaultValueMap;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -37,13 +41,13 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 	private List<WrappedFactAtStatement<Field, Fact, Stmt, Method>> summaries = Lists.newLinkedList();
 	private Context<Field, Fact, Stmt, Method> context;
 	private Method method;
-	private CacheMap<FactAtStatement<Fact, Stmt>, ReturnSiteResolver<Field, Fact, Stmt, Method>> returnSiteResolvers = new CacheMap<FactAtStatement<Fact, Stmt>, ReturnSiteResolver<Field,Fact,Stmt,Method>>() {
+	private DefaultValueMap<FactAtStatement<Fact, Stmt>, ReturnSiteResolver<Field, Fact, Stmt, Method>> returnSiteResolvers = new DefaultValueMap<FactAtStatement<Fact, Stmt>, ReturnSiteResolver<Field,Fact,Stmt,Method>>() {
 		@Override
 		protected ReturnSiteResolver<Field, Fact, Stmt, Method> createItem(FactAtStatement<Fact, Stmt> key) {
 			return new ReturnSiteResolver<>(PerAccessPathMethodAnalyzer.this, key.stmt);
 		}
 	};
-	private CacheMap<FactAtStatement<Fact, Stmt>, ControlFlowJoinResolver<Field, Fact, Stmt, Method>> ctrFlowJoinResolvers = new CacheMap<FactAtStatement<Fact, Stmt>, ControlFlowJoinResolver<Field,Fact,Stmt,Method>>() {
+	private DefaultValueMap<FactAtStatement<Fact, Stmt>, ControlFlowJoinResolver<Field, Fact, Stmt, Method>> ctrFlowJoinResolvers = new DefaultValueMap<FactAtStatement<Fact, Stmt>, ControlFlowJoinResolver<Field,Fact,Stmt,Method>>() {
 		@Override
 		protected ControlFlowJoinResolver<Field, Fact, Stmt, Method> createItem(FactAtStatement<Fact, Stmt> key) {
 			return new ControlFlowJoinResolver<>(PerAccessPathMethodAnalyzer.this, key.stmt);

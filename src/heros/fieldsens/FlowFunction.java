@@ -10,6 +10,8 @@
  ******************************************************************************/
 package heros.fieldsens;
 
+import heros.fieldsens.structs.WrappedFact;
+
 import java.util.LinkedHashSet;
 import java.util.Set;
 

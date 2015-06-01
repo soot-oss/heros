@@ -10,6 +10,8 @@
  ******************************************************************************/
 package heros.fieldsens;
 
+import heros.fieldsens.structs.WrappedFactAtStatement;
+
 import com.google.common.collect.Lists;
 
 

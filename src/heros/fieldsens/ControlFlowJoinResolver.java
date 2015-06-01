@@ -11,6 +11,9 @@
 package heros.fieldsens;
 
 import heros.fieldsens.AccessPath.Delta;
+import heros.fieldsens.structs.DeltaConstraint;
+import heros.fieldsens.structs.WrappedFact;
+import heros.fieldsens.structs.WrappedFactAtStatement;
 
 public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends ResolverTemplate<Field, Fact, Stmt, Method, WrappedFact<Field, Fact, Stmt, Method>> {
 
@@ -35,7 +38,7 @@ public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends Resolver
 		return inc.getAccessPath();
 	}
 
-	protected void processIncomingGuaranteedPrefix(heros.fieldsens.WrappedFact<Field,Fact,Stmt,Method> fact) {
+	protected void processIncomingGuaranteedPrefix(heros.fieldsens.structs.WrappedFact<Field,Fact,Stmt,Method> fact) {
 		if(!propagated) {
 			propagated=true;
 			analyzer.processFlowFromJoinStmt(new WrappedFactAtStatement<>(joinStmt, new WrappedFact<>(
