@@ -602,10 +602,12 @@ public class FieldSensitiveTestHelper {
 		Scheduler scheduler = new Scheduler();
 		BiDiFieldSensitiveIFDSSolver<String, TestFact, Statement, TestMethod, InterproceduralCFG<Statement, TestMethod>> solver =
 				direction == TabulationProblemExchange.AsSpecified ? 
-				new BiDiFieldSensitiveIFDSSolver<>(createTabulationProblem(true, initialSeeds), 
-									backwardHelper.createTabulationProblem(true, initialSeeds),
-									factMergeHandler, debugger, scheduler) :
-				new BiDiFieldSensitiveIFDSSolver<>(backwardHelper.createTabulationProblem(true, initialSeeds), 
+				new BiDiFieldSensitiveIFDSSolver<String, TestFact, Statement, TestMethod, InterproceduralCFG<Statement, TestMethod>>(
+						createTabulationProblem(true, initialSeeds), 
+						backwardHelper.createTabulationProblem(true, initialSeeds),
+						factMergeHandler, debugger, scheduler) :
+				new BiDiFieldSensitiveIFDSSolver<String, TestFact, Statement, TestMethod, InterproceduralCFG<Statement, TestMethod>>(
+						backwardHelper.createTabulationProblem(true, initialSeeds), 
 						createTabulationProblem(true, initialSeeds),
 						factMergeHandler, debugger, scheduler);
 		

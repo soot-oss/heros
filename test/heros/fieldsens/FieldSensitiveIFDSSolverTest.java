@@ -35,7 +35,7 @@ public class FieldSensitiveIFDSSolverTest {
 	@Before
 	public void before() {
 		System.err.println("-----");
-		debugger = new TestDebugger<>();
+		debugger = new TestDebugger<String, TestFact, Statement, TestMethod, InterproceduralCFG<Statement, TestMethod>>();
 		helper = new FieldSensitiveTestHelper(debugger);
 	}
 	

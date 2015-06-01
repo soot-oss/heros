@@ -56,7 +56,7 @@ public class FieldSensitiveIFDSSolver<FieldRef, D, N, M, I extends Interprocedur
 	}
 	
 	protected MethodAnalyzer<FieldRef, D, N, M> createMethodAnalyzer(M method) {
-		return new MethodAnalyzerImpl<>(method, context);
+		return new MethodAnalyzerImpl<FieldRef, D, N, M>(method, context);
 	}
 
 	/**

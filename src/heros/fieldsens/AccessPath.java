@@ -58,32 +58,32 @@ public class AccessPath<T> {
 
 		T[] newAccesses = Arrays.copyOf(accesses, accesses.length+fieldReferences.length);
 		System.arraycopy(fieldReferences, 0, newAccesses, accesses.length, fieldReferences.length);
-		return new AccessPath<>(newAccesses, Sets.<T>newHashSet());
+		return new AccessPath<T>(newAccesses, Sets.<T>newHashSet());
 	}
 
 	public AccessPath<T> prepend(T fieldRef) {
 		T[] newAccesses = (T[]) new Object[accesses.length+1];
 		newAccesses[0] = fieldRef;
 		System.arraycopy(accesses, 0, newAccesses, 1, accesses.length);
-		return new AccessPath<>(newAccesses, exclusions);
+		return new AccessPath<T>(newAccesses, exclusions);
 	}
 
 	public AccessPath<T> removeFirst() {
 		T[] newAccesses = (T[]) new Object[accesses.length-1];
 		System.arraycopy(accesses, 1, newAccesses, 0, accesses.length-1);
-		return new AccessPath<>(newAccesses, exclusions);
+		return new AccessPath<T>(newAccesses, exclusions);
 	}
 	
 	public AccessPath<T> appendExcludedFieldReference(Collection<T> fieldReferences) {
 		HashSet<T> newExclusions = Sets.newHashSet(fieldReferences);
 		newExclusions.addAll(exclusions);
-		return new AccessPath<>(accesses, newExclusions);
+		return new AccessPath<T>(accesses, newExclusions);
 	}
 	
 	public AccessPath<T> appendExcludedFieldReference(T... fieldReferences) {
 		HashSet<T> newExclusions = Sets.newHashSet(fieldReferences);
 		newExclusions.addAll(exclusions);
-		return new AccessPath<>(accesses, newExclusions);
+		return new AccessPath<T>(accesses, newExclusions);
 	}
 
 	public static enum PrefixTestResult {
@@ -209,7 +209,7 @@ public class AccessPath<T> {
 	public AccessPath<T> mergeExcludedFieldReferences(AccessPath<T> accPath) {
 		HashSet<T> newExclusions = Sets.newHashSet(exclusions);
 		newExclusions.addAll(accPath.exclusions);
-		return new AccessPath<>(accesses, newExclusions);
+		return new AccessPath<T>(accesses, newExclusions);
 	}
 	
 	public boolean canRead(T field) {

@@ -31,7 +31,7 @@ public class AccessPathTest {
 	public static AccessPath<String> ap(String ap) {
 		Pattern pattern = Pattern.compile("(\\.|\\^)?([^\\.\\^]+)");
 		Matcher matcher = pattern.matcher(ap);
-		AccessPath<String> accessPath = new AccessPath<>();
+		AccessPath<String> accessPath = new AccessPath<String>();
 		boolean addedExclusions = false;
 		
 		while(matcher.find()) {

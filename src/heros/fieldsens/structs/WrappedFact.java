@@ -37,7 +37,7 @@ public class WrappedFact<Field, Fact, Stmt, Method>{
 	}
 	
 	public WrappedFact<Field, Fact, Stmt, Method> applyDelta(AccessPath.Delta<Field> delta) {
-		return new WrappedFact<>(fact, delta.applyTo(accessPath), resolver); //TODO keep resolver?
+		return new WrappedFact<Field, Fact, Stmt, Method>(fact, delta.applyTo(accessPath), resolver); //TODO keep resolver?
 	}
 
 	public AccessPath<Field> getAccessPath() {
@@ -48,7 +48,7 @@ public class WrappedFact<Field, Fact, Stmt, Method>{
 		if(fact.equals(zeroValue))
 			return this;
 		else
-			return new WrappedFact<>(fact, constraint.applyToAccessPath(accessPath), resolver);
+			return new WrappedFact<Field, Fact, Stmt, Method>(fact, constraint.applyToAccessPath(accessPath), resolver);
 	}
 	
 	@Override

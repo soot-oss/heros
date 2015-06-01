@@ -60,12 +60,12 @@ public class CallEdge<Field, Fact, Stmt, Method> {
 			
 			@Override
 			public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver) {
-				WrappedFact<Field, Fact, Stmt, Method> calleeSourceFactWithDelta = new WrappedFact<>(calleeSourceFact.getFact(), delta.applyTo(calleeSourceFact.getAccessPath()), resolver);
+				WrappedFact<Field, Fact, Stmt, Method> calleeSourceFactWithDelta = new WrappedFact<Field, Fact, Stmt, Method>(calleeSourceFact.getFact(), delta.applyTo(calleeSourceFact.getAccessPath()), resolver);
 				if(interestedAnalyzer.getAccessPath().isPrefixOf(calleeSourceFactWithDelta.getAccessPath()) != PrefixTestResult.GUARANTEED_PREFIX)
 					throw new AssertionError();
 				interestedAnalyzer.addIncomingEdge(new CallEdge<Field, Fact, Stmt, Method>(analyzer, 
-						new WrappedFactAtStatement<>(factAtCallSite.getStatement(), 
-											new WrappedFact<>(factAtCallSite.getWrappedFact().getFact(), 
+						new WrappedFactAtStatement<Field, Fact, Stmt, Method>(factAtCallSite.getStatement(), 
+											new WrappedFact<Field, Fact, Stmt, Method>(factAtCallSite.getWrappedFact().getFact(), 
 													delta.applyTo(factAtCallSite.getWrappedFact().getAccessPath()), 
 													resolver)), 
 						calleeSourceFactWithDelta));

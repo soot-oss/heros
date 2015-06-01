@@ -61,7 +61,7 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 		if(!propagated) {
 			propagated=true;
 			analyzer.scheduleEdgeTo(new WrappedFactAtStatement<Field, Fact, Stmt, Method>(returnSite, 
-					new WrappedFact<>(retEdge.incFact, new AccessPath<Field>(), this)));
+					new WrappedFact<Field, Fact, Stmt, Method>(retEdge.incFact, new AccessPath<Field>(), this)));
 		}
 	};
 	
@@ -76,7 +76,7 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 
 	@Override
 	protected ResolverTemplate<Field, Fact, Stmt, Method, ReturnEdge<Field, Fact, Stmt, Method>> createNestedResolver(AccessPath<Field> newAccPath) {
-		return new ReturnSiteResolver<>(analyzer, returnSite, newAccPath, this);
+		return new ReturnSiteResolver<Field, Fact, Stmt, Method>(analyzer, returnSite, newAccPath, this);
 	}
 	
 	public Stmt getReturnSite() {
@@ -90,7 +90,7 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 			//resolve via incoming facts resolver
 			Delta<Field> delta = retEdge.usedAccessPathOfIncResolver.applyTo(retEdge.incAccessPath).getDeltaTo(getResolvedAccessPath());
 			assert delta.accesses.length <= 1;
-			retEdge.incResolver.resolve(new DeltaConstraint<>(delta), new InterestCallback<Field, Fact, Stmt, Method>() {
+			retEdge.incResolver.resolve(new DeltaConstraint<Field>(delta), new InterestCallback<Field, Fact, Stmt, Method>() {
 
 				@Override
 				public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver) {
@@ -120,7 +120,7 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 		if(retEdge.resolverAtCaller == null || retEdge.resolverAtCaller instanceof CallEdgeResolver) {
 			canBeResolvedEmpty();
 		} else {
-			retEdge.resolverAtCaller.resolve(new DeltaConstraint<>(currAccPath.getDeltaTo(getResolvedAccessPath())), new InterestCallback<Field, Fact, Stmt, Method>() {
+			retEdge.resolverAtCaller.resolve(new DeltaConstraint<Field>(currAccPath.getDeltaTo(getResolvedAccessPath())), new InterestCallback<Field, Fact, Stmt, Method>() {
 				@Override
 				public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver) {
 					incomingEdges.add(retEdge.copyWithResolverAtCaller(resolver, retEdge.incAccessPath.getDeltaTo(getResolvedAccessPath())));

@@ -41,7 +41,7 @@ public class BiDiFieldSensitiveIFDSSolverTest {
 	
 	public BiDiFieldSensitiveIFDSSolverTest(TabulationProblemExchange exchange) {
 		this.exchange = exchange;
-		debugger = new TestDebugger<>();
+		debugger = new TestDebugger<String, TestFact, Statement, TestMethod, InterproceduralCFG<Statement, TestMethod>>();
 		forwardHelper = new FieldSensitiveTestHelper(debugger);
 		backwardHelper = new FieldSensitiveTestHelper(debugger);
 	}

@@ -37,7 +37,7 @@ import org.mockito.verification.VerificationMode;
 public class ControlFlowJoinResolverTest {
 
 	private static DeltaConstraint<String> getDeltaConstraint(String... fieldRefs) {
-		return new DeltaConstraint<>(getDelta(fieldRefs));
+		return new DeltaConstraint<String>(getDelta(fieldRefs));
 	}
 
 	private static Delta<String> getDelta(String... fieldRefs) {
@@ -46,7 +46,7 @@ public class ControlFlowJoinResolverTest {
 	}
 
 	protected static AccessPath<String> createAccessPath(String... fieldRefs) {
-		AccessPath<String> accPath = new AccessPath<>();
+		AccessPath<String> accPath = new AccessPath<String>();
 		for (String fieldRef : fieldRefs) {
 			accPath = accPath.append(fieldRef);
 		}
@@ -64,7 +64,7 @@ public class ControlFlowJoinResolverTest {
 	public void before() {
 		analyzer = mock(PerAccessPathMethodAnalyzer.class);
 		joinStmt = new Statement("joinStmt");
-		sut = new ControlFlowJoinResolver<>(analyzer, joinStmt);
+		sut = new ControlFlowJoinResolver<String, TestFact, Statement, TestMethod>(analyzer, joinStmt);
 		fact = new TestFact("value");
 		callback = mock(InterestCallback.class);
 		callEdgeResolver = mock(CallEdgeResolver.class);
@@ -72,22 +72,22 @@ public class ControlFlowJoinResolverTest {
 
 	@Test
 	public void emptyIncomingFact() {
-		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), callEdgeResolver));
-		verify(analyzer).processFlowFromJoinStmt(eq(new WrappedFactAtStatement<>(joinStmt, new WrappedFact<>(fact, createAccessPath(), sut))));
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), callEdgeResolver));
+		verify(analyzer).processFlowFromJoinStmt(eq(new WrappedFactAtStatement<String, TestFact, Statement, TestMethod>(joinStmt, new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), sut))));
 		assertTrue(sut.isInterestGiven());
 	}
 
 	@Test
 	public void resolveViaIncomingFact() {
 		sut.resolve(getDeltaConstraint("a"), callback);
-		sut.addIncoming(new WrappedFact<>(fact, createAccessPath("a"), callEdgeResolver));
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath("a"), callEdgeResolver));
 		verify(callback).interest(eq(analyzer), argThat(new ResolverArgumentMatcher(createAccessPath("a"))));
 	}
 
 	@Test
 	public void registerCallbackAtIncomingResolver() {
 		Resolver<String, TestFact, Statement, TestMethod> resolver = mock(Resolver.class);
-		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), resolver));
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), resolver));
 		sut.resolve(getDeltaConstraint("a"), callback);
 		verify(resolver).resolve(eq(getDeltaConstraint("a")), any(InterestCallback.class));
 	}
@@ -106,7 +106,7 @@ public class ControlFlowJoinResolverTest {
 			}
 		}).when(resolver).resolve(eq(getDeltaConstraint("a")), any(InterestCallback.class));
 		
-		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), resolver));
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), resolver));
 		sut.resolve(getDeltaConstraint("a"), callback);
 		
 		verify(callback).interest(eq(analyzer), argThat(new ResolverArgumentMatcher(createAccessPath("a"))));

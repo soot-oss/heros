@@ -41,7 +41,7 @@ public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends Resolver
 	protected void processIncomingGuaranteedPrefix(heros.fieldsens.structs.WrappedFact<Field,Fact,Stmt,Method> fact) {
 		if(!propagated) {
 			propagated=true;
-			analyzer.processFlowFromJoinStmt(new WrappedFactAtStatement<>(joinStmt, new WrappedFact<>(
+			analyzer.processFlowFromJoinStmt(new WrappedFactAtStatement<Field, Fact, Stmt, Method>(joinStmt, new WrappedFact<Field, Fact, Stmt, Method>(
 					fact.getFact(), new AccessPath<Field>(), this)));
 		}
 	};
@@ -50,7 +50,7 @@ public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends Resolver
 	protected void processIncomingPotentialPrefix(WrappedFact<Field, Fact, Stmt, Method> fact) {
 		lock();
 		Delta<Field> delta = fact.getAccessPath().getDeltaTo(resolvedAccPath);
-		fact.getResolver().resolve(new DeltaConstraint<>(delta), new InterestCallback<Field, Fact, Stmt, Method>() {
+		fact.getResolver().resolve(new DeltaConstraint<Field>(delta), new InterestCallback<Field, Fact, Stmt, Method>() {
 			@Override
 			public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, 
 					Resolver<Field, Fact, Stmt, Method> resolver) {
@@ -67,7 +67,7 @@ public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends Resolver
 	
 	@Override
 	protected ResolverTemplate<Field, Fact, Stmt, Method, WrappedFact<Field, Fact, Stmt, Method>> createNestedResolver(AccessPath<Field> newAccPath) {
-		return new ControlFlowJoinResolver<>(analyzer, joinStmt, newAccPath, this);
+		return new ControlFlowJoinResolver<Field, Fact, Stmt, Method>(analyzer, joinStmt, newAccPath, this);
 	}
 
 	@Override

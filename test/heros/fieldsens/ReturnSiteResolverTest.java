@@ -41,7 +41,7 @@ import com.google.common.collect.Lists;
 public class ReturnSiteResolverTest {
 
 	private static DeltaConstraint<String> getDeltaConstraint(String... fieldRefs) {
-		return new DeltaConstraint<>(getDelta(fieldRefs));
+		return new DeltaConstraint<String>(getDelta(fieldRefs));
 	}
 
 	private static Delta<String> getDelta(String... fieldRefs) {
@@ -50,7 +50,7 @@ public class ReturnSiteResolverTest {
 	}
 
 	protected static AccessPath<String> createAccessPath(String... fieldRefs) {
-		AccessPath<String> accPath = new AccessPath<>();
+		AccessPath<String> accPath = new AccessPath<String>();
 		for (String fieldRef : fieldRefs) {
 			accPath = accPath.append(fieldRef);
 		}
@@ -68,7 +68,7 @@ public class ReturnSiteResolverTest {
 	public void before() {
 		analyzer = mock(PerAccessPathMethodAnalyzer.class);
 		returnSite = new Statement("returnSite");
-		sut = new ReturnSiteResolver<>(analyzer, returnSite);
+		sut = new ReturnSiteResolver<String, TestFact, Statement, TestMethod>(analyzer, returnSite);
 		fact = new TestFact("value");
 		callback = mock(InterestCallback.class);
 		callEdgeResolver = mock(CallEdgeResolver.class);
@@ -76,22 +76,22 @@ public class ReturnSiteResolverTest {
 
 	@Test
 	public void emptyIncomingFact() {
-		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), callEdgeResolver), callEdgeResolver, getDelta());
-		verify(analyzer).scheduleEdgeTo(eq(new WrappedFactAtStatement<>(returnSite, new WrappedFact<>(fact, createAccessPath(), sut))));
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), callEdgeResolver), callEdgeResolver, getDelta());
+		verify(analyzer).scheduleEdgeTo(eq(new WrappedFactAtStatement<String, TestFact, Statement, TestMethod>(returnSite, new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), sut))));
 		assertTrue(sut.isInterestGiven());
 	}
 
 	@Test
 	public void resolveViaIncomingFact() {
 		sut.resolve(getDeltaConstraint("a"), callback);
-		sut.addIncoming(new WrappedFact<>(fact, createAccessPath("a"), callEdgeResolver), callEdgeResolver, getDelta());
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath("a"), callEdgeResolver), callEdgeResolver, getDelta());
 		verify(callback).interest(eq(analyzer), argThat(new ReturnSiteResolverArgumentMatcher(createAccessPath("a"))));
 	}
 
 	@Test
 	public void registerCallbackAtIncomingResolver() {
 		Resolver<String, TestFact, Statement, TestMethod> resolver = mock(Resolver.class);
-		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), resolver), callEdgeResolver, getDelta());
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), resolver), callEdgeResolver, getDelta());
 		sut.resolve(getDeltaConstraint("a"), callback);
 		verify(resolver).resolve(eq(getDeltaConstraint("a")), any(InterestCallback.class));
 	}
@@ -110,7 +110,7 @@ public class ReturnSiteResolverTest {
 			}
 		}).when(resolver).resolve(eq(getDeltaConstraint("a")), any(InterestCallback.class));
 		
-		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), resolver), callEdgeResolver, getDelta());
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), resolver), callEdgeResolver, getDelta());
 		sut.resolve(getDeltaConstraint("a"), callback);
 		
 		verify(callback).interest(eq(analyzer), argThat(new ReturnSiteResolverArgumentMatcher(createAccessPath("a"))));
@@ -132,7 +132,7 @@ public class ReturnSiteResolverTest {
 			}
 		}).when(resolver).resolve(eq(getDeltaConstraint("a")), any(InterestCallback.class));
 		
-		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), resolver), callEdgeResolver, getDelta());
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), resolver), callEdgeResolver, getDelta());
 		sut.resolve(getDeltaConstraint("a"), callback);
 		
 		verify(callback, never()).interest(any(PerAccessPathMethodAnalyzer.class), any(Resolver.class));
@@ -145,7 +145,7 @@ public class ReturnSiteResolverTest {
 	
 	@Test
 	public void resolveViaDelta() {
-		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), callEdgeResolver), callEdgeResolver, getDelta("a"));
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), callEdgeResolver), callEdgeResolver, getDelta("a"));
 		sut.resolve(getDeltaConstraint("a"), callback);
 		verify(callback).interest(eq(analyzer), argThat(new ReturnSiteResolverArgumentMatcher(createAccessPath("a"))));
 	}
@@ -162,7 +162,7 @@ public class ReturnSiteResolverTest {
 			}
 		}).when(callback).interest(eq(analyzer), argThat(new ReturnSiteResolverArgumentMatcher(createAccessPath("a"))));
 		
-		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), callEdgeResolver), callEdgeResolver, getDelta("a", "b"));
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), callEdgeResolver), callEdgeResolver, getDelta("a", "b"));
 		sut.resolve(getDeltaConstraint("a"), callback);
 		
 		verify(innerCallback).interest(eq(analyzer), argThat(new ReturnSiteResolverArgumentMatcher(createAccessPath("a", "b"))));
@@ -180,14 +180,14 @@ public class ReturnSiteResolverTest {
 			}
 		}).when(callback).interest(eq(analyzer), argThat(new ReturnSiteResolverArgumentMatcher(createAccessPath("a"))));
 		
-		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), callEdgeResolver), callEdgeResolver, getDelta("a"));
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), callEdgeResolver), callEdgeResolver, getDelta("a"));
 		sut.resolve(getDeltaConstraint("a"), callback);
 		verify(innerCallback).canBeResolvedEmpty();
 	}
 
 	@Test
 	public void resolveViaCallEdgeResolverAtCallSite() {
-		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), callEdgeResolver), callEdgeResolver, getDelta());
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), callEdgeResolver), callEdgeResolver, getDelta());
 		sut.resolve(getDeltaConstraint("a"), callback);
 		verify(callback).canBeResolvedEmpty();
 	}
@@ -195,7 +195,7 @@ public class ReturnSiteResolverTest {
 	@Test
 	public void resolveViaResolverAtCallSite() {
 		Resolver<String, TestFact, Statement, TestMethod> resolver = mock(Resolver.class);
-		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), callEdgeResolver), resolver, getDelta());
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), callEdgeResolver), resolver, getDelta());
 		sut.resolve(getDeltaConstraint("a"), callback);
 		verify(resolver).resolve(eq(getDeltaConstraint("a")), any(InterestCallback.class));
 	}
@@ -232,7 +232,7 @@ public class ReturnSiteResolverTest {
 			
 		}).when(callback).interest(eq(analyzer), argThat(new ReturnSiteResolverArgumentMatcher(createAccessPath("a"))));
 		
-		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), callEdgeResolver), resolver, getDelta());
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), callEdgeResolver), resolver, getDelta());
 		sut.resolve(getDeltaConstraint("a"), callback);
 		
 		verify(secondCallback).interest(eq(analyzer), argThat(new ReturnSiteResolverArgumentMatcher(createAccessPath("a", "b"))));
@@ -252,7 +252,7 @@ public class ReturnSiteResolverTest {
 			}
 		}).when(resolver).resolve(eq(getDeltaConstraint("a")), any(InterestCallback.class));
 
-		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), resolver), callEdgeResolver, delta);
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), resolver), callEdgeResolver, delta);
 		sut.resolve(getDeltaConstraint("a"), callback);
 		
 		verify(callback, never()).canBeResolvedEmpty();
@@ -263,7 +263,7 @@ public class ReturnSiteResolverTest {
 	public void resolveViaCallSiteResolver() {
 		Resolver<String, TestFact, Statement, TestMethod> resolver = mock(Resolver.class);
 		
-		sut.addIncoming(new WrappedFact<>(fact, createAccessPath(), callEdgeResolver), resolver, getDelta());
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), callEdgeResolver), resolver, getDelta());
 		sut.resolve(getDeltaConstraint("a"), callback);
 		
 		verify(resolver).resolve(eq(getDeltaConstraint("a")), any(InterestCallback.class));
