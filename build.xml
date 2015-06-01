@@ -58,6 +58,7 @@
 				<pathelement location="build/classes" />
 	       		<pathelement location="${guava.jar}"/>
         		<pathelement location="${junit.jar}"/>
+	       		<pathelement location="${mockito.jar}"/>
 	       		<pathelement location="${hamcrest.jar}"/>
 	       		<pathelement location="${slf4j-api.jar}"/>
 	       		<pathelement location="${slf4j-simple.jar}"/>
@@ -79,6 +80,7 @@
 			<classpath>
         		<pathelement location="${guava.jar}"/>
         		<pathelement location="${junit.jar}"/>
+	       		<pathelement location="${mockito.jar}"/>
 	       		<pathelement location="${hamcrest.jar}"/>
 	       		<pathelement location="${slf4j-api.jar}"/>
 	       		<pathelement location="${slf4j-simple.jar}"/>

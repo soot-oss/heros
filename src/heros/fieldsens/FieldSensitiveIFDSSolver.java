@@ -19,8 +19,6 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sun.istack.internal.Nullable;
-
 public class FieldSensitiveIFDSSolver<FieldRef, D, N, M, I extends InterproceduralCFG<N, M>> {
 
 	protected static final Logger logger = LoggerFactory.getLogger(FieldSensitiveIFDSSolver.class);
@@ -37,7 +35,7 @@ public class FieldSensitiveIFDSSolver<FieldRef, D, N, M, I extends Interprocedur
 	private Debugger<FieldRef, D, N, M, I> debugger;
 	private Scheduler scheduler;
 
-	public FieldSensitiveIFDSSolver(IFDSTabulationProblem<N,FieldRef,D,M,I> tabulationProblem, FactMergeHandler<D> factHandler, @Nullable Debugger<FieldRef, D, N, M, I> debugger, Scheduler scheduler) {
+	public FieldSensitiveIFDSSolver(IFDSTabulationProblem<N,FieldRef,D,M,I> tabulationProblem, FactMergeHandler<D> factHandler, Debugger<FieldRef, D, N, M, I> debugger, Scheduler scheduler) {
 		this.tabulationProblem = tabulationProblem;
 		this.scheduler = scheduler;
 		this.debugger = debugger == null ? new Debugger.NullDebugger<FieldRef, D, N, M, I>() : debugger;
