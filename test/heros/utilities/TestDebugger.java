@@ -17,8 +17,7 @@ import java.util.Set;
 import com.google.common.collect.Sets;
 
 import heros.InterproceduralCFG;
-import heros.alias.Debugger;
-import heros.alias.JsonDocument;
+import heros.fieldsens.Debugger;
 
 public class TestDebugger<Field, Fact, Stmt, Method, I extends InterproceduralCFG<Stmt, Method>> implements Debugger<Field, Fact, Stmt, Method, I> {
 

@@ -10,8 +10,8 @@
  ******************************************************************************/
 package heros.utilities;
 
-import heros.alias.AccessPathHandler;
-import heros.alias.FlowFunction;
+import heros.fieldsens.AccessPathHandler;
+import heros.fieldsens.FlowFunction;
 
 import com.google.common.base.Joiner;
 
