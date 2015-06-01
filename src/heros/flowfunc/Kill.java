@@ -33,7 +33,7 @@ public class Kill<D> implements FlowFunction<D> {
 	} 
 
 	public Set<D> computeTargets(D source) {
-		if(source==killValue) {
+		if(source.equals(killValue)) {
 			return emptySet();
 		} else
 			return singleton(source);

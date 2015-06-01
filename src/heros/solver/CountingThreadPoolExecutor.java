@@ -10,8 +10,11 @@
  ******************************************************************************/
 package heros.solver;
 
+import heros.util.SootThreadGroup;
+
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -32,7 +35,13 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 
 	public CountingThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit,
 			BlockingQueue<Runnable> workQueue) {
-		super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue);
+		super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, new ThreadFactory() {
+			
+			@Override
+			public Thread newThread(Runnable r) {
+				return new Thread(new SootThreadGroup(), r);
+			}
+		});
 	}
 
 	@Override
@@ -44,6 +53,7 @@ public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 		catch (RejectedExecutionException ex) {
 			// If we were unable to submit the task, we may not count it!
 			numRunningTasks.decrement();
+			throw ex;
 		}
 	}
 	

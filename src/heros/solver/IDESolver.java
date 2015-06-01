@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -93,7 +94,12 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	//see CC 2010 paper by Naeem, Lhotak and Rodriguez
 	@SynchronizedBy("consistent lock on field")
 	protected final Table<N,D,Map<N,Set<D>>> incoming = HashBasedTable.create();
-	
+
+	//stores the return sites (inside callers) to which we have unbalanced returns
+	//if followReturnPastSeeds is enabled
+	@SynchronizedBy("use of ConcurrentHashMap")
+	protected final Set<N> unbalancedRetSites;
+
 	@DontSynchronize("stateless")
 	protected final FlowFunctions<N, D, M> flowFunctions;
 
@@ -183,6 +189,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		this.flowFunctions = flowFunctions;
 		this.edgeFunctions = edgeFunctions;
 		this.initialSeeds = tabulationProblem.initialSeeds();
+		this.unbalancedRetSites = Collections.newSetFromMap(new ConcurrentHashMap<N, Boolean>());
 		this.valueLattice = tabulationProblem.joinLattice();
 		this.allTop = tabulationProblem.allTopFunction();
 		this.jumpFn = new JumpFunctions<N,D,V>(allTop);
@@ -353,7 +360,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
 							flowFunctionConstructionCount++;
 							//for each target value of the function
-							for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2))) {
+							for(D d5: computeReturnFlowFunction(retFunction, d3, d4, n, Collections.singleton(d2))) {
 								//update the caller-side summary function
 								EdgeFunction<V> f4 = edgeFunctions.getCallEdgeFunction(n, d2, sCalledProcN, d3);
 								EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(n, sCalledProcN, eP, d4, retSiteN, d5);
@@ -448,7 +455,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				flowFunctionConstructionCount++;
 				//for each incoming-call value
 				for(D d4: entry.getValue()) {
-					Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, entry.getValue());
+					Set<D> targets = computeReturnFlowFunction(retFunction, d1, d2, c, entry.getValue());
 					//for each target value at the return site
 					//line 23
 					for(D d5: targets) {
@@ -482,10 +489,12 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 					for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
 						FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
 						flowFunctionConstructionCount++;
-						Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, Collections.singleton(zeroValue));
+						Set<D> targets = computeReturnFlowFunction(retFunction, d1, d2, c, Collections.singleton(zeroValue));
 						for(D d5: targets) {
 							EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
 							propagateUnbalancedReturnFlow(retSiteC, d5, f.composeWith(f5), c);
+							//register for value processing (2nd IDE phase)
+							unbalancedRetSites.add(retSiteC);
 						}
 					}
 				}
@@ -500,7 +509,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			}
 		}
 	
-	protected void propagateUnbalancedReturnFlow(N retSiteC, D targetVal, EdgeFunction<V> edgeFunction, N relatedCallSite) {
+	protected void propagateUnbalancedReturnFlow(N retSiteC, D targetVal, EdgeFunction<V> edgeFunction, N relatedCallSite) {		
 		propagate(zeroValue, retSiteC, targetVal, edgeFunction, relatedCallSite, true);
 	}
 
@@ -531,13 +540,14 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * Computes the return flow function for the given set of caller-side
 	 * abstractions.
 	 * @param retFunction The return flow function to compute
+	 * @param d1 The abstraction at the beginning of the callee
 	 * @param d2 The abstraction at the exit node in the callee
 	 * @param callSite The call site
 	 * @param callerSideDs The abstractions at the call site
 	 * @return The set of caller-side abstractions at the return site
 	 */
 	protected Set<D> computeReturnFlowFunction
-			(FlowFunction<D> retFunction, D d2, N callSite, Set<D> callerSideDs) {
+			(FlowFunction<D> retFunction, D d1, D d2, N callSite, Set<D> callerSideDs) {
 		return retFunction.computeTargets(d2);
 	}
 
@@ -620,7 +630,18 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	private void computeValues() {	
 		//Phase II(i)
         logger.debug("Computing the final values for the edge functions");
-		for(Entry<N, Set<D>> seed: initialSeeds.entrySet()) {
+        //add caller seeds to initial seeds in an unbalanced problem
+        Map<N, Set<D>> allSeeds = new HashMap<N, Set<D>>(initialSeeds);
+        for(N unbalancedRetSite: unbalancedRetSites) {
+        	Set<D> seeds = allSeeds.get(unbalancedRetSite);
+        	if(seeds==null) {
+        		seeds = new HashSet<D>();
+        		allSeeds.put(unbalancedRetSite, seeds);
+        	}
+        	seeds.add(zeroValue);
+        }
+		//do processing
+		for(Entry<N, Set<D>> seed: allSeeds.entrySet()) {
 			N startPoint = seed.getKey();
 			for(D val: seed.getValue()) {
 				setVal(startPoint, val, valueLattice.bottomElement());
@@ -731,7 +752,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		}
 	}
 
-	private Set<Cell<N, D, EdgeFunction<V>>> endSummary(N sP, D d3) {
+	protected Set<Cell<N, D, EdgeFunction<V>>> endSummary(N sP, D d3) {
 		Table<N, D, EdgeFunction<V>> map = endSummary.get(sP, d3);
 		if(map==null) return Collections.emptySet();
 		return map.cellSet();
@@ -749,7 +770,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		summaries.put(eP,d2,f);
 	}	
 	
-	private Map<N, Set<D>> incoming(D d1, N sP) {
+	protected Map<N, Set<D>> incoming(D d1, N sP) {
 		synchronized (incoming) {
 			Map<N, Set<D>> map = incoming.get(sP, d1);
 			if(map==null) return Collections.emptyMap();
@@ -857,7 +878,8 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		public void run() {
 			N n = nAndD.getO1();
 			if(icfg.isStartPoint(n) ||
-				initialSeeds.containsKey(n)) { 		//our initial seeds are not necessarily method-start points but here they should be treated as such
+				initialSeeds.containsKey(n) ||			//our initial seeds are not necessarily method-start points but here they should be treated as such
+				unbalancedRetSites.contains(n)) { 		//the same also for unbalanced return sites in an unbalanced problem
 				propagateValueAtStart(nAndD, n);
 			}
 			if(icfg.isCallStmt(n)) {
