@@ -1,4 +1,4 @@
-/*******************************************************************************
+﻿/*******************************************************************************
  * Copyright (c) 2012 Eric Bodden.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the GNU Lesser Public License v2.1
@@ -7,7 +7,7 @@
  * 
  * Contributors:
  *     Eric Bodden - initial API and implementation
- *     Johannes Lerch, Johannes Späth - extension for field sensitivity
+ *     Johannes Lerch, Johannes Spaeth - extension for field sensitivity
  ******************************************************************************/
 package heros.fieldsens;
 
