@@ -1,4 +1,4 @@
-﻿/*******************************************************************************
+/*******************************************************************************
  * Copyright (c) 2014 Johannes Lerch, Johannes Spaeth.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the GNU Lesser Public License v2.1
@@ -8,6 +8,7 @@
  * Contributors:
  *     Johannes Lerch, Johannes Spaeth - initial API and implementation
  ******************************************************************************/
+
 package heros.fieldsens;
 
 import heros.InterproceduralCFG;
