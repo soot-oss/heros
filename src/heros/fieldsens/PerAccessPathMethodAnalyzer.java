@@ -44,13 +44,13 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 	private DefaultValueMap<FactAtStatement<Fact, Stmt>, ReturnSiteResolver<Field, Fact, Stmt, Method>> returnSiteResolvers = new DefaultValueMap<FactAtStatement<Fact, Stmt>, ReturnSiteResolver<Field,Fact,Stmt,Method>>() {
 		@Override
 		protected ReturnSiteResolver<Field, Fact, Stmt, Method> createItem(FactAtStatement<Fact, Stmt> key) {
-			return new ReturnSiteResolver<Field, Fact, Stmt, Method>(PerAccessPathMethodAnalyzer.this, key.stmt);
+			return new ReturnSiteResolver<Field, Fact, Stmt, Method>(context.factHandler, PerAccessPathMethodAnalyzer.this, key.stmt);
 		}
 	};
 	private DefaultValueMap<FactAtStatement<Fact, Stmt>, ControlFlowJoinResolver<Field, Fact, Stmt, Method>> ctrFlowJoinResolvers = new DefaultValueMap<FactAtStatement<Fact, Stmt>, ControlFlowJoinResolver<Field,Fact,Stmt,Method>>() {
 		@Override
 		protected ControlFlowJoinResolver<Field, Fact, Stmt, Method> createItem(FactAtStatement<Fact, Stmt> key) {
-			return new ControlFlowJoinResolver<Field, Fact, Stmt, Method>(PerAccessPathMethodAnalyzer.this, key.stmt);
+			return new ControlFlowJoinResolver<Field, Fact, Stmt, Method>(context.factHandler, PerAccessPathMethodAnalyzer.this, key.stmt);
 		}
 	};
 	private CallEdgeResolver<Field, Fact, Stmt, Method> callEdgeResolver;
@@ -245,9 +245,10 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 	}
 	
 	public void addIncomingEdge(CallEdge<Field, Fact, Stmt, Method> incEdge) {
-		if(!isBootStrapped())
+		if(isBootStrapped()) {
+			context.factHandler.merge(sourceFact, incEdge.getCalleeSourceFact().getFact());
+		} else 
 			bootstrapAtMethodStartPoints();
-		
 		callEdgeResolver.addIncoming(incEdge);
 	}
 

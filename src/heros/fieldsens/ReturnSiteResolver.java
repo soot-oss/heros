@@ -22,16 +22,21 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 	private Stmt returnSite;
 	private AccessPath<Field> resolvedAccPath;
 	private boolean propagated = false;
+	private Fact sourceFact;
+	private FactMergeHandler<Fact> factMergeHandler;
 
-	public ReturnSiteResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Stmt returnSite) {
-		this(analyzer, returnSite, new AccessPath<Field>(), null);
+	public ReturnSiteResolver(FactMergeHandler<Fact> factMergeHandler, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Stmt returnSite) {
+		this(factMergeHandler, analyzer, returnSite, null, new AccessPath<Field>(), null);
+		this.factMergeHandler = factMergeHandler;
 		propagated = false;
 	}
 
-	private ReturnSiteResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Stmt returnSite, 
-			AccessPath<Field> resolvedAccPath, ReturnSiteResolver<Field, Fact, Stmt, Method> parent) {
+	private ReturnSiteResolver(FactMergeHandler<Fact> factMergeHandler, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Stmt returnSite, 
+			Fact sourceFact, AccessPath<Field> resolvedAccPath, ReturnSiteResolver<Field, Fact, Stmt, Method> parent) {
 		super(analyzer, parent);
+		this.factMergeHandler = factMergeHandler;
 		this.returnSite = returnSite;
+		this.sourceFact = sourceFact;
 		this.resolvedAccPath = resolvedAccPath;
 		propagated=true;
 	}
@@ -58,8 +63,12 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 	}
 	
 	protected void processIncomingGuaranteedPrefix(ReturnEdge<Field, Fact, Stmt, Method> retEdge) {
-		if(!propagated) {
+		if(propagated) {
+			factMergeHandler.merge(sourceFact, retEdge.incFact);
+		} 
+		else {
 			propagated=true;
+			sourceFact = retEdge.incFact;
 			analyzer.scheduleEdgeTo(new WrappedFactAtStatement<Field, Fact, Stmt, Method>(returnSite, 
 					new WrappedFact<Field, Fact, Stmt, Method>(retEdge.incFact, new AccessPath<Field>(), this)));
 		}
@@ -76,7 +85,7 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 
 	@Override
 	protected ResolverTemplate<Field, Fact, Stmt, Method, ReturnEdge<Field, Fact, Stmt, Method>> createNestedResolver(AccessPath<Field> newAccPath) {
-		return new ReturnSiteResolver<Field, Fact, Stmt, Method>(analyzer, returnSite, newAccPath, this);
+		return new ReturnSiteResolver<Field, Fact, Stmt, Method>(factMergeHandler, analyzer, returnSite, sourceFact, newAccPath, this);
 	}
 	
 	public Stmt getReturnSite() {

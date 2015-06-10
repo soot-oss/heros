@@ -64,7 +64,7 @@ public class ControlFlowJoinResolverTest {
 	public void before() {
 		analyzer = mock(PerAccessPathMethodAnalyzer.class);
 		joinStmt = new Statement("joinStmt");
-		sut = new ControlFlowJoinResolver<String, TestFact, Statement, TestMethod>(analyzer, joinStmt);
+		sut = new ControlFlowJoinResolver<String, TestFact, Statement, TestMethod>(mock(FactMergeHandler.class), analyzer, joinStmt);
 		fact = new TestFact("value");
 		callback = mock(InterestCallback.class);
 		callEdgeResolver = mock(CallEdgeResolver.class);

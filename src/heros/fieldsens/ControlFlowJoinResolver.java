@@ -20,15 +20,21 @@ public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends Resolver
 	private Stmt joinStmt;
 	private AccessPath<Field> resolvedAccPath;
 	private boolean propagated = false;
+	private Fact sourceFact;
+	private FactMergeHandler<Fact> factMergeHandler;
 
-	public ControlFlowJoinResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Stmt joinStmt) {
-		this(analyzer, joinStmt, new AccessPath<Field>(), null);
+	public ControlFlowJoinResolver(FactMergeHandler<Fact> factMergeHandler, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Stmt joinStmt) {
+		this(factMergeHandler, analyzer, joinStmt, null, new AccessPath<Field>(), null);
+		this.factMergeHandler = factMergeHandler;
 		propagated=false;
 	}
 	
-	private ControlFlowJoinResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Stmt joinStmt, AccessPath<Field> resolvedAccPath, ControlFlowJoinResolver<Field, Fact, Stmt, Method> parent) {
+	private ControlFlowJoinResolver(FactMergeHandler<Fact> factMergeHandler, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, 
+			Stmt joinStmt, Fact sourceFact, AccessPath<Field> resolvedAccPath, ControlFlowJoinResolver<Field, Fact, Stmt, Method> parent) {
 		super(analyzer, parent);
+		this.factMergeHandler = factMergeHandler;
 		this.joinStmt = joinStmt;
+		this.sourceFact = sourceFact;
 		this.resolvedAccPath = resolvedAccPath;
 		propagated=true;
 	}
@@ -39,8 +45,12 @@ public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends Resolver
 	}
 
 	protected void processIncomingGuaranteedPrefix(heros.fieldsens.structs.WrappedFact<Field,Fact,Stmt,Method> fact) {
-		if(!propagated) {
+		if(propagated) {
+			factMergeHandler.merge(sourceFact, fact.getFact());
+		}
+		else {
 			propagated=true;
+			sourceFact = fact.getFact();
 			analyzer.processFlowFromJoinStmt(new WrappedFactAtStatement<Field, Fact, Stmt, Method>(joinStmt, new WrappedFact<Field, Fact, Stmt, Method>(
 					fact.getFact(), new AccessPath<Field>(), this)));
 		}
@@ -67,7 +77,7 @@ public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends Resolver
 	
 	@Override
 	protected ResolverTemplate<Field, Fact, Stmt, Method, WrappedFact<Field, Fact, Stmt, Method>> createNestedResolver(AccessPath<Field> newAccPath) {
-		return new ControlFlowJoinResolver<Field, Fact, Stmt, Method>(analyzer, joinStmt, newAccPath, this);
+		return new ControlFlowJoinResolver<Field, Fact, Stmt, Method>(factMergeHandler, analyzer, joinStmt, sourceFact, newAccPath, this);
 	}
 
 	@Override

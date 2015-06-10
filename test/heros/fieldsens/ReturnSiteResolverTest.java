@@ -68,7 +68,7 @@ public class ReturnSiteResolverTest {
 	public void before() {
 		analyzer = mock(PerAccessPathMethodAnalyzer.class);
 		returnSite = new Statement("returnSite");
-		sut = new ReturnSiteResolver<String, TestFact, Statement, TestMethod>(analyzer, returnSite);
+		sut = new ReturnSiteResolver<String, TestFact, Statement, TestMethod>(mock(FactMergeHandler.class), analyzer, returnSite);
 		fact = new TestFact("value");
 		callback = mock(InterestCallback.class);
 		callEdgeResolver = mock(CallEdgeResolver.class);
