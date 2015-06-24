@@ -26,7 +26,7 @@ public class AllTop<V> implements EdgeFunction<V> {
 	}
 
 	public EdgeFunction<V> composeWith(EdgeFunction<V> secondFunction) {
-		return secondFunction;
+		return this;
 	}
 
 	public EdgeFunction<V> joinWith(EdgeFunction<V> otherFunction) {
