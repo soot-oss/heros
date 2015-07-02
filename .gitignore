@@ -4,8 +4,10 @@
 *.war
 *.ear
 /ant.settings
-bin
 heros-trunk.jar
 /javadoc
 /reports
 /target
+/.settings
+/.classpath
+/.project
