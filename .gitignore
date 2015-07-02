@@ -8,3 +8,4 @@ bin
 heros-trunk.jar
 /javadoc
 /reports
+/target
