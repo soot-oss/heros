@@ -57,13 +57,14 @@ public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends Resolver
 	};
 	
 	@Override
-	protected void processIncomingPotentialPrefix(WrappedFact<Field, Fact, Stmt, Method> fact) {
+	protected void processIncomingPotentialPrefix(final WrappedFact<Field, Fact, Stmt, Method> fact) {
 		lock();
 		Delta<Field> delta = fact.getAccessPath().getDeltaTo(resolvedAccPath);
 		fact.getResolver().resolve(new DeltaConstraint<Field>(delta), new InterestCallback<Field, Fact, Stmt, Method>() {
 			@Override
 			public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, 
 					Resolver<Field, Fact, Stmt, Method> resolver) {
+				incomingEdges.add(new WrappedFact<Field, Fact, Stmt, Method>(fact.getFact(), resolvedAccPath, resolver));
 				ControlFlowJoinResolver.this.interest();
 			}
 
