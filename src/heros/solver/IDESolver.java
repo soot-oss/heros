@@ -13,7 +13,6 @@
 package heros.solver;
 
 
-import heros.DebugSolverConfiguration;
 import heros.DontSynchronize;
 import heros.EdgeFunction;
 import heros.EdgeFunctionCache;
@@ -72,6 +71,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	
     protected static final Logger logger = LoggerFactory.getLogger(IDESolver.class);
 
+    @SynchronizedBy("consistent lock on field")
     protected Table<N,N,Map<D,Set<D>>> computedEdges = HashBasedTable.create();
 
     //enable with -Dorg.slf4j.simpleLogger.defaultLogLevel=trace
@@ -202,10 +202,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		this.numThreads = Math.max(1,tabulationProblem.numThreads());
 		this.computeValues = tabulationProblem.computeValues();
 		this.executor = getExecutor();
-		this.recordEdges = false;
-		if(tabulationProblem instanceof DebugSolverConfiguration) {
-			this.recordEdges = ((DebugSolverConfiguration)tabulationProblem).recordEdges();
-		}
+		this.recordEdges = tabulationProblem.recordEdges();
 	}
 
 	/**

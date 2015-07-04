@@ -10,10 +10,16 @@
  ******************************************************************************/
 package heros;
 
-public interface DebugSolverConfiguration {
-	/**
-	 * If true, the solver will record the edges produced by the flow function. These intermediate edges
-	 * are not used by the solver but may be useful for debugging the flow functions.
-	 */
-	public boolean recordEdges();
+/**
+ * Interface for creating string representations of nodes, facts,
+ * and methods in the IDE/IFDS problem.
+ *
+ * @param <N> The type of nodes in the interprocedural control-flow graph.
+ * @param <D> The type of data-flow facts to computed by the tabulation problem.
+ * @param <M> The type of objects used to represent methods.
+ */
+public interface ItemPrinter<N, D, M> {
+	public String printNode(N node, M parentMethod);
+	public String printFact(D fact);
+	public String printMethod(M method);
 }

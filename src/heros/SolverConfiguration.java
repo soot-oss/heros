@@ -10,6 +10,7 @@
  ******************************************************************************/
 package heros;
 
+import heros.solver.FlowFunctionDotExport;
 import heros.solver.IDESolver;
 
 /**
@@ -47,4 +48,11 @@ public interface SolverConfiguration {
 	 */	
 	boolean computeValues();
 
+	/**
+	 * Returns true if the solver should record the intermediate flow edges
+	 * created by calling the methods on {@link IFDSTabulationProblem#flowFunctions()}.
+	 * These nodes are not used by the solver, but may be useful for debugging the solver
+	 * or flow functions (see {@link FlowFunctionDotExport}). 
+	 */
+	boolean recordEdges();
 }

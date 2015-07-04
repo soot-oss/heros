@@ -471,6 +471,11 @@ public class TestHelper {
 			public JoinableFact zeroValue() {
 				return new JoinableFact("0");
 			}
+
+			@Override
+			public boolean recordEdges() {
+				return false;
+			}
 		};
 	}
 }
