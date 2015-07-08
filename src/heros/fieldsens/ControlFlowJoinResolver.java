@@ -23,15 +23,15 @@ public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends Resolver
 	private Fact sourceFact;
 	private FactMergeHandler<Fact> factMergeHandler;
 
-	public ControlFlowJoinResolver(FactMergeHandler<Fact> factMergeHandler, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Stmt joinStmt) {
-		this(factMergeHandler, analyzer, joinStmt, null, new AccessPath<Field>(), null);
+	public ControlFlowJoinResolver(FactMergeHandler<Fact> factMergeHandler, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Stmt joinStmt, Debugger<Field, Fact, Stmt, Method> debugger) {
+		this(factMergeHandler, analyzer, joinStmt, null, new AccessPath<Field>(), debugger, null);
 		this.factMergeHandler = factMergeHandler;
 		propagated=false;
 	}
 	
 	private ControlFlowJoinResolver(FactMergeHandler<Fact> factMergeHandler, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, 
-			Stmt joinStmt, Fact sourceFact, AccessPath<Field> resolvedAccPath, ControlFlowJoinResolver<Field, Fact, Stmt, Method> parent) {
-		super(analyzer, parent);
+			Stmt joinStmt, Fact sourceFact, AccessPath<Field> resolvedAccPath, Debugger<Field, Fact, Stmt, Method> debugger, ControlFlowJoinResolver<Field, Fact, Stmt, Method> parent) {
+		super(analyzer, parent, debugger);
 		this.factMergeHandler = factMergeHandler;
 		this.joinStmt = joinStmt;
 		this.sourceFact = sourceFact;
@@ -78,7 +78,7 @@ public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends Resolver
 	
 	@Override
 	protected ResolverTemplate<Field, Fact, Stmt, Method, WrappedFact<Field, Fact, Stmt, Method>> createNestedResolver(AccessPath<Field> newAccPath) {
-		return new ControlFlowJoinResolver<Field, Fact, Stmt, Method>(factMergeHandler, analyzer, joinStmt, sourceFact, newAccPath, this);
+		return new ControlFlowJoinResolver<Field, Fact, Stmt, Method>(factMergeHandler, analyzer, joinStmt, sourceFact, newAccPath, debugger, this);
 	}
 
 	@Override
@@ -88,7 +88,7 @@ public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends Resolver
 
 	@Override
 	public String toString() {
-		return "<"+resolvedAccPath+":"+joinStmt+">";
+		return "<"+resolvedAccPath+":"+joinStmt+" in "+analyzer.getMethod()+">";
 	}
 
 	@Override

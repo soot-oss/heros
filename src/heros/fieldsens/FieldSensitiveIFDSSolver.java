@@ -33,13 +33,13 @@ public class FieldSensitiveIFDSSolver<FieldRef, D, N, M, I extends Interprocedur
 
 	private IFDSTabulationProblem<N, FieldRef, D, M, I> tabulationProblem;
 	protected Context<FieldRef, D, N,M> context;
-	private Debugger<FieldRef, D, N, M, I> debugger;
+	private Debugger<FieldRef, D, N, M> debugger;
 	private Scheduler scheduler;
 
-	public FieldSensitiveIFDSSolver(IFDSTabulationProblem<N,FieldRef,D,M,I> tabulationProblem, FactMergeHandler<D> factHandler, Debugger<FieldRef, D, N, M, I> debugger, Scheduler scheduler) {
+	public FieldSensitiveIFDSSolver(IFDSTabulationProblem<N,FieldRef,D,M,I> tabulationProblem, FactMergeHandler<D> factHandler, Debugger<FieldRef, D, N, M> debugger, Scheduler scheduler) {
 		this.tabulationProblem = tabulationProblem;
 		this.scheduler = scheduler;
-		this.debugger = debugger == null ? new Debugger.NullDebugger<FieldRef, D, N, M, I>() : debugger;
+		this.debugger = debugger == null ? new Debugger.NullDebugger<FieldRef, D, N, M>() : debugger;
 		this.debugger.setICFG(tabulationProblem.interproceduralCFG());
 		context = initContext(tabulationProblem, factHandler);
 		submitInitialSeeds();
@@ -57,7 +57,7 @@ public class FieldSensitiveIFDSSolver<FieldRef, D, N, M, I extends Interprocedur
 	}
 	
 	protected MethodAnalyzer<FieldRef, D, N, M> createMethodAnalyzer(M method) {
-		return new MethodAnalyzerImpl<FieldRef, D, N, M>(method, context);
+		return new MethodAnalyzerImpl<FieldRef, D, N, M>(method, context, debugger);
 	}
 
 	/**

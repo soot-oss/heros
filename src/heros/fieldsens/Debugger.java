@@ -11,23 +11,40 @@
 package heros.fieldsens;
 
 import heros.InterproceduralCFG;
+import heros.fieldsens.structs.WrappedFactAtStatement;
 
-public interface Debugger<Field, Fact, Stmt, Method, I extends InterproceduralCFG<Stmt, Method>> {
+public interface Debugger<Field, Fact, Stmt, Method> {
 
-	public abstract void setICFG(I icfg);
+	public void setICFG(InterproceduralCFG<Stmt, Method> icfg);
 
-	public abstract void initialSeed(Stmt stmt);
-
+	public void initialSeed(Stmt stmt);
 	
-	public static class NullDebugger <Field, Fact, Stmt, Method, I extends InterproceduralCFG<Stmt, Method>> implements Debugger<Field, Fact, Stmt, Method, I> {
+	public void edgeTo(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt);
+
+	public void newResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver);
+	
+	
+	public static class NullDebugger <Field, Fact, Stmt, Method> implements Debugger<Field, Fact, Stmt, Method> {
 
 		@Override
-		public void setICFG(I icfg) {
+		public void setICFG(InterproceduralCFG<Stmt, Method> icfg) {
 			
 		}
 
 		@Override
 		public void initialSeed(Stmt stmt) {
+			
+		}
+
+		@Override
+		public void edgeTo(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer,
+				WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
+			
+		}
+
+		@Override
+		public void newResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver) {
+			// TODO Auto-generated method stub
 			
 		}
 		

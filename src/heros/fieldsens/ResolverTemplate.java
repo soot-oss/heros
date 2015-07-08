@@ -26,11 +26,14 @@ public abstract class ResolverTemplate<Field, Fact, Stmt, Method, Incoming>  ext
 	protected Set<Incoming> incomingEdges = Sets.newHashSet();
 	private ResolverTemplate<Field, Fact, Stmt, Method, Incoming> parent;
 	private Map<AccessPath<Field>, ResolverTemplate<Field, Fact, Stmt, Method, Incoming>> nestedResolvers = Maps.newHashMap();
+	protected Debugger<Field, Fact, Stmt, Method> debugger;
 
 	public ResolverTemplate(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, 
-			ResolverTemplate<Field, Fact, Stmt, Method, Incoming> parent) {
+			ResolverTemplate<Field, Fact, Stmt, Method, Incoming> parent, Debugger<Field, Fact, Stmt, Method> debugger) {
 		super(analyzer);
 		this.parent = parent;
+		this.debugger = debugger;
+		debugger.newResolver(analyzer, this);
 	}
 	
 	protected boolean isLocked() {
