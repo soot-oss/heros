@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
  */
 public class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 	
-    protected static final Logger logger = LoggerFactory.getLogger(IDESolver.class);
+    protected static final Logger logger = LoggerFactory.getLogger(CountingThreadPoolExecutor.class);
 
     protected final CountLatch numRunningTasks = new CountLatch(0);
 	
