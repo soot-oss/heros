@@ -57,7 +57,7 @@ public abstract class Resolver<Field, Fact, Stmt, Method> {
 
 	protected void registerCallback(InterestCallback<Field, Fact, Stmt, Method> callback) {
 		if(!interest.isEmpty()) {
-			for(Resolver<Field, Fact, Stmt, Method> resolver : interest)
+			for(Resolver<Field, Fact, Stmt, Method> resolver : Lists.newLinkedList(interest))
 				callback.interest(analyzer, resolver);
 		}
 		else {
