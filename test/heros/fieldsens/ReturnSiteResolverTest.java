@@ -12,15 +12,13 @@ package heros.fieldsens;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
-
-import java.util.List;
-
-import heros.fieldsens.CallEdgeResolver;
-import heros.fieldsens.InterestCallback;
-import heros.fieldsens.PerAccessPathMethodAnalyzer;
-import heros.fieldsens.Resolver;
-import heros.fieldsens.ReturnSiteResolver;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.argThat;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import heros.fieldsens.AccessPath.Delta;
 import heros.fieldsens.structs.DeltaConstraint;
 import heros.fieldsens.structs.WrappedFact;
@@ -28,6 +26,8 @@ import heros.fieldsens.structs.WrappedFactAtStatement;
 import heros.utilities.Statement;
 import heros.utilities.TestFact;
 import heros.utilities.TestMethod;
+
+import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -68,7 +68,8 @@ public class ReturnSiteResolverTest {
 	public void before() {
 		analyzer = mock(PerAccessPathMethodAnalyzer.class);
 		returnSite = new Statement("returnSite");
-		sut = new ReturnSiteResolver<String, TestFact, Statement, TestMethod>(mock(FactMergeHandler.class), analyzer, returnSite);
+		sut = new ReturnSiteResolver<String, TestFact, Statement, TestMethod>(mock(FactMergeHandler.class), analyzer, returnSite,
+				new Debugger.NullDebugger<String, TestFact, Statement, TestMethod>());
 		fact = new TestFact("value");
 		callback = mock(InterestCallback.class);
 		callEdgeResolver = mock(CallEdgeResolver.class);
@@ -225,17 +226,17 @@ public class ReturnSiteResolverTest {
 		doAnswer(new Answer() {
 			@Override
 			public Object answer(InvocationOnMock invocation) throws Throwable {
-				ReturnSiteResolver<String, TestFact, Statement, TestMethod> resolver = (ReturnSiteResolver) invocation.getArguments()[1];
+				Resolver<String, TestFact, Statement, TestMethod> resolver = (Resolver) invocation.getArguments()[1];
 				resolver.resolve(getDeltaConstraint("b"), secondCallback);
 				return null;
 			}
 			
-		}).when(callback).interest(eq(analyzer), argThat(new ReturnSiteResolverArgumentMatcher(createAccessPath("a"))));
+		}).when(callback).interest(eq(analyzer), eq(nestedResolver));
 		
 		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), callEdgeResolver), resolver, getDelta());
 		sut.resolve(getDeltaConstraint("a"), callback);
 		
-		verify(secondCallback).interest(eq(analyzer), argThat(new ReturnSiteResolverArgumentMatcher(createAccessPath("a", "b"))));
+		verify(secondCallback).interest(eq(analyzer), eq(nestedResolver));
 	}
 	
 	@Test

@@ -44,7 +44,6 @@ public interface Debugger<Field, Fact, Stmt, Method> {
 
 		@Override
 		public void newResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver) {
-			// TODO Auto-generated method stub
 			
 		}
 		
