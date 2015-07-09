@@ -64,8 +64,8 @@ public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends Resolver
 			@Override
 			public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, 
 					Resolver<Field, Fact, Stmt, Method> resolver) {
-				incomingEdges.add(new WrappedFact<Field, Fact, Stmt, Method>(fact.getFact(), resolvedAccPath, resolver));
-				ControlFlowJoinResolver.this.interest();
+//				incomingEdges.add(new WrappedFact<Field, Fact, Stmt, Method>(fact.getFact(), resolvedAccPath, resolver));
+				ControlFlowJoinResolver.this.interest(resolver);
 			}
 
 			@Override

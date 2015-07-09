@@ -28,7 +28,7 @@ public class ZeroCallEdgeResolver<Field, Fact, Stmt, Method> extends CallEdgeRes
 	}
 	
 	@Override
-	public void interest() {
+	public void interest(Resolver<Field, Fact, Stmt, Method> resolver) {
 	}
 	
 	@Override

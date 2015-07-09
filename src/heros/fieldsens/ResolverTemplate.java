@@ -13,6 +13,7 @@ package heros.fieldsens;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -62,9 +63,9 @@ public abstract class ResolverTemplate<Field, Fact, Stmt, Method, Incoming>  ext
 			if(!incomingEdges.add(inc))
 				return;
 			
-			interest();
+			interest(this);
 			
-			for(ResolverTemplate<Field, Fact, Stmt, Method, Incoming> nestedResolver : nestedResolvers.values()) {
+			for(ResolverTemplate<Field, Fact, Stmt, Method, Incoming> nestedResolver : Lists.newLinkedList(nestedResolvers.values())) {
 				nestedResolver.addIncoming(inc);
 			}
 			

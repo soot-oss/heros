@@ -104,7 +104,7 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 				@Override
 				public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver) {
 					incomingEdges.add(retEdge.copyWithIncomingResolver(resolver, retEdge.incAccessPath.getDeltaTo(getResolvedAccessPath())));
-					ReturnSiteResolver.this.interest();
+					ReturnSiteResolver.this.interest(ReturnSiteResolver.this);
 				}
 				
 				@Override
@@ -119,7 +119,7 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 		final AccessPath<Field> currAccPath = retEdge.callDelta.applyTo(retEdge.usedAccessPathOfIncResolver.applyTo(retEdge.incAccessPath));
 		if(getResolvedAccessPath().isPrefixOf(currAccPath) == PrefixTestResult.GUARANTEED_PREFIX) {
 			incomingEdges.add(retEdge.copyWithIncomingResolver(null, retEdge.usedAccessPathOfIncResolver));
-			interest();
+			interest(this);
 		} else if(currAccPath.isPrefixOf(getResolvedAccessPath()).atLeast(PrefixTestResult.POTENTIAL_PREFIX)) {
 			resolveViaCallSiteResolver(retEdge, currAccPath);
 		}
@@ -132,8 +132,8 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 			retEdge.resolverAtCaller.resolve(new DeltaConstraint<Field>(currAccPath.getDeltaTo(getResolvedAccessPath())), new InterestCallback<Field, Fact, Stmt, Method>() {
 				@Override
 				public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver) {
-					incomingEdges.add(retEdge.copyWithResolverAtCaller(resolver, retEdge.incAccessPath.getDeltaTo(getResolvedAccessPath())));
-					ReturnSiteResolver.this.interest();
+//					incomingEdges.add(retEdge.copyWithResolverAtCaller(resolver, retEdge.incAccessPath.getDeltaTo(getResolvedAccessPath())));
+					ReturnSiteResolver.this.interest(resolver);
 				}
 				
 				@Override

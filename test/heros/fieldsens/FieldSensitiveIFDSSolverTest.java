@@ -30,12 +30,12 @@ import static heros.utilities.FieldSensitiveTestHelper.*;
 public class FieldSensitiveIFDSSolverTest {
 
 	private FieldSensitiveTestHelper helper;
-	private TestDebugger<String, TestFact, Statement, TestMethod, InterproceduralCFG<Statement, TestMethod>> debugger;
+	private TestDebugger<String, TestFact, Statement, TestMethod> debugger;
 
 	@Before
 	public void before() {
 		System.err.println("-----");
-		debugger = new TestDebugger<String, TestFact, Statement, TestMethod, InterproceduralCFG<Statement, TestMethod>>();
+		debugger = new TestDebugger<String, TestFact, Statement, TestMethod>();
 		helper = new FieldSensitiveTestHelper(debugger);
 	}
 	
@@ -717,7 +717,6 @@ public class FieldSensitiveIFDSSolverTest {
 				normalStmt("e", flow("5", readField("g"), "6")).succ("f"),
 				normalStmt("f", flow("6", readField("f"), "7")).succ("g"),
 				normalStmt("g", kill("7")).succ("h"));
-		
 		
 		helper.runSolver(true, "a");
 	}

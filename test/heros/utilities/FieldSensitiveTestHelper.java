@@ -58,9 +58,9 @@ public class FieldSensitiveTestHelper {
 	private List<ReturnEdge> returnEdges = Lists.newLinkedList();
 	private Map<Statement, TestMethod> stmt2method = Maps.newHashMap();
 	private Multiset<ExpectedFlowFunction> remainingFlowFunctions = HashMultiset.create();
-	private TestDebugger<String, TestFact, Statement, TestMethod, InterproceduralCFG<Statement, TestMethod>> debugger;
+	private TestDebugger<String, TestFact, Statement, TestMethod> debugger;
 
-	public FieldSensitiveTestHelper(TestDebugger<String, TestFact, Statement, TestMethod, InterproceduralCFG<Statement, TestMethod>> debugger) {
+	public FieldSensitiveTestHelper(TestDebugger<String, TestFact, Statement, TestMethod> debugger) {
 		this.debugger = debugger;
 	}
 

@@ -96,7 +96,7 @@ public class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 	}
 
 	private void bootstrapAtMethodStartPoints() {
-		callEdgeResolver.interest();
+		callEdgeResolver.interest(callEdgeResolver);
 		for(Stmt startPoint : context.icfg.getStartPointsOf(method)) {
 			WrappedFactAtStatement<Field, Fact, Stmt, Method> target = new WrappedFactAtStatement<Field, Fact, Stmt, Method>(startPoint, wrappedSource());
 			if(!reachableStatements.containsKey(target))
