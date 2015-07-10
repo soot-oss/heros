@@ -19,10 +19,12 @@ public class AccessPathHandler<Field, Fact, Stmt, Method> {
 
 	private AccessPath<Field> accessPath;
 	private Resolver<Field, Fact, Stmt, Method> resolver;
+	private Debugger<Field, Fact, Stmt, Method> debugger;
 
-	public AccessPathHandler(AccessPath<Field> accessPath, Resolver<Field, Fact, Stmt, Method> resolver) {
+	public AccessPathHandler(AccessPath<Field> accessPath, Resolver<Field, Fact, Stmt, Method> resolver, Debugger<Field, Fact, Stmt, Method> debugger) {
 		this.accessPath = accessPath;
 		this.resolver = resolver;
+		this.debugger = debugger;
 	}
 
 	public boolean canRead(Field field) {
@@ -42,7 +44,7 @@ public class AccessPathHandler<Field, Fact, Stmt, Method> {
 	}
 	
 	public ConstrainedFact<Field, Fact, Stmt, Method> generateWithEmptyAccessPath(Fact fact, ZeroHandler<Field> zeroHandler) {
-		return new ConstrainedFact<Field, Fact, Stmt, Method>(new WrappedFact<Field, Fact, Stmt, Method>(fact, new AccessPath<Field>(), new ZeroCallEdgeResolver<Field, Fact, Stmt, Method>(resolver.analyzer, zeroHandler)));
+		return new ConstrainedFact<Field, Fact, Stmt, Method>(new WrappedFact<Field, Fact, Stmt, Method>(fact, new AccessPath<Field>(), new ZeroCallEdgeResolver<Field, Fact, Stmt, Method>(resolver.analyzer, zeroHandler, debugger)));
 	}
 	
 	public ResultBuilder<Field, Fact, Stmt, Method> prepend(final Field field) {

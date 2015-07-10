@@ -30,12 +30,12 @@ import static heros.utilities.FieldSensitiveTestHelper.*;
 public class FieldSensitiveIFDSSolverTest {
 
 	private FieldSensitiveTestHelper helper;
-	private TestDebugger<String, TestFact, Statement, TestMethod, InterproceduralCFG<Statement, TestMethod>> debugger;
+	private TestDebugger<String, TestFact, Statement, TestMethod> debugger;
 
 	@Before
 	public void before() {
 		System.err.println("-----");
-		debugger = new TestDebugger<String, TestFact, Statement, TestMethod, InterproceduralCFG<Statement, TestMethod>>();
+		debugger = new TestDebugger<String, TestFact, Statement, TestMethod>();
 		helper = new FieldSensitiveTestHelper(debugger);
 	}
 	
@@ -718,7 +718,6 @@ public class FieldSensitiveIFDSSolverTest {
 				normalStmt("f", flow("6", readField("f"), "7")).succ("g"),
 				normalStmt("g", kill("7")).succ("h"));
 		
-		
 		helper.runSolver(true, "a");
 	}
 	
@@ -1173,6 +1172,24 @@ public class FieldSensitiveIFDSSolverTest {
 				normalStmt("a", flow("0", "1")).succ("b"),
 				callSite("b").calls("bar", kill(2,"1")).retSite("c", flow("1", "1")),
 				normalStmt("c", flow("1", prependField("f"), "1")).succ("b"));
+		
+		helper.runSolver(false, "a");
+	}
+	
+	@Test
+	public void readMultipleAbstractedFields() {
+		helper.method("foo",
+			startPoints("a"),
+			normalStmt("a", flow("0", prependField("f"), "1")).succ("b1").succ("b2"),
+			normalStmt("b1", kill("1")).succ("c"),
+			normalStmt("b2", flow("1", prependField("g"), "1")).succ("c"),
+			normalStmt("c", flow("1", "2")).succ("d"),
+			normalStmt("d", flow("2", "2")).succ("e1").succ("e2"),
+			normalStmt("e1", flow("2", "3")).succ("f"),
+			normalStmt("e2", kill("2")).succ("f"),
+			normalStmt("f", flow("3", readField("g"), "4")).succ("g"),
+			normalStmt("g", flow("4", readField("f"), "5")).succ("h"),
+			normalStmt("h", kill("5")).succ("i"));
 		
 		helper.runSolver(false, "a");
 	}

@@ -13,12 +13,14 @@ package heros.fieldsens;
 import heros.fieldsens.FlowFunction.Constraint;
 
 import java.util.List;
+import java.util.Set;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 public abstract class Resolver<Field, Fact, Stmt, Method> {
 
-	private boolean interest = false;
+	private Set<Resolver<Field, Fact, Stmt, Method>> interest = Sets.newHashSet();
 	private List<InterestCallback<Field, Fact, Stmt, Method>> interestCallbacks = Lists.newLinkedList();
 	protected PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer;
 	private boolean canBeResolvedEmpty = false;
@@ -29,18 +31,14 @@ public abstract class Resolver<Field, Fact, Stmt, Method> {
 
 	public abstract void resolve(Constraint<Field> constraint, InterestCallback<Field, Fact, Stmt, Method> callback);
 	
-	public void interest() {
-		if(interest)
+	public void interest(Resolver<Field, Fact, Stmt, Method> resolver) {
+		if(!interest.add(resolver))
 			return;
 
 		log("Interest given");
-		interest = true;
 		for(InterestCallback<Field, Fact, Stmt, Method> callback : Lists.newLinkedList(interestCallbacks)) {
-			callback.interest(analyzer, this);
+			callback.interest(analyzer, resolver);
 		}
-		
-		if(canBeResolvedEmpty)
-			interestCallbacks = null;
 	}
 	
 	protected void canBeResolvedEmpty() {
@@ -51,18 +49,16 @@ public abstract class Resolver<Field, Fact, Stmt, Method> {
 		for(InterestCallback<Field, Fact, Stmt, Method> callback : Lists.newLinkedList(interestCallbacks)) {
 			callback.canBeResolvedEmpty();
 		}
-		
-		if(interest)
-			interestCallbacks = null;
 	}
 
 	public boolean isInterestGiven() {
-		return interest;
+		return !interest.isEmpty();
 	}
 
 	protected void registerCallback(InterestCallback<Field, Fact, Stmt, Method> callback) {
-		if(interest) {
-			callback.interest(analyzer, this);
+		if(!interest.isEmpty()) {
+			for(Resolver<Field, Fact, Stmt, Method> resolver : Lists.newLinkedList(interest))
+				callback.interest(analyzer, resolver);
 		}
 		else {
 			log("Callback registered");

@@ -32,7 +32,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
+public class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 
 	private static final Logger logger = LoggerFactory.getLogger(PerAccessPathMethodAnalyzer.class);
 	private Fact sourceFact;
@@ -44,23 +44,25 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 	private DefaultValueMap<FactAtStatement<Fact, Stmt>, ReturnSiteResolver<Field, Fact, Stmt, Method>> returnSiteResolvers = new DefaultValueMap<FactAtStatement<Fact, Stmt>, ReturnSiteResolver<Field,Fact,Stmt,Method>>() {
 		@Override
 		protected ReturnSiteResolver<Field, Fact, Stmt, Method> createItem(FactAtStatement<Fact, Stmt> key) {
-			return new ReturnSiteResolver<Field, Fact, Stmt, Method>(context.factHandler, PerAccessPathMethodAnalyzer.this, key.stmt);
+			return new ReturnSiteResolver<Field, Fact, Stmt, Method>(context.factHandler, PerAccessPathMethodAnalyzer.this, key.stmt, debugger);
 		}
 	};
 	private DefaultValueMap<FactAtStatement<Fact, Stmt>, ControlFlowJoinResolver<Field, Fact, Stmt, Method>> ctrFlowJoinResolvers = new DefaultValueMap<FactAtStatement<Fact, Stmt>, ControlFlowJoinResolver<Field,Fact,Stmt,Method>>() {
 		@Override
 		protected ControlFlowJoinResolver<Field, Fact, Stmt, Method> createItem(FactAtStatement<Fact, Stmt> key) {
-			return new ControlFlowJoinResolver<Field, Fact, Stmt, Method>(context.factHandler, PerAccessPathMethodAnalyzer.this, key.stmt);
+			return new ControlFlowJoinResolver<Field, Fact, Stmt, Method>(context.factHandler, PerAccessPathMethodAnalyzer.this, key.stmt, debugger);
 		}
 	};
 	private CallEdgeResolver<Field, Fact, Stmt, Method> callEdgeResolver;
 	private PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> parent;
+	private Debugger<Field, Fact, Stmt, Method> debugger;
 
-	public PerAccessPathMethodAnalyzer(Method method, Fact sourceFact, Context<Field, Fact, Stmt, Method> context) {
-		this(method, sourceFact, context, new AccessPath<Field>(), null);
+	public PerAccessPathMethodAnalyzer(Method method, Fact sourceFact, Context<Field, Fact, Stmt, Method> context, Debugger<Field, Fact, Stmt, Method> debugger) {
+		this(method, sourceFact, context, debugger, new AccessPath<Field>(), null);
 	}
 	
-	private PerAccessPathMethodAnalyzer(Method method, Fact sourceFact, Context<Field, Fact, Stmt, Method> context, AccessPath<Field> accPath, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> parent) {
+	private PerAccessPathMethodAnalyzer(Method method, Fact sourceFact, Context<Field, Fact, Stmt, Method> context, Debugger<Field, Fact, Stmt, Method> debugger, AccessPath<Field> accPath, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> parent) {
+		this.debugger = debugger;
 		if(method == null)
 			throw new IllegalArgumentException("Method must be not null");
 		this.parent = parent;
@@ -69,16 +71,16 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 		this.accessPath = accPath;
 		this.context = context;
 		if(parent == null) {
-			this.callEdgeResolver = isZeroSource() ? new ZeroCallEdgeResolver<Field, Fact, Stmt, Method>(this, context.zeroHandler) : new CallEdgeResolver<Field, Fact, Stmt, Method>(this);
+			this.callEdgeResolver = isZeroSource() ? new ZeroCallEdgeResolver<Field, Fact, Stmt, Method>(this, context.zeroHandler, debugger) : new CallEdgeResolver<Field, Fact, Stmt, Method>(this, debugger);
 		}
 		else {
-			this.callEdgeResolver = isZeroSource() ? parent.callEdgeResolver : new CallEdgeResolver<Field, Fact, Stmt, Method>(this, parent.callEdgeResolver);
+			this.callEdgeResolver = isZeroSource() ? parent.callEdgeResolver : new CallEdgeResolver<Field, Fact, Stmt, Method>(this, debugger, parent.callEdgeResolver);
 		}
 		log("initialized");
 	}
 	
 	public PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> createWithAccessPath(AccessPath<Field> accPath) {
-		return new PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method>(method, sourceFact, context, accPath, this);
+		return new PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method>(method, sourceFact, context, debugger, accPath, this);
 	}
 	
 	WrappedFact<Field, Fact, Stmt, Method> wrappedSource() {
@@ -94,7 +96,7 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 	}
 
 	private void bootstrapAtMethodStartPoints() {
-		callEdgeResolver.interest();
+		callEdgeResolver.interest(callEdgeResolver);
 		for(Stmt startPoint : context.icfg.getStartPointsOf(method)) {
 			WrappedFactAtStatement<Field, Fact, Stmt, Method> target = new WrappedFactAtStatement<Field, Fact, Stmt, Method>(startPoint, wrappedSource());
 			if(!reachableStatements.containsKey(target))
@@ -121,6 +123,7 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 			log("Edge to "+factAtStmt);
 			reachableStatements.put(factAtStmt, factAtStmt);
 			context.scheduler.schedule(new Job(factAtStmt));
+			debugger.edgeTo(this, factAtStmt);
 		}
 	}
 
@@ -137,7 +140,7 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 		Collection<Method> calledMethods = context.icfg.getCalleesOfCallAt(factAtStmt.getStatement());
 		for (Method calledMethod : calledMethods) {
 			FlowFunction<Field, Fact, Stmt, Method> flowFunction = context.flowFunctions.getCallFlowFunction(factAtStmt.getStatement(), calledMethod);
-			Collection<ConstrainedFact<Field, Fact, Stmt, Method>> targetFacts =  flowFunction.computeTargets(factAtStmt.getFact(), new AccessPathHandler<Field, Fact, Stmt, Method>(factAtStmt.getAccessPath(), factAtStmt.getResolver()));
+			Collection<ConstrainedFact<Field, Fact, Stmt, Method>> targetFacts =  flowFunction.computeTargets(factAtStmt.getFact(), new AccessPathHandler<Field, Fact, Stmt, Method>(factAtStmt.getAccessPath(), factAtStmt.getResolver(), debugger));
 			for (ConstrainedFact<Field, Fact, Stmt, Method> targetFact : targetFacts) {
 				//TODO handle constraint
 				MethodAnalyzer<Field, Fact, Stmt, Method> analyzer = context.getAnalyzer(calledMethod);
@@ -162,7 +165,7 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 				Collection<Stmt> returnSites = context.icfg.getReturnSitesOfCallAt(callSite);
 				for(Stmt returnSite : returnSites) {
 					FlowFunction<Field, Fact, Stmt, Method> flowFunction = context.flowFunctions.getReturnFlowFunction(callSite, method, factAtStmt.getStatement(), returnSite);
-					Collection<ConstrainedFact<Field, Fact, Stmt, Method>> targetFacts = flowFunction.computeTargets(factAtStmt.getFact(), new AccessPathHandler<Field, Fact, Stmt, Method>(factAtStmt.getAccessPath(), factAtStmt.getResolver()));
+					Collection<ConstrainedFact<Field, Fact, Stmt, Method>> targetFacts = flowFunction.computeTargets(factAtStmt.getFact(), new AccessPathHandler<Field, Fact, Stmt, Method>(factAtStmt.getAccessPath(), factAtStmt.getResolver(), debugger));
 					for (ConstrainedFact<Field, Fact, Stmt, Method> targetFact : targetFacts) {
 						//TODO handle constraint
 						context.getAnalyzer(context.icfg.getMethodOf(callSite)).addUnbalancedReturnFlow(new WrappedFactAtStatement<Field, Fact, Stmt, Method>(returnSite, targetFact.getFact()), callSite);
@@ -174,15 +177,13 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 			//instead we thus call the return flow function will a null caller
 			if(callSites.isEmpty()) {
 				FlowFunction<Field, Fact, Stmt, Method> flowFunction = context.flowFunctions.getReturnFlowFunction(null, method, factAtStmt.getStatement(), null);
-				flowFunction.computeTargets(factAtStmt.getFact(), new AccessPathHandler<Field, Fact, Stmt, Method>(factAtStmt.getAccessPath(), factAtStmt.getResolver()));
+				flowFunction.computeTargets(factAtStmt.getFact(), new AccessPathHandler<Field, Fact, Stmt, Method>(factAtStmt.getAccessPath(), factAtStmt.getResolver(), debugger));
 			}
 		}
 	}
 	
 	private void processCallToReturnEdge(WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
-		Stmt stmt = factAtStmt.getStatement();
-		int numberOfPredecessors = context.icfg.getPredsOf(stmt).size();		
-		if(numberOfPredecessors > 1 || (context.icfg.isStartPoint(stmt) && numberOfPredecessors > 0)) {
+		if(isLoopStart(factAtStmt.getStatement())) {
 			ctrFlowJoinResolvers.getOrCreate(factAtStmt.getAsFactAtStatement()).addIncoming(factAtStmt.getWrappedFact());
 		}
 		else {
@@ -194,7 +195,7 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 		Collection<Stmt> returnSites = context.icfg.getReturnSitesOfCallAt(factAtStmt.getStatement());
 		for(Stmt returnSite : returnSites) {
 			FlowFunction<Field, Fact, Stmt, Method> flowFunction = context.flowFunctions.getCallToReturnFlowFunction(factAtStmt.getStatement(), returnSite);
-			Collection<ConstrainedFact<Field, Fact, Stmt, Method>> targetFacts = flowFunction.computeTargets(factAtStmt.getFact(), new AccessPathHandler<Field, Fact, Stmt, Method>(factAtStmt.getAccessPath(), factAtStmt.getResolver()));
+			Collection<ConstrainedFact<Field, Fact, Stmt, Method>> targetFacts = flowFunction.computeTargets(factAtStmt.getFact(), new AccessPathHandler<Field, Fact, Stmt, Method>(factAtStmt.getAccessPath(), factAtStmt.getResolver(), debugger));
 			for (ConstrainedFact<Field, Fact, Stmt, Method> targetFact : targetFacts) {
 				//TODO handle constraint
 				scheduleEdgeTo(new WrappedFactAtStatement<Field, Fact, Stmt, Method>(returnSite, targetFact.getFact()));
@@ -203,14 +204,30 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 	}
 
 	private void processNormalFlow(WrappedFactAtStatement<Field,Fact, Stmt, Method> factAtStmt) {
-		Stmt stmt = factAtStmt.getStatement();
-		int numberOfPredecessors = context.icfg.getPredsOf(stmt).size();
-		if((numberOfPredecessors > 1 && !context.icfg.isExitStmt(stmt)) || (context.icfg.isStartPoint(stmt) && numberOfPredecessors > 0)) {
+		if(isLoopStart(factAtStmt.getStatement())) {
 			ctrFlowJoinResolvers.getOrCreate(factAtStmt.getAsFactAtStatement()).addIncoming(factAtStmt.getWrappedFact());
 		}
 		else {
 			processNormalNonJoiningFlow(factAtStmt);
 		}
+	}
+	
+	private boolean isLoopStart(Stmt stmt) {
+		int numberOfPredecessors = context.icfg.getPredsOf(stmt).size();
+		if((numberOfPredecessors > 1 && !context.icfg.isExitStmt(stmt)) || (context.icfg.isStartPoint(stmt) && numberOfPredecessors > 0)) {
+			Set<Stmt> visited = Sets.newHashSet();
+			List<Stmt> worklist = Lists.newLinkedList();
+			worklist.addAll(context.icfg.getPredsOf(stmt));
+			while(!worklist.isEmpty()) {
+				Stmt current = worklist.remove(0);
+				if(current.equals(stmt))
+					return true;
+				if(!visited.add(current))
+					continue;
+				worklist.addAll(context.icfg.getPredsOf(current));
+			}
+		}
+		return false;
 	}
 
 	void processFlowFromJoinStmt(WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
@@ -223,7 +240,7 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 	private void processNormalNonJoiningFlow(WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
 		final List<Stmt> successors = context.icfg.getSuccsOf(factAtStmt.getStatement());
 		FlowFunction<Field, Fact, Stmt, Method> flowFunction = context.flowFunctions.getNormalFlowFunction(factAtStmt.getStatement());
-		Collection<ConstrainedFact<Field, Fact, Stmt, Method>> targetFacts = flowFunction.computeTargets(factAtStmt.getFact(), new AccessPathHandler<Field, Fact, Stmt, Method>(factAtStmt.getAccessPath(), factAtStmt.getResolver()));
+		Collection<ConstrainedFact<Field, Fact, Stmt, Method>> targetFacts = flowFunction.computeTargets(factAtStmt.getFact(), new AccessPathHandler<Field, Fact, Stmt, Method>(factAtStmt.getAccessPath(), factAtStmt.getResolver(), debugger));
 		for (final ConstrainedFact<Field, Fact, Stmt, Method> targetFact : targetFacts) {
 			if(targetFact.getConstraint() == null)
 				scheduleEdgeTo(successors, targetFact.getFact());
@@ -256,7 +273,7 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 		Collection<Stmt> returnSites = context.icfg.getReturnSitesOfCallAt(incEdge.getCallSite());
 		for(Stmt returnSite : returnSites) {
 			FlowFunction<Field, Fact, Stmt, Method> flowFunction = context.flowFunctions.getReturnFlowFunction(incEdge.getCallSite(), method, exitFact.getStatement(), returnSite);
-			Set<ConstrainedFact<Field, Fact, Stmt, Method>> targets = flowFunction.computeTargets(exitFact.getFact(), new AccessPathHandler<Field, Fact, Stmt, Method>(exitFact.getAccessPath(), exitFact.getResolver()));
+			Set<ConstrainedFact<Field, Fact, Stmt, Method>> targets = flowFunction.computeTargets(exitFact.getFact(), new AccessPathHandler<Field, Fact, Stmt, Method>(exitFact.getAccessPath(), exitFact.getResolver(), debugger));
 			for (ConstrainedFact<Field, Fact, Stmt, Method> targetFact : targets) {
 				context.factHandler.restoreCallingContext(targetFact.getFact().getFact(), incEdge.getCallerCallSiteFact().getFact());
 				//TODO handle constraint
@@ -294,10 +311,12 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 
 		public Job(WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
 			this.factAtStmt = factAtStmt;
+			debugger.newJob(PerAccessPathMethodAnalyzer.this, factAtStmt);
 		}
 
 		@Override
 		public void run() {
+			debugger.jobStarted(PerAccessPathMethodAnalyzer.this, factAtStmt);
 			if (context.icfg.isCallStmt(factAtStmt.getStatement())) {
 				processCall(factAtStmt);
 			} else {
@@ -308,11 +327,16 @@ class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 					processNormalFlow(factAtStmt);
 				}
 			}
+			debugger.jobFinished(PerAccessPathMethodAnalyzer.this, factAtStmt);
 		}
 	}
 
 	public CallEdgeResolver<Field, Fact, Stmt, Method> getCallEdgeResolver() {
 		return callEdgeResolver;
+	}
+
+	public Method getMethod() {
+		return method;
 	}
 	
 //	public void debugReachables() {

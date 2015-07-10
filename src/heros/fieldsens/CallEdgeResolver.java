@@ -17,12 +17,12 @@ import com.google.common.collect.Lists;
 
 class CallEdgeResolver<Field, Fact, Stmt, Method> extends ResolverTemplate<Field, Fact, Stmt, Method, CallEdge<Field, Fact, Stmt, Method>>  {
 
-	public CallEdgeResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer) {
-		this(analyzer, null);
+	public CallEdgeResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Debugger<Field, Fact, Stmt, Method> debugger) {
+		this(analyzer, debugger, null);
 	}
 	
-	public CallEdgeResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, CallEdgeResolver<Field, Fact, Stmt, Method> parent) {
-		super(analyzer, parent);
+	public CallEdgeResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Debugger<Field, Fact, Stmt, Method> debugger, CallEdgeResolver<Field, Fact, Stmt, Method> parent) {
+		super(analyzer, parent, debugger);
 	}
 
 	@Override
@@ -60,7 +60,7 @@ class CallEdgeResolver<Field, Fact, Stmt, Method> extends ResolverTemplate<Field
 	
 	@Override
 	public String toString() {
-		return "";
+		return "<"+analyzer.getAccessPath()+":"+analyzer.getMethod()+">";
 	}
 	
 	@Override

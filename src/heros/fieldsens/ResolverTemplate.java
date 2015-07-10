@@ -13,6 +13,7 @@ package heros.fieldsens;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -26,11 +27,14 @@ public abstract class ResolverTemplate<Field, Fact, Stmt, Method, Incoming>  ext
 	protected Set<Incoming> incomingEdges = Sets.newHashSet();
 	private ResolverTemplate<Field, Fact, Stmt, Method, Incoming> parent;
 	private Map<AccessPath<Field>, ResolverTemplate<Field, Fact, Stmt, Method, Incoming>> nestedResolvers = Maps.newHashMap();
+	protected Debugger<Field, Fact, Stmt, Method> debugger;
 
 	public ResolverTemplate(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, 
-			ResolverTemplate<Field, Fact, Stmt, Method, Incoming> parent) {
+			ResolverTemplate<Field, Fact, Stmt, Method, Incoming> parent, Debugger<Field, Fact, Stmt, Method> debugger) {
 		super(analyzer);
 		this.parent = parent;
+		this.debugger = debugger;
+		debugger.newResolver(analyzer, this);
 	}
 	
 	protected boolean isLocked() {
@@ -59,9 +63,9 @@ public abstract class ResolverTemplate<Field, Fact, Stmt, Method, Incoming>  ext
 			if(!incomingEdges.add(inc))
 				return;
 			
-			interest();
+			interest(this);
 			
-			for(ResolverTemplate<Field, Fact, Stmt, Method, Incoming> nestedResolver : nestedResolvers.values()) {
+			for(ResolverTemplate<Field, Fact, Stmt, Method, Incoming> nestedResolver : Lists.newLinkedList(nestedResolvers.values())) {
 				nestedResolver.addIncoming(inc);
 			}
 			

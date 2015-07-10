@@ -58,9 +58,9 @@ public class FieldSensitiveTestHelper {
 	private List<ReturnEdge> returnEdges = Lists.newLinkedList();
 	private Map<Statement, TestMethod> stmt2method = Maps.newHashMap();
 	private Multiset<ExpectedFlowFunction> remainingFlowFunctions = HashMultiset.create();
-	private TestDebugger<String, TestFact, Statement, TestMethod, InterproceduralCFG<Statement, TestMethod>> debugger;
+	private TestDebugger<String, TestFact, Statement, TestMethod> debugger;
 
-	public FieldSensitiveTestHelper(TestDebugger<String, TestFact, Statement, TestMethod, InterproceduralCFG<Statement, TestMethod>> debugger) {
+	public FieldSensitiveTestHelper(TestDebugger<String, TestFact, Statement, TestMethod> debugger) {
 		this.debugger = debugger;
 	}
 
@@ -265,6 +265,10 @@ public class FieldSensitiveTestHelper {
 				for (NormalEdge edge : normalEdges) {
 					if (edge.includeInCfg && edge.succUnit.equals(stmt))
 						result.add(edge.unit);
+				}
+				for(Call2ReturnEdge edge : call2retEdges) {
+					if(edge.includeInCfg && edge.returnSite.equals(stmt))
+						result.add(edge.callSite);
 				}
 				return result;
 			}

@@ -10,13 +10,21 @@
  ******************************************************************************/
 package heros.fieldsens;
 
-import heros.InterproceduralCFG;
+import static heros.utilities.FieldSensitiveTestHelper.callSite;
+import static heros.utilities.FieldSensitiveTestHelper.exitStmt;
+import static heros.utilities.FieldSensitiveTestHelper.flow;
+import static heros.utilities.FieldSensitiveTestHelper.kill;
+import static heros.utilities.FieldSensitiveTestHelper.normalStmt;
+import static heros.utilities.FieldSensitiveTestHelper.over;
+import static heros.utilities.FieldSensitiveTestHelper.startPoints;
+import static heros.utilities.FieldSensitiveTestHelper.times;
+import static heros.utilities.FieldSensitiveTestHelper.to;
 import heros.utilities.FieldSensitiveTestHelper;
+import heros.utilities.FieldSensitiveTestHelper.TabulationProblemExchange;
 import heros.utilities.Statement;
 import heros.utilities.TestDebugger;
 import heros.utilities.TestFact;
 import heros.utilities.TestMethod;
-import heros.utilities.FieldSensitiveTestHelper.TabulationProblemExchange;
 
 import java.util.Collection;
 import java.util.LinkedList;
@@ -28,8 +36,6 @@ import org.junit.runners.Parameterized.Parameters;
 
 import com.google.common.collect.Lists;
 
-import static heros.utilities.FieldSensitiveTestHelper.*;
-
 
 @RunWith(Parameterized.class)
 public class BiDiFieldSensitiveIFDSSolverTest {
@@ -37,11 +43,11 @@ public class BiDiFieldSensitiveIFDSSolverTest {
 	private FieldSensitiveTestHelper forwardHelper;
 	private FieldSensitiveTestHelper backwardHelper;
 	private TabulationProblemExchange exchange;
-	private TestDebugger<String, TestFact, Statement, TestMethod, InterproceduralCFG<Statement, TestMethod>> debugger;
+	private TestDebugger<String, TestFact, Statement, TestMethod> debugger;
 	
 	public BiDiFieldSensitiveIFDSSolverTest(TabulationProblemExchange exchange) {
 		this.exchange = exchange;
-		debugger = new TestDebugger<String, TestFact, Statement, TestMethod, InterproceduralCFG<Statement, TestMethod>>();
+		debugger = new TestDebugger<String, TestFact, Statement, TestMethod>();
 		forwardHelper = new FieldSensitiveTestHelper(debugger);
 		backwardHelper = new FieldSensitiveTestHelper(debugger);
 	}

@@ -21,18 +21,21 @@ public class SourceStmtAnnotatedMethodAnalyzer<Field, Fact, Stmt, Method>
 	private Method method;
 	private DefaultValueMap<Key<Fact, Stmt>, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method>> perSourceAnalyzer = 
 			new DefaultValueMap<Key<Fact, Stmt>, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method>>() {
+
 		@Override
 		protected PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> createItem(Key<Fact, Stmt> key) {
-			return new PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method>(method, key.fact, context);
+			return new PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method>(method, key.fact, context, debugger);
 		}
 	};
 	private Context<Field, Fact, Stmt, Method> context;
 	private Synchronizer<Stmt> synchronizer;
+	private Debugger<Field, Fact, Stmt, Method> debugger;
 	
-	public SourceStmtAnnotatedMethodAnalyzer(Method method, Context<Field, Fact, Stmt, Method> context, Synchronizer<Stmt> synchronizer) {
+	public SourceStmtAnnotatedMethodAnalyzer(Method method, Context<Field, Fact, Stmt, Method> context, Synchronizer<Stmt> synchronizer, Debugger<Field, Fact, Stmt, Method> debugger) {
 		this.method = method;
 		this.context = context;
 		this.synchronizer = synchronizer;
+		this.debugger = debugger;
 	}
 	
 	@Override
