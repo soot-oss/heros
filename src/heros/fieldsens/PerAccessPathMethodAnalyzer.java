@@ -183,9 +183,7 @@ public class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 	}
 	
 	private void processCallToReturnEdge(WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
-		Stmt stmt = factAtStmt.getStatement();
-		int numberOfPredecessors = context.icfg.getPredsOf(stmt).size();		
-		if(numberOfPredecessors > 1 || (context.icfg.isStartPoint(stmt) && numberOfPredecessors > 0)) {
+		if(isLoopStart(factAtStmt.getStatement())) {
 			ctrFlowJoinResolvers.getOrCreate(factAtStmt.getAsFactAtStatement()).addIncoming(factAtStmt.getWrappedFact());
 		}
 		else {
@@ -206,14 +204,30 @@ public class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 	}
 
 	private void processNormalFlow(WrappedFactAtStatement<Field,Fact, Stmt, Method> factAtStmt) {
-		Stmt stmt = factAtStmt.getStatement();
-		int numberOfPredecessors = context.icfg.getPredsOf(stmt).size();
-		if((numberOfPredecessors > 1 && !context.icfg.isExitStmt(stmt)) || (context.icfg.isStartPoint(stmt) && numberOfPredecessors > 0)) {
+		if(isLoopStart(factAtStmt.getStatement())) {
 			ctrFlowJoinResolvers.getOrCreate(factAtStmt.getAsFactAtStatement()).addIncoming(factAtStmt.getWrappedFact());
 		}
 		else {
 			processNormalNonJoiningFlow(factAtStmt);
 		}
+	}
+	
+	private boolean isLoopStart(Stmt stmt) {
+		int numberOfPredecessors = context.icfg.getPredsOf(stmt).size();
+		if((numberOfPredecessors > 1 && !context.icfg.isExitStmt(stmt)) || (context.icfg.isStartPoint(stmt) && numberOfPredecessors > 0)) {
+			Set<Stmt> visited = Sets.newHashSet();
+			List<Stmt> worklist = Lists.newLinkedList();
+			worklist.addAll(context.icfg.getPredsOf(stmt));
+			while(!worklist.isEmpty()) {
+				Stmt current = worklist.remove(0);
+				if(current.equals(stmt))
+					return true;
+				if(!visited.add(current))
+					continue;
+				worklist.addAll(context.icfg.getPredsOf(current));
+			}
+		}
+		return false;
 	}
 
 	void processFlowFromJoinStmt(WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {

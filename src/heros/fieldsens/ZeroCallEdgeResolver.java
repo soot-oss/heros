@@ -38,7 +38,7 @@ public class ZeroCallEdgeResolver<Field, Fact, Stmt, Method> extends CallEdgeRes
 
 	@Override
 	public String toString() {
-		return "ZeroCallEdgeResolver: "+super.toString();
+		return "0-Resolver"+super.toString();
 	}
 	
 	@Override

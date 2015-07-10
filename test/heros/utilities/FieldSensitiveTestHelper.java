@@ -266,6 +266,10 @@ public class FieldSensitiveTestHelper {
 					if (edge.includeInCfg && edge.succUnit.equals(stmt))
 						result.add(edge.unit);
 				}
+				for(Call2ReturnEdge edge : call2retEdges) {
+					if(edge.includeInCfg && edge.returnSite.equals(stmt))
+						result.add(edge.callSite);
+				}
 				return result;
 			}
 
