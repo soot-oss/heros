@@ -35,7 +35,7 @@ public abstract class Resolver<Field, Fact, Stmt, Method> {
 		if(!interest.add(resolver))
 			return;
 
-		log("Interest given");
+		log("Interest given by: "+resolver);
 		for(InterestCallback<Field, Fact, Stmt, Method> callback : Lists.newLinkedList(interestCallbacks)) {
 			callback.interest(analyzer, resolver);
 		}
