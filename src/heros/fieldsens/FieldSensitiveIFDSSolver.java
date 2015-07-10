@@ -33,7 +33,7 @@ public class FieldSensitiveIFDSSolver<FieldRef, D, N, M, I extends Interprocedur
 
 	private IFDSTabulationProblem<N, FieldRef, D, M, I> tabulationProblem;
 	protected Context<FieldRef, D, N,M> context;
-	private Debugger<FieldRef, D, N, M> debugger;
+	protected Debugger<FieldRef, D, N, M> debugger;
 	private Scheduler scheduler;
 
 	public FieldSensitiveIFDSSolver(IFDSTabulationProblem<N,FieldRef,D,M,I> tabulationProblem, FactMergeHandler<D> factHandler, Debugger<FieldRef, D, N, M> debugger, Scheduler scheduler) {
