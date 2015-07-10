@@ -92,8 +92,18 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 		return returnSite;
 	}
 	
+	private boolean isNullOrCallEdgeResolver(Resolver<Field, Fact, Stmt, Method> resolver) {
+		if(resolver == null)
+			return true;
+		if(resolver instanceof CallEdgeResolver) {
+			return !(resolver instanceof ZeroCallEdgeResolver);
+		}
+		return false;
+	}
+	
 	private void resolveViaDelta(final ReturnEdge<Field, Fact, Stmt, Method> retEdge) {
-		if(retEdge.incResolver == null || retEdge.incResolver instanceof CallEdgeResolver) {
+		if(isNullOrCallEdgeResolver(retEdge.incResolver)) {
+			
 			resolveViaDeltaAndPotentiallyDelegateToCallSite(retEdge);
 		} else {
 			//resolve via incoming facts resolver
@@ -126,7 +136,7 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 	}
 
 	protected void resolveViaCallSiteResolver(final ReturnEdge<Field, Fact, Stmt, Method> retEdge, AccessPath<Field> currAccPath) {
-		if(retEdge.resolverAtCaller == null || retEdge.resolverAtCaller instanceof CallEdgeResolver) {
+		if(isNullOrCallEdgeResolver(retEdge.resolverAtCaller)) {
 			canBeResolvedEmpty();
 		} else {
 			retEdge.resolverAtCaller.resolve(new DeltaConstraint<Field>(currAccPath.getDeltaTo(getResolvedAccessPath())), new InterestCallback<Field, Fact, Stmt, Method>() {

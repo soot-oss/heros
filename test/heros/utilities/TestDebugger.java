@@ -121,4 +121,21 @@ public class TestDebugger<Field, Fact, Stmt, Method> implements Debugger<Field, 
 		
 	}
 
+	@Override
+	public void newJob(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
+		
+	}
+
+	@Override
+	public void jobStarted(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer,
+			WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
+		
+	}
+
+	@Override
+	public void jobFinished(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer,
+			WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
+		
+	}
+
 }

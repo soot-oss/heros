@@ -15,11 +15,17 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.RETURNS_MOCKS;
+import static org.mockito.Mockito.RETURNS_SMART_NULLS;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 import heros.fieldsens.AccessPath.Delta;
+import heros.fieldsens.FlowFunction.Constraint;
 import heros.fieldsens.structs.DeltaConstraint;
 import heros.fieldsens.structs.WrappedFact;
 import heros.fieldsens.structs.WrappedFactAtStatement;
@@ -268,6 +274,18 @@ public class ReturnSiteResolverTest {
 		sut.resolve(getDeltaConstraint("a"), callback);
 		
 		verify(resolver).resolve(eq(getDeltaConstraint("a")), any(InterestCallback.class));
+	}
+	
+	@Test
+	public void incomingZeroCallEdgeResolver() {
+		Resolver<String, TestFact, Statement, TestMethod> resolver = mock(Resolver.class);
+		ZeroCallEdgeResolver<String, TestFact, Statement, TestMethod> zeroResolver = mock(ZeroCallEdgeResolver.class); 
+		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), zeroResolver), resolver, getDelta());
+		sut.resolve(getDeltaConstraint("a"), callback);
+		
+		verify(resolver, never()).resolve(any(Constraint.class), any(InterestCallback.class));
+		verify(callback, never()).interest(any(PerAccessPathMethodAnalyzer.class), any(Resolver.class));
+		verify(callback, never()).canBeResolvedEmpty();
 	}
 	
 	private class ReturnSiteResolverArgumentMatcher extends

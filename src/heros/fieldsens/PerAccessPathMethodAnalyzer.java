@@ -297,10 +297,12 @@ public class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 
 		public Job(WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
 			this.factAtStmt = factAtStmt;
+			debugger.newJob(PerAccessPathMethodAnalyzer.this, factAtStmt);
 		}
 
 		@Override
 		public void run() {
+			debugger.jobStarted(PerAccessPathMethodAnalyzer.this, factAtStmt);
 			if (context.icfg.isCallStmt(factAtStmt.getStatement())) {
 				processCall(factAtStmt);
 			} else {
@@ -311,6 +313,7 @@ public class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 					processNormalFlow(factAtStmt);
 				}
 			}
+			debugger.jobFinished(PerAccessPathMethodAnalyzer.this, factAtStmt);
 		}
 	}
 
