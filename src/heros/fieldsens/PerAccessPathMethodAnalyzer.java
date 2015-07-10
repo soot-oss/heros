@@ -329,6 +329,11 @@ public class PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> {
 			}
 			debugger.jobFinished(PerAccessPathMethodAnalyzer.this, factAtStmt);
 		}
+		
+		@Override
+		public String toString() {
+			return "Job: "+factAtStmt;
+		}
 	}
 
 	public CallEdgeResolver<Field, Fact, Stmt, Method> getCallEdgeResolver() {

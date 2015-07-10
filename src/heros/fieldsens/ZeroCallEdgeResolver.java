@@ -21,6 +21,10 @@ public class ZeroCallEdgeResolver<Field, Fact, Stmt, Method> extends CallEdgeRes
 		this.zeroHandler = zeroHandler;
 	}
 
+	ZeroCallEdgeResolver<Field, Fact, Stmt, Method> copyWithAnalyzer(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer) {
+		return new ZeroCallEdgeResolver<Field, Fact, Stmt, Method>(analyzer, zeroHandler, debugger);
+	}
+	
 	@Override
 	public void resolve(Constraint<Field> constraint, InterestCallback<Field, Fact, Stmt, Method> callback) {
 		if(zeroHandler.shouldGenerateAccessPath(constraint.applyToAccessPath(new AccessPath<Field>())))

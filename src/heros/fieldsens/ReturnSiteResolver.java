@@ -103,7 +103,6 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 	
 	private void resolveViaDelta(final ReturnEdge<Field, Fact, Stmt, Method> retEdge) {
 		if(isNullOrCallEdgeResolver(retEdge.incResolver)) {
-			
 			resolveViaDeltaAndPotentiallyDelegateToCallSite(retEdge);
 		} else {
 			//resolve via incoming facts resolver
@@ -113,8 +112,13 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 
 				@Override
 				public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver) {
-					incomingEdges.add(retEdge.copyWithIncomingResolver(resolver, retEdge.incAccessPath.getDeltaTo(getResolvedAccessPath())));
-					ReturnSiteResolver.this.interest(ReturnSiteResolver.this);
+					if(resolver instanceof ZeroCallEdgeResolver) {
+						ReturnSiteResolver.this.interest(((ZeroCallEdgeResolver<Field, Fact, Stmt, Method>) resolver).
+								copyWithAnalyzer(ReturnSiteResolver.this.analyzer));
+					} else {
+						incomingEdges.add(retEdge.copyWithIncomingResolver(resolver, retEdge.incAccessPath.getDeltaTo(getResolvedAccessPath())));
+						ReturnSiteResolver.this.interest(ReturnSiteResolver.this);
+					}
 				}
 				
 				@Override
