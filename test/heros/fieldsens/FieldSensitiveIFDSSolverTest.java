@@ -157,7 +157,7 @@ public class FieldSensitiveIFDSSolverTest {
 		helper.method("bar",
 				startPoints("c"),
 				normalStmt("c", flow("2", readField("f"), "3")).succ("d"),
-				exitStmt("d").returns(over("b"), to("e"), flow("3", "4")).returns(over("e"), to("f"), flow("3", "5")));
+				exitStmt("d").returns(over("b"), to("e"), flow(2, "3", "4")).returns(over("e"), to("f"), flow(2, "3", "5")));
 		
 		helper.runSolver(false, "a");
 	}

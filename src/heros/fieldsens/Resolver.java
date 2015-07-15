@@ -60,10 +60,8 @@ public abstract class Resolver<Field, Fact, Stmt, Method> {
 			for(Resolver<Field, Fact, Stmt, Method> resolver : Lists.newLinkedList(interest))
 				callback.interest(analyzer, resolver);
 		}
-		else {
-			log("Callback registered");
-			interestCallbacks.add(callback);
-		}
+		log("Callback registered");
+		interestCallbacks.add(callback);
 
 		if(canBeResolvedEmpty)
 			callback.canBeResolvedEmpty();
