@@ -75,15 +75,10 @@ public class AccessPathHandler<Field, Fact, Stmt, Method> {
 	public ResultBuilder<Field, Fact, Stmt, Method> overwrite(final Field field) {
 		if(mayBeEmpty())
 			return new ResultBuilder<Field, Fact, Stmt, Method>() {
+				@SuppressWarnings("unchecked")
 				@Override
 				public ConstrainedFact<Field, Fact, Stmt, Method> generate(Fact fact) {
-					if(accessPath.canRead(field)) {
-						AccessPath<Field> tempAccPath = accessPath.removeFirst();
-						if(tempAccPath.hasEmptyAccessPath())
-							return new ConstrainedFact<Field, Fact, Stmt, Method>(new WrappedFact<Field, Fact, Stmt, Method>(fact, tempAccPath.appendExcludedFieldReference(field), resolver));
-						else
-							return new ConstrainedFact<Field, Fact, Stmt, Method>(new WrappedFact<Field, Fact, Stmt, Method>(fact, tempAccPath, resolver));
-					} else if(accessPath.isAccessInExclusions(field))
+					if(accessPath.isAccessInExclusions(field))
 						return new ConstrainedFact<Field, Fact, Stmt, Method>(new WrappedFact<Field, Fact, Stmt, Method>(fact, accessPath, resolver));
 					else
 						return new ConstrainedFact<Field, Fact, Stmt, Method>(new WrappedFact<Field, Fact, Stmt, Method>(fact, accessPath.appendExcludedFieldReference(field), resolver), new WriteFieldConstraint<Field>(field));
