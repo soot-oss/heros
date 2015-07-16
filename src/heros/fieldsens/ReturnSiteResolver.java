@@ -52,7 +52,7 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 	}
 	
 	protected AccessPath<Field> getAccessPathOf(ReturnEdge<Field, Fact, Stmt, Method> inc) {
-		return inc.incAccessPath;
+		return inc.usedAccessPathOfIncResolver.applyTo(inc.incAccessPath);
 	}
 	
 	public void addIncoming(final WrappedFact<Field, Fact, Stmt, Method> fact, 
@@ -130,7 +130,11 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 	}
 
 	private void resolveViaDeltaAndPotentiallyDelegateToCallSite(final ReturnEdge<Field, Fact, Stmt, Method> retEdge) {
-		final AccessPath<Field> currAccPath = retEdge.callDelta.applyTo(retEdge.usedAccessPathOfIncResolver.applyTo(retEdge.incAccessPath));
+		AccessPath<Field> inc = retEdge.usedAccessPathOfIncResolver.applyTo(retEdge.incAccessPath);
+		if(!retEdge.callDelta.canBeAppliedTo(inc))
+			return;
+		
+		final AccessPath<Field> currAccPath = retEdge.callDelta.applyTo(inc);
 		if(getResolvedAccessPath().isPrefixOf(currAccPath) == PrefixTestResult.GUARANTEED_PREFIX) {
 			incomingEdges.add(retEdge.copyWithIncomingResolver(null, retEdge.usedAccessPathOfIncResolver));
 			interest(this);
