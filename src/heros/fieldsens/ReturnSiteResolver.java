@@ -20,7 +20,6 @@ import heros.fieldsens.structs.WrappedFactAtStatement;
 public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTemplate<Field, Fact, Stmt, Method, ReturnEdge<Field, Fact, Stmt, Method>> {
 
 	private Stmt returnSite;
-	private AccessPath<Field> resolvedAccPath;
 	private boolean propagated = false;
 	private Fact sourceFact;
 	private FactMergeHandler<Fact> factMergeHandler;
@@ -33,22 +32,16 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 
 	private ReturnSiteResolver(FactMergeHandler<Fact> factMergeHandler, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Stmt returnSite, 
 			Fact sourceFact, Debugger<Field, Fact, Stmt, Method> debugger, AccessPath<Field> resolvedAccPath, ReturnSiteResolver<Field, Fact, Stmt, Method> parent) {
-		super(analyzer, parent, debugger);
+		super(analyzer, resolvedAccPath, parent, debugger);
 		this.factMergeHandler = factMergeHandler;
 		this.returnSite = returnSite;
 		this.sourceFact = sourceFact;
-		this.resolvedAccPath = resolvedAccPath;
 		propagated=true;
 	}
 	
 	@Override
 	public String toString() {
-		return "<"+resolvedAccPath+":"+returnSite+" in "+analyzer.getMethod()+">";
-	}
-	
-	@Override
-	public AccessPath<Field> getResolvedAccessPath() {
-		return resolvedAccPath;
+		return "<"+resolvedAccessPath+":"+returnSite+" in "+analyzer.getMethod()+">";
 	}
 	
 	protected AccessPath<Field> getAccessPathOf(ReturnEdge<Field, Fact, Stmt, Method> inc) {
@@ -106,7 +99,7 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 			resolveViaDeltaAndPotentiallyDelegateToCallSite(retEdge);
 		} else {
 			//resolve via incoming facts resolver
-			Delta<Field> delta = retEdge.usedAccessPathOfIncResolver.applyTo(retEdge.incAccessPath).getDeltaTo(getResolvedAccessPath());
+			Delta<Field> delta = retEdge.usedAccessPathOfIncResolver.applyTo(retEdge.incAccessPath).getDeltaTo(resolvedAccessPath);
 			assert delta.accesses.length <= 1;
 			retEdge.incResolver.resolve(new DeltaConstraint<Field>(delta), new InterestCallback<Field, Fact, Stmt, Method>() {
 
@@ -116,7 +109,7 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 						ReturnSiteResolver.this.interest(((ZeroCallEdgeResolver<Field, Fact, Stmt, Method>) resolver).
 								copyWithAnalyzer(ReturnSiteResolver.this.analyzer));
 					} else {
-						incomingEdges.add(retEdge.copyWithIncomingResolver(resolver, retEdge.incAccessPath.getDeltaTo(getResolvedAccessPath())));
+						incomingEdges.add(retEdge.copyWithIncomingResolver(resolver, retEdge.incAccessPath.getDeltaTo(resolvedAccessPath)));
 						ReturnSiteResolver.this.interest(ReturnSiteResolver.this);
 					}
 				}
@@ -135,10 +128,10 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 			return;
 		
 		final AccessPath<Field> currAccPath = retEdge.callDelta.applyTo(inc);
-		if(getResolvedAccessPath().isPrefixOf(currAccPath) == PrefixTestResult.GUARANTEED_PREFIX) {
+		if(resolvedAccessPath.isPrefixOf(currAccPath) == PrefixTestResult.GUARANTEED_PREFIX) {
 			incomingEdges.add(retEdge.copyWithIncomingResolver(null, retEdge.usedAccessPathOfIncResolver));
 			interest(this);
-		} else if(currAccPath.isPrefixOf(getResolvedAccessPath()).atLeast(PrefixTestResult.POTENTIAL_PREFIX)) {
+		} else if(currAccPath.isPrefixOf(resolvedAccessPath).atLeast(PrefixTestResult.POTENTIAL_PREFIX)) {
 			resolveViaCallSiteResolver(retEdge, currAccPath);
 		}
 	}
@@ -147,7 +140,7 @@ public class ReturnSiteResolver<Field, Fact, Stmt, Method> extends ResolverTempl
 		if(isNullOrCallEdgeResolver(retEdge.resolverAtCaller)) {
 			canBeResolvedEmpty();
 		} else {
-			retEdge.resolverAtCaller.resolve(new DeltaConstraint<Field>(currAccPath.getDeltaTo(getResolvedAccessPath())), new InterestCallback<Field, Fact, Stmt, Method>() {
+			retEdge.resolverAtCaller.resolve(new DeltaConstraint<Field>(currAccPath.getDeltaTo(resolvedAccessPath)), new InterestCallback<Field, Fact, Stmt, Method>() {
 				@Override
 				public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver) {
 //					incomingEdges.add(retEdge.copyWithResolverAtCaller(resolver, retEdge.incAccessPath.getDeltaTo(getResolvedAccessPath())));

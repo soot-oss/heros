@@ -126,7 +126,7 @@ public class ControlFlowJoinResolverTest {
 		@Override
 		public boolean matches(Object argument) {
 			ControlFlowJoinResolver resolver = (ControlFlowJoinResolver) argument;
-			return resolver.isInterestGiven() && resolver.getResolvedAccessPath().equals(accPath) && resolver.getJoinStmt().equals(joinStmt);
+			return resolver.isInterestGiven() && resolver.resolvedAccessPath.equals(accPath) && resolver.getJoinStmt().equals(joinStmt);
 		}
 	}
 }

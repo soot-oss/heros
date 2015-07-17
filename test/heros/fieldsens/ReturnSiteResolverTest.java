@@ -300,7 +300,7 @@ public class ReturnSiteResolverTest {
 		@Override
 		public boolean matches(Object argument) {
 			ReturnSiteResolver resolver = (ReturnSiteResolver) argument;
-			return resolver.isInterestGiven() && resolver.getResolvedAccessPath().equals(accPath) && resolver.getReturnSite().equals(returnSite);
+			return resolver.isInterestGiven() && resolver.resolvedAccessPath.equals(accPath) && resolver.getReturnSite().equals(returnSite);
 		}
 	}
 }

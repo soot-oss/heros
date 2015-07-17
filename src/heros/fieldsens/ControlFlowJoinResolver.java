@@ -18,7 +18,6 @@ import heros.fieldsens.structs.WrappedFactAtStatement;
 public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends ResolverTemplate<Field, Fact, Stmt, Method, WrappedFact<Field, Fact, Stmt, Method>> {
 
 	private Stmt joinStmt;
-	private AccessPath<Field> resolvedAccPath;
 	private boolean propagated = false;
 	private Fact sourceFact;
 	private FactMergeHandler<Fact> factMergeHandler;
@@ -31,11 +30,10 @@ public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends Resolver
 	
 	private ControlFlowJoinResolver(FactMergeHandler<Fact> factMergeHandler, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, 
 			Stmt joinStmt, Fact sourceFact, AccessPath<Field> resolvedAccPath, Debugger<Field, Fact, Stmt, Method> debugger, ControlFlowJoinResolver<Field, Fact, Stmt, Method> parent) {
-		super(analyzer, parent, debugger);
+		super(analyzer, resolvedAccPath, parent, debugger);
 		this.factMergeHandler = factMergeHandler;
 		this.joinStmt = joinStmt;
 		this.sourceFact = sourceFact;
-		this.resolvedAccPath = resolvedAccPath;
 		propagated=true;
 	}
 	
@@ -59,7 +57,7 @@ public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends Resolver
 	@Override
 	protected void processIncomingPotentialPrefix(final WrappedFact<Field, Fact, Stmt, Method> fact) {
 		lock();
-		Delta<Field> delta = fact.getAccessPath().getDeltaTo(resolvedAccPath);
+		Delta<Field> delta = fact.getAccessPath().getDeltaTo(resolvedAccessPath);
 		fact.getResolver().resolve(new DeltaConstraint<Field>(delta), new InterestCallback<Field, Fact, Stmt, Method>() {
 			@Override
 			public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, 
@@ -88,12 +86,7 @@ public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends Resolver
 
 	@Override
 	public String toString() {
-		return "<"+resolvedAccPath+":"+joinStmt+" in "+analyzer.getMethod()+">";
-	}
-
-	@Override
-	public AccessPath<Field> getResolvedAccessPath() {
-		return resolvedAccPath;
+		return "<"+resolvedAccessPath+":"+joinStmt+" in "+analyzer.getMethod()+">";
 	}
 
 	public Stmt getJoinStmt() {

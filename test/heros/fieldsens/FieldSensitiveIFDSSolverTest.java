@@ -1193,4 +1193,72 @@ public class FieldSensitiveIFDSSolverTest {
 		
 		helper.runSolver(false, "a");
 	}
+	
+	@Test
+	public void intraproceduralStateExplosionInline0Resolver() {
+		helper.method("main",
+				startPoints("m_a"),
+				normalStmt("m_a", flow("0", "1")).succ("m_b"),
+				callSite("m_b").calls("foo", flow("1", "1")));
+		
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a", flow("1", "1")).succ("b"),
+				normalStmt("b", flow("1", "1")).succ("c1").succ("c2"),
+				normalStmt("c1", flow("1", "1")).succ("d"),
+				normalStmt("c2", flow("1", overwriteField("f"), "1")).succ("d"),
+				normalStmt("d", flow(2, "1", "1")).succ("e1").succ("e2"),
+				normalStmt("e1", flow(2, "1", "1")).succ("f"),
+				normalStmt("e2", flow(2, "1", overwriteField("g"), "1")).succ("f"),
+				normalStmt("f", flow(4, "1", "1")).succ("g1").succ("g2"),
+				normalStmt("g1", flow(4, "1", "1")).succ("h"),
+				normalStmt("g2", flow(4, "1", overwriteField("h"), "1")).succ("h"),
+				normalStmt("h", flow(8, "1", "1")).succ("i"));
+		
+		helper.runSolver(false, "m_a");
+	}
+	
+	@Test
+	public void intraproceduralStateExplosion() {
+		helper.method("main",
+				startPoints("m_a"),
+				normalStmt("m_a", flow("0", "1")).succ("m_b"),
+				callSite("m_b").calls("foo", flow("1", prependField("x"), "1")));
+		
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a", flow("1", "1")).succ("b"),
+				normalStmt("b", flow("1", "1")).succ("c1").succ("c2"),
+				normalStmt("c1", flow("1", "1")).succ("d"),
+				normalStmt("c2", flow("1", overwriteField("f"), "1")).succ("d"),
+				normalStmt("d", flow(2, "1", "1")).succ("e1").succ("e2"),
+				normalStmt("e1", flow(2, "1", "1")).succ("f"),
+				normalStmt("e2", flow(2, "1", overwriteField("g"), "1")).succ("f"),
+				normalStmt("f", flow(4, "1", "1")).succ("g1").succ("g2"),
+				normalStmt("g1", flow(4, "1", "1")).succ("h"),
+				normalStmt("g2", flow(4, "1", overwriteField("h"), "1")).succ("h"),
+				normalStmt("h", flow(8, "1", "1")).succ("i"));
+		
+		helper.runSolver(false, "m_a");
+	}
+	
+	@Test
+	public void nestedResolversShouldFormAGraph() {
+		helper.method("main",
+				startPoints("m_a"),
+				normalStmt("m_a", flow("0", "1")).succ("m_b"),
+				callSite("m_b").calls("foo", flow("1", prependField("f"), "1")));
+		
+		helper.method("foo",
+				startPoints("a"),
+				normalStmt("a", flow("1", "1")).succ("b1").succ("b2"),
+				normalStmt("b1", flow("1", overwriteField("x"), "1")).succ("c"),
+				normalStmt("b2", flow("1", overwriteField("y"), "1")).succ("c"),
+				normalStmt("c", flow(2, "1", "1")).succ("d1").succ("d2"),
+				normalStmt("d1", flow(2, "1", overwriteField("x"), "1")).succ("e"),
+				normalStmt("d2", flow(2, "1", overwriteField("y"), "1")).succ("e"),
+				normalStmt("e", flow(3, "1", "1")).succ("f"));
+		
+		helper.runSolver(false, "m_a");
+	}
 }

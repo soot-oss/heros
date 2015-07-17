@@ -22,14 +22,9 @@ class CallEdgeResolver<Field, Fact, Stmt, Method> extends ResolverTemplate<Field
 	}
 	
 	public CallEdgeResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Debugger<Field, Fact, Stmt, Method> debugger, CallEdgeResolver<Field, Fact, Stmt, Method> parent) {
-		super(analyzer, parent, debugger);
+		super(analyzer, analyzer.getAccessPath(), parent, debugger);
 	}
 
-	@Override
-	protected AccessPath<Field> getResolvedAccessPath() {
-		return analyzer.getAccessPath();
-	}
-	
 	@Override
 	protected AccessPath<Field> getAccessPathOf(CallEdge<Field, Fact, Stmt, Method> inc) {
 		return inc.getCalleeSourceFact().getAccessPath();
