@@ -27,6 +27,10 @@ public class JsonArray {
 		for(String item: items) {
 			JsonDocument.tabs(tabs+1, builder); builder.append("\""+item+"\",\n");
 		}
+		
+		if(!items.isEmpty())
+			builder.delete(builder.length()-2, builder.length()-1); 
+		
 		JsonDocument.tabs(tabs, builder); builder.append("]");
 	}
 }
