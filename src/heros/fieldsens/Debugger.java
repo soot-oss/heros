@@ -11,6 +11,7 @@
 package heros.fieldsens;
 
 import heros.InterproceduralCFG;
+import heros.fieldsens.FlowFunction.Constraint;
 import heros.fieldsens.structs.WrappedFactAtStatement;
 
 public interface Debugger<Field, Fact, Stmt, Method> {
@@ -22,6 +23,7 @@ public interface Debugger<Field, Fact, Stmt, Method> {
 	public void newJob(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt);
 	public void jobStarted(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt);
 	public void jobFinished(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt);
+	public void askedToResolve(Resolver<Field, Fact, Stmt, Method> resolver, Constraint<Field> constraint);
 	
 	public static class NullDebugger <Field, Fact, Stmt, Method> implements Debugger<Field, Fact, Stmt, Method> {
 
@@ -61,6 +63,11 @@ public interface Debugger<Field, Fact, Stmt, Method> {
 		@Override
 		public void jobFinished(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer,
 				WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
+			
+		}
+
+		@Override
+		public void askedToResolve(Resolver<Field, Fact, Stmt, Method> resolver, Constraint<Field> constraint) {
 			
 		}
 		

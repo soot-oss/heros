@@ -18,6 +18,7 @@ import com.google.common.collect.Sets;
 
 import heros.InterproceduralCFG;
 import heros.fieldsens.Debugger;
+import heros.fieldsens.FlowFunction.Constraint;
 import heros.fieldsens.PerAccessPathMethodAnalyzer;
 import heros.fieldsens.Resolver;
 import heros.fieldsens.structs.WrappedFactAtStatement;
@@ -135,6 +136,11 @@ public class TestDebugger<Field, Fact, Stmt, Method> implements Debugger<Field, 
 	@Override
 	public void jobFinished(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer,
 			WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
+		
+	}
+
+	@Override
+	public void askedToResolve(Resolver<Field, Fact, Stmt, Method> resolver, Constraint<Field> constraint) {
 		
 	}
 

@@ -92,6 +92,7 @@ public abstract class ResolverTemplate<Field, Fact, Stmt, Method, Incoming>  ext
 	@Override
 	public void resolve(Constraint<Field> constraint, InterestCallback<Field, Fact, Stmt, Method> callback) {
 		log("Resolve: "+constraint);
+		debugger.askedToResolve(this, constraint);
 		if(constraint.canBeAppliedTo(resolvedAccessPath) && !isLocked()) {
 			AccessPath<Field> newAccPath = constraint.applyToAccessPath(resolvedAccessPath);
 			ResolverTemplate<Field,Fact,Stmt,Method,Incoming> nestedResolver = getOrCreateNestedResolver(newAccPath);
