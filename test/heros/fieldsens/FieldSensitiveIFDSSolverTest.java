@@ -1261,4 +1261,23 @@ public class FieldSensitiveIFDSSolverTest {
 		
 		helper.runSolver(false, "m_a");
 	}
+	
+	@Test
+	public void maintainCallingContextInCtrlFlowJoin() {
+		helper.method("main",
+				startPoints("a"),
+				normalStmt("a", flow("0", "1")).succ("b1").succ("b2"),
+				callSite("b1").calls("foo", flow("1", prependField("f"), "2")).retSite("c1", kill("1")),
+				callSite("b2").calls("foo", flow("1", "2")).retSite("c2", kill("1")),
+				normalStmt("c1", kill("3")).succ("d"),
+				normalStmt("c2", flow("3", readField("f"), "4")).succ("d"),
+				normalStmt("d", kill("4")).succ("e"));
+				
+		helper.method("foo", 
+				startPoints("f"),
+				normalStmt("f", flow("2", "2")).succ("g").succ("f"),
+				exitStmt("g").returns(over("b1"), to("c1"), flow("2", "3")).returns(over("b2"), to("c2"), flow("2", "3")));
+				
+		helper.runSolver(false, "a");
+	}
 }

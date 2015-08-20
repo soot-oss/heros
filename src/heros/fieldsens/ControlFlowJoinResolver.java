@@ -54,24 +54,37 @@ public class ControlFlowJoinResolver<Field, Fact, Stmt, Method> extends Resolver
 		}
 	};
 	
+	private boolean isNullOrCallEdgeResolver(Resolver<Field, Fact, Stmt, Method> resolver) {
+		if(resolver == null)
+			return true;
+		if(resolver instanceof CallEdgeResolver) {
+			return !(resolver instanceof ZeroCallEdgeResolver);
+		}
+		return false;
+	}
+	
 	@Override
 	protected void processIncomingPotentialPrefix(final WrappedFact<Field, Fact, Stmt, Method> fact) {
-		lock();
-		Delta<Field> delta = fact.getAccessPath().getDeltaTo(resolvedAccessPath);
-		fact.getResolver().resolve(new DeltaConstraint<Field>(delta), new InterestCallback<Field, Fact, Stmt, Method>() {
-			@Override
-			public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, 
-					Resolver<Field, Fact, Stmt, Method> resolver) {
-//				incomingEdges.add(new WrappedFact<Field, Fact, Stmt, Method>(fact.getFact(), resolvedAccPath, resolver));
-				ControlFlowJoinResolver.this.interest(resolver);
-			}
-
-			@Override
-			public void canBeResolvedEmpty() {
-				ControlFlowJoinResolver.this.canBeResolvedEmpty();
-			}
-		});
-		unlock();
+		if(isNullOrCallEdgeResolver(fact.getResolver())) {
+			canBeResolvedEmpty();
+		}
+		else {
+			lock();
+			Delta<Field> delta = fact.getAccessPath().getDeltaTo(resolvedAccessPath);
+			fact.getResolver().resolve(new DeltaConstraint<Field>(delta), new InterestCallback<Field, Fact, Stmt, Method>() {
+				@Override
+				public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, 
+						Resolver<Field, Fact, Stmt, Method> resolver) {
+					ControlFlowJoinResolver.this.interest(resolver);
+				}
+	
+				@Override
+				public void canBeResolvedEmpty() {
+					ControlFlowJoinResolver.this.canBeResolvedEmpty();
+				}
+			});
+			unlock();
+		}
 	}
 	
 	@Override
