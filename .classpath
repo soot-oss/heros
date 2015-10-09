@@ -4,11 +4,11 @@
 	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="test"/>
-	<classpathentry exported="true" kind="lib" path="guava-14.0.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="slf4j-api-1.7.5.jar"/>
 	<classpathentry exported="true" kind="lib" path="slf4j-simple-1.7.5.jar"/>
 	<classpathentry kind="lib" path="junit.jar"/>
 	<classpathentry kind="lib" path="org.hamcrest.core_1.3.0.jar"/>
 	<classpathentry kind="lib" path="mockito-all-1.9.5.jar"/>
+	<classpathentry exported="true" kind="lib" path="guava-18.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
