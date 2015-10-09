@@ -270,4 +270,8 @@ public class AccessPath<T> {
 	public T getFirstAccess() {
 		return accesses[0];
 	}
+
+	Set<T> getExclusions() {
+		return exclusions;
+	}
 }

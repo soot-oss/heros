@@ -22,14 +22,16 @@ public class MethodAnalyzerImpl<Field,Fact, Stmt, Method>
 			new DefaultValueMap<Fact, PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method>>() {
 		@Override
 		protected PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> createItem(Fact key) {
-			return new PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method>(method, key, context);
+			return new PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method>(method, key, context, debugger);
 		}
 	};
 	private Context<Field, Fact, Stmt, Method> context;
+	private Debugger<Field, Fact, Stmt, Method> debugger;
 
-	MethodAnalyzerImpl(Method method, Context<Field, Fact, Stmt, Method> context) {
+	MethodAnalyzerImpl(Method method, Context<Field, Fact, Stmt, Method> context, Debugger<Field, Fact, Stmt, Method> debugger) {
 		this.method = method;
 		this.context = context;
+		this.debugger = debugger;
 	}
 	
 	@Override

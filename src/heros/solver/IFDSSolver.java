@@ -49,7 +49,12 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 	 * {@link #solve()}.
 	 */
 	public IFDSSolver(final IFDSTabulationProblem<N,D,M,I> ifdsProblem) {
-		super(new IDETabulationProblem<N,D,M,BinaryDomain,I>() {
+		super(createIDETabulationProblem(ifdsProblem));
+	}
+
+	static <N, D, M, I extends InterproceduralCFG<N, M>> IDETabulationProblem<N, D, M, BinaryDomain, I> createIDETabulationProblem(
+			final IFDSTabulationProblem<N, D, M, I> ifdsProblem) {
+		return new IDETabulationProblem<N,D,M,BinaryDomain,I>() {
 
 			public FlowFunctions<N,D,M> flowFunctions() {
 				return ifdsProblem.flowFunctions();
@@ -140,7 +145,7 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 				}
 			}
 
-			});
+			};
 	}
 	
 	/**

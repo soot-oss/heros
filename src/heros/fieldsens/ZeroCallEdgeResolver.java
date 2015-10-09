@@ -16,11 +16,15 @@ public class ZeroCallEdgeResolver<Field, Fact, Stmt, Method> extends CallEdgeRes
 
 	private ZeroHandler<Field> zeroHandler;
 
-	public ZeroCallEdgeResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, ZeroHandler<Field> zeroHandler) {
-		super(analyzer);
+	public ZeroCallEdgeResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, ZeroHandler<Field> zeroHandler, Debugger<Field, Fact, Stmt, Method> debugger) {
+		super(analyzer, debugger);
 		this.zeroHandler = zeroHandler;
 	}
 
+	ZeroCallEdgeResolver<Field, Fact, Stmt, Method> copyWithAnalyzer(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer) {
+		return new ZeroCallEdgeResolver<Field, Fact, Stmt, Method>(analyzer, zeroHandler, debugger);
+	}
+	
 	@Override
 	public void resolve(Constraint<Field> constraint, InterestCallback<Field, Fact, Stmt, Method> callback) {
 		if(zeroHandler.shouldGenerateAccessPath(constraint.applyToAccessPath(new AccessPath<Field>())))
@@ -28,7 +32,7 @@ public class ZeroCallEdgeResolver<Field, Fact, Stmt, Method> extends CallEdgeRes
 	}
 	
 	@Override
-	public void interest() {
+	public void interest(Resolver<Field, Fact, Stmt, Method> resolver) {
 	}
 	
 	@Override
@@ -36,6 +40,11 @@ public class ZeroCallEdgeResolver<Field, Fact, Stmt, Method> extends CallEdgeRes
 		return this;
 	}
 
+	@Override
+	public String toString() {
+		return "[0-Resolver"+super.toString()+"]";
+	}
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;

@@ -18,11 +18,15 @@ import com.google.common.collect.Sets;
 
 import heros.InterproceduralCFG;
 import heros.fieldsens.Debugger;
+import heros.fieldsens.FlowFunction.Constraint;
+import heros.fieldsens.PerAccessPathMethodAnalyzer;
+import heros.fieldsens.Resolver;
+import heros.fieldsens.structs.WrappedFactAtStatement;
 
-public class TestDebugger<Field, Fact, Stmt, Method, I extends InterproceduralCFG<Stmt, Method>> implements Debugger<Field, Fact, Stmt, Method, I> {
+public class TestDebugger<Field, Fact, Stmt, Method> implements Debugger<Field, Fact, Stmt, Method> {
 
 	private JsonDocument root = new JsonDocument();
-	private I icfg;
+	private InterproceduralCFG<Stmt, Method> icfg;
 	
 	public void writeJsonDebugFile(String filename) {
 		try {
@@ -41,7 +45,7 @@ public class TestDebugger<Field, Fact, Stmt, Method, I extends InterproceduralCF
 	 * @see heros.alias.Debugger#setICFG(I)
 	 */
 	@Override
-	public void setICFG(I icfg) {
+	public void setICFG(InterproceduralCFG<Stmt, Method> icfg) {
 		this.icfg = icfg;
 	}
 
@@ -106,6 +110,38 @@ public class TestDebugger<Field, Fact, Stmt, Method, I extends InterproceduralCF
 	public void expectReturnFlow(Stmt exitStmt, Stmt returnSite, String expectedFlowFunctionsToString) {
 		if(returnSite != null)
 			stmt(exitStmt).doc("returns").doc(returnSite.toString()).keyValue("flow", expectedFlowFunctionsToString);
+	}
+
+	@Override
+	public void edgeTo(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
+		
+	}
+
+	@Override
+	public void newResolver(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver) {
+		
+	}
+
+	@Override
+	public void newJob(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
+		
+	}
+
+	@Override
+	public void jobStarted(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer,
+			WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
+		
+	}
+
+	@Override
+	public void jobFinished(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer,
+			WrappedFactAtStatement<Field, Fact, Stmt, Method> factAtStmt) {
+		
+	}
+
+	@Override
+	public void askedToResolve(Resolver<Field, Fact, Stmt, Method> resolver, Constraint<Field> constraint) {
+		
 	}
 
 }

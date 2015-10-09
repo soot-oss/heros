@@ -64,7 +64,8 @@ public class ControlFlowJoinResolverTest {
 	public void before() {
 		analyzer = mock(PerAccessPathMethodAnalyzer.class);
 		joinStmt = new Statement("joinStmt");
-		sut = new ControlFlowJoinResolver<String, TestFact, Statement, TestMethod>(analyzer, joinStmt);
+		sut = new ControlFlowJoinResolver<String, TestFact, Statement, TestMethod>(mock(FactMergeHandler.class), analyzer, joinStmt, 
+				new Debugger.NullDebugger<String, TestFact, Statement, TestMethod>());
 		fact = new TestFact("value");
 		callback = mock(InterestCallback.class);
 		callEdgeResolver = mock(CallEdgeResolver.class);
@@ -109,7 +110,7 @@ public class ControlFlowJoinResolverTest {
 		sut.addIncoming(new WrappedFact<String, TestFact, Statement, TestMethod>(fact, createAccessPath(), resolver));
 		sut.resolve(getDeltaConstraint("a"), callback);
 		
-		verify(callback).interest(eq(analyzer), argThat(new ResolverArgumentMatcher(createAccessPath("a"))));
+		verify(callback).interest(eq(analyzer), eq(nestedResolver));
 	}
 	
 	
@@ -125,7 +126,7 @@ public class ControlFlowJoinResolverTest {
 		@Override
 		public boolean matches(Object argument) {
 			ControlFlowJoinResolver resolver = (ControlFlowJoinResolver) argument;
-			return resolver.isInterestGiven() && resolver.getResolvedAccessPath().equals(accPath) && resolver.getJoinStmt().equals(joinStmt);
+			return resolver.isInterestGiven() && resolver.resolvedAccessPath.equals(accPath) && resolver.getJoinStmt().equals(joinStmt);
 		}
 	}
 }

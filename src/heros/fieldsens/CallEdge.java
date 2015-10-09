@@ -61,14 +61,22 @@ public class CallEdge<Field, Fact, Stmt, Method> {
 			@Override
 			public void interest(PerAccessPathMethodAnalyzer<Field, Fact, Stmt, Method> analyzer, Resolver<Field, Fact, Stmt, Method> resolver) {
 				WrappedFact<Field, Fact, Stmt, Method> calleeSourceFactWithDelta = new WrappedFact<Field, Fact, Stmt, Method>(calleeSourceFact.getFact(), delta.applyTo(calleeSourceFact.getAccessPath()), resolver);
-				if(interestedAnalyzer.getAccessPath().isPrefixOf(calleeSourceFactWithDelta.getAccessPath()) != PrefixTestResult.GUARANTEED_PREFIX)
-					throw new AssertionError();
-				interestedAnalyzer.addIncomingEdge(new CallEdge<Field, Fact, Stmt, Method>(analyzer, 
+				assert interestedAnalyzer.getAccessPath().isPrefixOf(calleeSourceFactWithDelta.getAccessPath()) == PrefixTestResult.GUARANTEED_PREFIX;
+				
+				CallEdge<Field, Fact, Stmt, Method> newCallEdge = new CallEdge<Field, Fact, Stmt, Method>(analyzer, 
 						new WrappedFactAtStatement<Field, Fact, Stmt, Method>(factAtCallSite.getStatement(), 
 											new WrappedFact<Field, Fact, Stmt, Method>(factAtCallSite.getWrappedFact().getFact(), 
 													delta.applyTo(factAtCallSite.getWrappedFact().getAccessPath()), 
 													resolver)), 
-						calleeSourceFactWithDelta));
+						calleeSourceFactWithDelta);
+				
+				if (resolver instanceof ZeroCallEdgeResolver) {
+					interestedAnalyzer.getCallEdgeResolver().incomingEdges.add(newCallEdge);
+					interestedAnalyzer.getCallEdgeResolver().interest(((ZeroCallEdgeResolver<Field, Fact, Stmt, Method>) resolver).copyWithAnalyzer(interestedAnalyzer));
+					interestedAnalyzer.getCallEdgeResolver().processIncomingGuaranteedPrefix(newCallEdge);
+				}
+				else
+					interestedAnalyzer.addIncomingEdge(newCallEdge);
 			}
 			
 			@Override

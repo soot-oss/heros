@@ -70,7 +70,7 @@ public class TestHelper {
 		return result;
 	}
 
-	@SafeVarargs
+	@SuppressWarnings("unchecked")
 	public static EdgeBuilder.NormalStmtBuilder normalStmt(String stmt, ExpectedFlowFunction<JoinableFact>...flowFunctions) {
 		return new NormalStmtBuilder(new Statement(stmt), flowFunctions);
 	}
