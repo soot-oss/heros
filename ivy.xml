@@ -2,8 +2,8 @@
     <info organisation="ca.mcgill.sable" module="heros"/>
     <publications>
         <artifact name="heros" type="jar" ext="jar" />
-        <artifact name="heros" type="javadoc" ext="jar" />
-        <artifact name="heros" type="source" ext="jar" />
+        <artifact name="herosjavadoc" type="javadoc" ext="jar" />
+        <artifact name="herossources" type="source" ext="jar" />
         <!--
         <artifact name="heros" type="classes" ext="jar" />
         -->
