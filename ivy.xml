@@ -1,0 +1,19 @@
+<ivy-module version="2.0">
+    <info organisation="ca.mcgill.sable" module="heros"/>
+    <publications>
+        <artifact name="heros" type="jar" ext="jar" />
+        <artifact name="heros" type="javadoc" ext="jar" />
+        <artifact name="heros" type="source" ext="jar" />
+        <!--
+        <artifact name="heros" type="classes" ext="jar" />
+        -->
+    </publications>
+    <!--<dependencies>
+        <dependency org="com.google.guava" name="guava" rev="18.0"/>
+        <dependency org="org.slf4j" name="slf4j-api" rev="1.7.5"/>
+        <dependency org="org.slf4j" name="slf4j-simple" rev="1.7.5"/>
+        <dependency org="org.mockito" name="mockito-all" rev="1.9.5"/>
+        <dependency org="org.hamcrest" name="hamcrest-core" rev="1.3"/>
+        <dependency org="junit" name="junit" rev="4.12"/>
+    </dependencies>-->
+</ivy-module>
