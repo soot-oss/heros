@@ -2,7 +2,7 @@
 	<info organisation="ca.mcgill.sable" module="heros"/>
 	<configurations>
 		<conf name="default" />
-		<conf name="sources" />
+ 		<conf name="sources" />
 		<conf name="javadoc" />
 	</configurations>
 	
