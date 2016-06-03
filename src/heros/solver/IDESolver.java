@@ -365,7 +365,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 								EdgeFunction<V> f4 = edgeFunctions.getCallEdgeFunction(n, d2, sCalledProcN, d3);
 								EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(n, sCalledProcN, eP, d4, retSiteN, d5);
 								EdgeFunction<V> fPrime = f4.composeWith(fCalleeSummary).composeWith(f5);					
-								D d5_restoredCtx = restoreContextOnReturnedFact(d2, d5);
+								D d5_restoredCtx = restoreContextOnReturnedFact(n, d2, d5);
 								propagate(d1, retSiteN, d5_restoredCtx, f.composeWith(fPrime), n, false);
 							}
 						}
@@ -469,7 +469,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 								EdgeFunction<V> f3 = valAndFunc.getValue();
 								if(!f3.equalTo(allTop)) {
 									D d3 = valAndFunc.getKey();
-									D d5_restoredCtx = restoreContextOnReturnedFact(d4, d5);
+									D d5_restoredCtx = restoreContextOnReturnedFact(c, d4, d5);
 									propagate(d3, retSiteC, d5_restoredCtx, f3.composeWith(fPrime), c, false);
 								}
 							}
@@ -517,6 +517,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * This method will be called for each incoming edge and can be used to
 	 * transfer knowledge from the calling edge to the returning edge, without
 	 * affecting the summary edges at the callee.
+	 * @param callSite 
 	 * 
 	 * @param d4
 	 *            Fact stored with the incoming edge, i.e., present at the
@@ -526,7 +527,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * @return Fact that will be propagated to the caller.
 	 */
 	@SuppressWarnings("unchecked")
-	protected D restoreContextOnReturnedFact(D d4, D d5) {
+	protected D restoreContextOnReturnedFact(N callSite, D d4, D d5) {
 		if (d5 instanceof LinkedNode) {
 			((LinkedNode<D>) d5).setCallingContext(d4);
 		}

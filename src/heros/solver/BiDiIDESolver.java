@@ -221,7 +221,7 @@ public class BiDiIDESolver<N, D, M, V, I extends InterproceduralCFG<N, M>> {
 		}
 		
 		@Override
-		protected AbstractionWithSourceStmt restoreContextOnReturnedFact(AbstractionWithSourceStmt d4, AbstractionWithSourceStmt d5) {
+		protected AbstractionWithSourceStmt restoreContextOnReturnedFact(N callSite, AbstractionWithSourceStmt d4, AbstractionWithSourceStmt d5) {
 			return new AbstractionWithSourceStmt(d5.getAbstraction(), d4.getSourceStmt());
 		}
 		
