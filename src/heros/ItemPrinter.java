@@ -22,4 +22,20 @@ public interface ItemPrinter<N, D, M> {
 	public String printNode(N node, M parentMethod);
 	public String printFact(D fact);
 	public String printMethod(M method);
+	public static final ItemPrinter<Object, Object, Object> DEFAULT_PRINTER = new ItemPrinter<Object, Object, Object>() {
+		@Override
+		public String printNode(Object node, Object parentMethod) {
+			return node.toString();
+		}
+
+		@Override
+		public String printFact(Object fact) {
+			return fact.toString();
+		}
+
+		@Override
+		public String printMethod(Object method) {
+			return method.toString();
+		}
+	};
 }

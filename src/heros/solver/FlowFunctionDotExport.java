@@ -12,7 +12,6 @@ package heros.solver;
 
 import heros.InterproceduralCFG;
 import heros.ItemPrinter;
-import heros.SolverDebugConfiguration;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -38,14 +37,14 @@ import com.google.common.collect.Table.Cell;
  */
 public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 	private final IDESolver<N, D, M, ?, I> solver;
-	private final ItemPrinter<N, D, M> printer;
+	private final ItemPrinter<? super N, ? super D, ? super M> printer;
 	/**
 	 * Constructor.
 	 * @param solver The solver instance to dump.
 	 * @param printer The printer object to use to create the string representations of
 	 * the nodes, facts, and methods in the exploded super-graph.
 	 */
-	public FlowFunctionDotExport(IDESolver<N, D, M, ?, I> solver, ItemPrinter<N, D, M> printer) {
+	public FlowFunctionDotExport(IDESolver<N, D, M, ?, I> solver, ItemPrinter<? super N, ? super D, ? super M> printer) {
 		this.solver = solver;
 		this.printer = printer;
 	}
@@ -67,6 +66,13 @@ public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 		return toRet;
 	}
 	
+	private String escapeLabelString(String toEscape) { 
+		return toEscape.replace("\\", "\\\\")
+				.replace("\"", "\\\"")
+				.replace("<", "\\<")
+				.replace(">", "\\>");
+	}
+	
 	/**
 	 * Write a graph representation of the flow functions computed by the solver
 	 * to the file indicated by fileName.
@@ -77,10 +83,7 @@ public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 	 * @param fileName The output file to which to write the dot representation.
 	 */
 	public void dumpDotFile(String fileName) {
-		File f = new File(fileName);
-		PrintStream pf = null;
-		try {
-			pf = new PrintStream(f);
+		try(PrintStream pf = new PrintStream(new File(fileName))) {
 			long factCounter = 0;
 			Map<Pair<N, D>, Long> factNumbers = new HashMap<Pair<N, D>, Long>();
 			long unitCounter = 0;
@@ -117,10 +120,10 @@ public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 				for(N methodUnit : intraProc) {
 					Set<D> loc = factsForUnit.get(methodUnit);
 					long unitNumber = unitNumbers.get(methodUnit);
-					String unitText = printer.printNode(methodUnit, kv.getKey()).replace("\\", "\\\\").replace("\"", "\\\"").replace("<", "\\<").replace(">", "\\>");
+					String unitText = escapeLabelString(printer.printNode(methodUnit, kv.getKey()));
 					pf.print("u"+ unitNumber + " [shape=record,label=\""+ unitText + " ");
 					for(D hl : loc) {
-						pf.print("| <f" + factNumbers.get(new Pair<N, D>(methodUnit, hl)) + "> " + printer.printFact(hl));
+						pf.print("| <f" + factNumbers.get(new Pair<N, D>(methodUnit, hl)) + "> " + escapeLabelString(printer.printFact(hl)));
 					}
 					pf.println("\"];");
 				}
@@ -145,7 +148,7 @@ public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 						}
 					}
 				}
-				pf.println("label=\"" + printer.printMethod(kv.getKey()) + "\";");
+				pf.println("label=\"" + escapeLabelString(printer.printMethod(kv.getKey())) + "\";");
 				pf.println("}");
 			}
 			for(String interProcE : interProc) {
@@ -154,8 +157,6 @@ public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 			pf.println("}");
 		} catch (FileNotFoundException e) {	
 			throw new RuntimeException("Writing dot output failed", e); 
-		} finally {
-			pf.close();
 		}
 	}
 }
