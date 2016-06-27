@@ -6,7 +6,7 @@
  * http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  * 
  * Contributors:
- *     Eric Bodden - initial API and implementation
+ *     John Toman - initial API and implementation 
  ******************************************************************************/
 package heros.solver;
 
@@ -16,11 +16,12 @@ import heros.ItemPrinter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 
 /**
@@ -36,6 +37,27 @@ import com.google.common.collect.Table.Cell;
  * @param <I> The type of inter-procedural control-flow graph being used.
  */
 public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
+	private static class Numberer<D> {
+		long counter = 1;
+		Map<D, Long> map = new HashMap<D, Long>();
+		
+		public void add(D o) {
+			if(map.containsKey(o)) {
+				return;
+			}
+			map.put(o, counter++);
+		}
+		public long get(D o) {
+			if(o == null) {
+				throw new IllegalArgumentException("Null key");
+			}
+			if(!map.containsKey(o)) {
+				throw new IllegalArgumentException("Failed to find number for: " + o);
+			}
+			return map.get(o);
+			
+		}
+	}
 	private final IDESolver<N, D, M, ?, I> solver;
 	private final ItemPrinter<? super N, ? super D, ? super M> printer;
 	/**
@@ -49,15 +71,7 @@ public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 		this.printer = printer;
 	}
 	
-	private <T> long doNumber(Map<T, Long> map, T value, long val) {
-		if(map.containsKey(value)) {
-			return val;
-		}
-		map.put(value, val);
-		return val + 1;
-	}
-	
-	private <K,U> Set<U> getOrMakeSet(Map<K,Set<U>> map, K key) {
+	private static <K,U> Set<U> getOrMakeSet(Map<K,Set<U>> map, K key) {
 		if(map.containsKey(key)) {
 			return map.get(key);
 		}
@@ -73,6 +87,50 @@ public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 				.replace(">", "\\>");
 	}
 	
+	private class UnitFactTracker {
+		private Numberer<Pair<N, D>> factNumbers = new Numberer<Pair<N, D>>();
+		private Numberer<N> unitNumbers = new Numberer<N>();
+		private Map<N, Set<D>> factsForUnit = new HashMap<N, Set<D>>();
+		private Map<M, Set<N>> methodToUnit = new HashMap<M, Set<N>>();
+		
+		public void registerFactAtUnit(N unit, D fact) {
+			getOrMakeSet(factsForUnit, unit).add(fact);
+			factNumbers.add(new Pair<N, D>(unit, fact));
+		}
+
+		public void registerUnit(M method, N unit) {
+			unitNumbers.add(unit);
+			getOrMakeSet(methodToUnit, method).add(unit);
+		}
+		
+		public String getUnitLabel(N unit) {
+			return "u" + unitNumbers.get(unit);
+		}
+		
+		public String getFactLabel(N unit, D fact) {
+			return "f" + factNumbers.get(new Pair<N, D>(unit, fact));
+		}
+		
+		public String getEdgePoint(N unit, D fact) {
+			return this.getUnitLabel(unit) + ":" + this.getFactLabel(unit, fact);
+		}
+	}
+	
+	private void numberEdges(Table<N, N, Map<D, Set<D>>> edgeSet, UnitFactTracker utf) {
+		for(Cell<N,N,Map<D,Set<D>>> c : edgeSet.cellSet()) {
+			N sourceUnit = c.getRowKey();
+			N destUnit = c.getColumnKey();
+			utf.registerUnit(solver.icfg.getMethodOf(destUnit), destUnit);
+			utf.registerUnit(solver.icfg.getMethodOf(sourceUnit), sourceUnit);
+			for(Map.Entry<D, Set<D>> entry : c.getValue().entrySet()) {
+				utf.registerFactAtUnit(sourceUnit, entry.getKey());
+				for(D destFact : entry.getValue()) {
+					utf.registerFactAtUnit(destUnit, destFact);
+				}
+			}
+		}
+	}
+	
 	/**
 	 * Write a graph representation of the flow functions computed by the solver
 	 * to the file indicated by fileName.
@@ -83,67 +141,41 @@ public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 	 * @param fileName The output file to which to write the dot representation.
 	 */
 	public void dumpDotFile(String fileName) {
-		try(PrintStream pf = new PrintStream(new File(fileName))) {
-			long factCounter = 0;
-			Map<Pair<N, D>, Long> factNumbers = new HashMap<Pair<N, D>, Long>();
-			long unitCounter = 0;
-			Map<N, Long> unitNumbers = new HashMap<N, Long>();
-			Map<N, Set<D>> factsForUnit = new HashMap<N, Set<D>>();
-			Map<M, Set<N>> methodToUnit = new HashMap<M, Set<N>>();
-			for(Cell<N,N,Map<D,Set<D>>> c : solver.computedEdges.cellSet()) {
-				N sourceUnit = c.getRowKey();
-				N destUnit = c.getColumnKey();
-				getOrMakeSet(methodToUnit, solver.icfg.getMethodOf(destUnit)).add(destUnit);
-				getOrMakeSet(methodToUnit, solver.icfg.getMethodOf(sourceUnit)).add(sourceUnit);
-				unitCounter = doNumber(unitNumbers, sourceUnit, unitCounter);
-				unitCounter = doNumber(unitNumbers, destUnit, unitCounter);
-				Set<D> sourceFacts = getOrMakeSet(factsForUnit, sourceUnit);
-				Set<D> destFacts = getOrMakeSet(factsForUnit, destUnit);
-				for(Map.Entry<D, Set<D>> entry : c.getValue().entrySet()) {
-					factCounter = doNumber(factNumbers, new Pair<N, D>(sourceUnit, entry.getKey()), factCounter);
-					sourceFacts.add(entry.getKey());
-					for(D destFact : entry.getValue()) {
-						factCounter = doNumber(factNumbers, new Pair<N, D>(destUnit, destFact), factCounter);
-						destFacts.add(destFact);
-					}
-				}
-			}
+		File f = new File(fileName);
+		PrintStream pf = null;
+		try {
+			pf = new PrintStream(f);
+			UnitFactTracker utf = new UnitFactTracker();
+			
+			numberEdges(solver.computedIntraPEdges, utf);
+			numberEdges(solver.computedInterPEdges, utf);
+			
 			pf.println("digraph ifds {" +
 					"node[shape=record];"
 			);
-			ArrayList<String> interProc = new ArrayList<String>();
 			int methodCounter = 0;
-			for(Map.Entry<M, Set<N>> kv : methodToUnit.entrySet()) {
+			for(Map.Entry<M, Set<N>> kv : utf.methodToUnit.entrySet()) {
 				Set<N> intraProc = kv.getValue();
 				pf.println("subgraph cluster" + methodCounter + " {");
 				methodCounter++;
 				for(N methodUnit : intraProc) {
-					Set<D> loc = factsForUnit.get(methodUnit);
-					long unitNumber = unitNumbers.get(methodUnit);
+					Set<D> loc = utf.factsForUnit.get(methodUnit);
 					String unitText = escapeLabelString(printer.printNode(methodUnit, kv.getKey()));
-					pf.print("u"+ unitNumber + " [shape=record,label=\""+ unitText + " ");
+					pf.print(utf.getUnitLabel(methodUnit) + " [shape=record,label=\""+ unitText + " ");
 					for(D hl : loc) {
-						pf.print("| <f" + factNumbers.get(new Pair<N, D>(methodUnit, hl)) + "> " + escapeLabelString(printer.printFact(hl)));
+						pf.print("| <" + utf.getFactLabel(methodUnit, hl) + "> " + escapeLabelString(printer.printFact(hl)));
 					}
 					pf.println("\"];");
 				}
 				for(N methodUnit : intraProc) {
-					long sourceNumber = unitNumbers.get(methodUnit);
-					Map<N, Map<D, Set<D>>> flows = solver.computedEdges.row(methodUnit);
+					Map<N, Map<D, Set<D>>> flows = solver.computedIntraPEdges.row(methodUnit);
 					for(Map.Entry<N, Map<D, Set<D>>> kv2 : flows.entrySet()) {
 						N destUnit = kv2.getKey();
-						long destNumber = unitNumbers.get(destUnit);
 						for(Map.Entry<D, Set<D>> pointFlow : kv2.getValue().entrySet()) {
-							long sourceFactNumber = factNumbers.get(new Pair<N, D>(methodUnit, pointFlow.getKey()));
-							
 							for(D destFact : pointFlow.getValue()) {
-								long destFactNumber = factNumbers.get(new Pair<N, D>(destUnit, destFact));
-								String edge = "u" + sourceNumber + ":f" + sourceFactNumber + " -> u" + destNumber + ":f" + destFactNumber;
-								if(intraProc.contains(destUnit)) {
-									pf.println(edge+ ";");
-								} else {
-									interProc.add(edge + " [style=dotted];");
-								}
+								String edge = utf.getEdgePoint(methodUnit, pointFlow.getKey()) + " -> " + utf.getEdgePoint(destUnit, destFact);
+								pf.print(edge);
+								pf.println(";");
 							}
 						}
 					}
@@ -151,12 +183,23 @@ public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 				pf.println("label=\"" + escapeLabelString(printer.printMethod(kv.getKey())) + "\";");
 				pf.println("}");
 			}
-			for(String interProcE : interProc) {
-				pf.println(interProcE);
+			for(Cell<N, N, Map<D, Set<D>>> c : solver.computedInterPEdges.cellSet()) {
+				for(Map.Entry<D, Set<D>> kv : c.getValue().entrySet()) {
+					for(D dFact : kv.getValue()) {
+						pf.print(utf.getEdgePoint(c.getRowKey(), kv.getKey()));
+						pf.print(" -> ");
+						pf.print(utf.getEdgePoint(c.getColumnKey(), dFact));
+						pf.println(" [style=dotted];");
+					}
+				}
 			}
 			pf.println("}");
 		} catch (FileNotFoundException e) {	
 			throw new RuntimeException("Writing dot output failed", e); 
+		} finally {
+			if(pf != null) {
+				pf.close();
+			}
 		}
 	}
 }

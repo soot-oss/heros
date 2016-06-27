@@ -9,6 +9,7 @@
  * Contributors:
  *     Eric Bodden - initial API and implementation
  *     Marc-Andre Laverdiere-Papineau - Fixed race condition
+ *     John Toman - Adds edge recording
  ******************************************************************************/
 package heros.solver;
 
@@ -72,7 +73,10 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
     protected static final Logger logger = LoggerFactory.getLogger(IDESolver.class);
 
     @SynchronizedBy("consistent lock on field")
-    protected Table<N,N,Map<D,Set<D>>> computedEdges = HashBasedTable.create();
+    protected Table<N,N,Map<D,Set<D>>> computedIntraPEdges = HashBasedTable.create();
+    
+    @SynchronizedBy("consistent lock on field")
+    protected Table<N,N,Map<D,Set<D>>> computedInterPEdges = HashBasedTable.create();
 
     //enable with -Dorg.slf4j.simpleLogger.defaultLogLevel=trace
     public static final boolean DEBUG = logger.isDebugEnabled();
@@ -308,15 +312,16 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		executor.execute(task);
 	}
 	
-	private void saveEdges(N sourceNode, N sinkStmt, D sourceVal, Set<D> destVals) {
+	private void saveEdges(N sourceNode, N sinkStmt, D sourceVal, Set<D> destVals, boolean interP) {
 		if(!this.recordEdges) {
 			return;
 		}
-		synchronized (computedEdges) {
-			Map<D,Set<D>> map = computedEdges.get(sourceNode, sinkStmt);
+		Table<N, N, Map<D, Set<D>>> tgtMap = interP ? computedInterPEdges : computedIntraPEdges;
+		synchronized (tgtMap) {
+			Map<D,Set<D>> map = tgtMap.get(sourceNode, sinkStmt);
 			if(map == null) {
 				map = new HashMap<D, Set<D>>();
-				computedEdges.put(sourceNode, sinkStmt, map);
+				tgtMap.put(sourceNode, sinkStmt, map);
 			}
 			map.put(sourceVal, new HashSet<D>(destVals));
 		}
@@ -351,7 +356,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			//for each callee's start point(s)
 			Collection<N> startPointsOf = icfg.getStartPointsOf(sCalledProcN);
 			for(N sP: startPointsOf) {
-				saveEdges(n, sP, d2, res);
+				saveEdges(n, sP, d2, res, true);
 				//for each result node of the call-flow function
 				for(D d3: res) {
 					//create initial self-loop
@@ -380,7 +385,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
 							flowFunctionConstructionCount++;
 							Set<D> returnedFacts = computeReturnFlowFunction(retFunction, d3, d4, n, Collections.singleton(d2));
-							saveEdges(eP, retSiteN, d4, returnedFacts);
+							saveEdges(eP, retSiteN, d4, returnedFacts, true);
 							//for each target value of the function
 							for(D d5: returnedFacts) {
 								//update the caller-side summary function
@@ -401,7 +406,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			FlowFunction<D> callToReturnFlowFunction = flowFunctions.getCallToReturnFlowFunction(n, returnSiteN);
 			flowFunctionConstructionCount++;
 			Set<D> returnFacts = computeCallToReturnFlowFunction(callToReturnFlowFunction, d1, d2);
-			saveEdges(n, returnSiteN, d2, returnFacts);
+			saveEdges(n, returnSiteN, d2, returnFacts, false);
 			for(D d3: returnFacts) {
 				EdgeFunction<V> edgeFnE = edgeFunctions.getCallToReturnEdgeFunction(n, d2, returnSiteN, d3);
 				propagate(d1, returnSiteN, d3, f.composeWith(edgeFnE), n, false);
@@ -480,7 +485,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				//for each incoming-call value
 				for(D d4: entry.getValue()) {
 					Set<D> targets = computeReturnFlowFunction(retFunction, d1, d2, c, entry.getValue());
-					saveEdges(n, retSiteC, d2, targets);
+					saveEdges(n, retSiteC, d2, targets, true);
 					//for each target value at the return site
 					//line 23
 					for(D d5: targets) {
@@ -515,7 +520,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 						FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
 						flowFunctionConstructionCount++;
 						Set<D> targets = computeReturnFlowFunction(retFunction, d1, d2, c, Collections.singleton(zeroValue));
-						saveEdges(n, retSiteC, d2, targets);
+						saveEdges(n, retSiteC, d2, targets, true);
 						for(D d5: targets) {
 							EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(c, icfg.getMethodOf(n), n, d2, retSiteC, d5);
 							propagateUnbalancedReturnFlow(retSiteC, d5, f.composeWith(f5), c);
@@ -593,7 +598,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 			FlowFunction<D> flowFunction = flowFunctions.getNormalFlowFunction(n,m);
 			flowFunctionConstructionCount++;
 			Set<D> res = computeNormalFlowFunction(flowFunction, d1, d2);
-			saveEdges(n, m, d2, res);
+			saveEdges(n, m, d2, res, false);
 			for (D d3 : res) {
 				EdgeFunction<V> fprime = f.composeWith(edgeFunctions.getNormalEdgeFunction(n, d2, m, d3));
 				propagate(d1, m, d3, fprime, null, false); 

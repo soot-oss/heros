@@ -6,7 +6,7 @@
  * http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  * 
  * Contributors:
- *     Eric Bodden - initial API and implementation
+ *     John Toman - initial API and implementation
  ******************************************************************************/
 package heros;
 

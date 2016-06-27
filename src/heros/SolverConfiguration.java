@@ -7,6 +7,7 @@
  * 
  * Contributors:
  *     Eric Bodden - initial API and implementation
+ *     John Toman - adds recordEdge option
  ******************************************************************************/
 package heros;
 
