@@ -77,4 +77,9 @@ public abstract class DefaultIFDSTabulationProblem<N,D,M, I extends Interprocedu
 	public boolean computeValues() {
 		return true;
 	}
+	
+	@Override
+	public boolean recordEdges() {
+		return false;
+	}
 }

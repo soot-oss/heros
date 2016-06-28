@@ -588,6 +588,11 @@ public class FieldSensitiveTestHelper {
 					}
 				};
 			}
+
+			@Override
+			public boolean recordEdges() {
+				return false;
+			}
 		};
 	}
 	

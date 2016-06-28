@@ -488,6 +488,11 @@ public class BiDiIDESolver<N, D, M, V, I extends InterproceduralCFG<N, M>> {
 			return delegate.allTopFunction();
 		}
 
+		@Override
+		public boolean recordEdges() {
+			return delegate.recordEdges();
+		}
+
 	}
 	
 }

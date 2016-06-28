@@ -144,6 +144,11 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 					return EdgeIdentity.v(); 
 				}
 			}
+			
+			@Override
+			public boolean recordEdges() {
+				return ifdsProblem.recordEdges();
+			}
 
 			};
 	}
