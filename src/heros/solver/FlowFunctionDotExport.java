@@ -60,6 +60,8 @@ public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 	}
 	private final IDESolver<N, D, M, ?, I> solver;
 	private final ItemPrinter<? super N, ? super D, ? super M> printer;
+	private final Set<M> methodWhitelist;
+	
 	/**
 	 * Constructor.
 	 * @param solver The solver instance to dump.
@@ -67,8 +69,22 @@ public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 	 * the nodes, facts, and methods in the exploded super-graph.
 	 */
 	public FlowFunctionDotExport(IDESolver<N, D, M, ?, I> solver, ItemPrinter<? super N, ? super D, ? super M> printer) {
+		this(solver, printer, null);
+	}
+	
+	/**
+	 * Constructor.
+	 * @param solver The solver instance to dump.
+	 * @param printer The printer object to use to create the string representations of
+	 * the nodes, facts, and methods in the exploded super-graph.
+	 * @param methodWhitelist A set of methods of type M for which the full graphs should be printed.
+	 * Flow functions for which both unit endpoints are not contained in a method in methodWhitelist are not printed.
+	 * Callee/caller edges into/out of the methods in the set are still printed.  
+	 */
+	public FlowFunctionDotExport(IDESolver<N, D, M, ?, I> solver, ItemPrinter<? super N, ? super D, ? super M> printer, Set<M> methodWhitelist) {
 		this.solver = solver;
 		this.printer = printer;
+		this.methodWhitelist = methodWhitelist;
 	}
 	
 	private static <K,U> Set<U> getOrMakeSet(Map<K,Set<U>> map, K key) {
@@ -93,6 +109,8 @@ public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 		private Map<N, Set<D>> factsForUnit = new HashMap<N, Set<D>>();
 		private Map<M, Set<N>> methodToUnit = new HashMap<M, Set<N>>();
 		
+		private Map<M, Set<N>> stubMethods = new HashMap<M, Set<N>>();
+		
 		public void registerFactAtUnit(N unit, D fact) {
 			getOrMakeSet(factsForUnit, unit).add(fact);
 			factNumbers.add(new Pair<N, D>(unit, fact));
@@ -101,6 +119,12 @@ public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 		public void registerUnit(M method, N unit) {
 			unitNumbers.add(unit);
 			getOrMakeSet(methodToUnit, method).add(unit);
+		}
+		
+		public void registerStubUnit(M method, N unit) {
+			assert !methodToUnit.containsKey(method);
+			unitNumbers.add(unit);
+			getOrMakeSet(stubMethods, method).add(unit);
 		}
 		
 		public String getUnitLabel(N unit) {
@@ -120,14 +144,47 @@ public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 		for(Cell<N,N,Map<D,Set<D>>> c : edgeSet.cellSet()) {
 			N sourceUnit = c.getRowKey();
 			N destUnit = c.getColumnKey();
-			utf.registerUnit(solver.icfg.getMethodOf(destUnit), destUnit);
-			utf.registerUnit(solver.icfg.getMethodOf(sourceUnit), sourceUnit);
+			M destMethod = solver.icfg.getMethodOf(destUnit);
+			M sourceMethod = solver.icfg.getMethodOf(sourceUnit);
+			if(isMethodFiltered(sourceMethod) && isMethodFiltered(destMethod)) {
+				continue;
+			}
+			if(isMethodFiltered(destMethod)) {
+				utf.registerStubUnit(destMethod, destUnit);
+			} else {
+				utf.registerUnit(destMethod, destUnit);
+			}
+			if(isMethodFiltered(sourceMethod)) {
+				utf.registerStubUnit(sourceMethod, sourceUnit);
+			} else {
+				utf.registerUnit(sourceMethod, sourceUnit);
+			}
 			for(Map.Entry<D, Set<D>> entry : c.getValue().entrySet()) {
 				utf.registerFactAtUnit(sourceUnit, entry.getKey());
 				for(D destFact : entry.getValue()) {
 					utf.registerFactAtUnit(destUnit, destFact);
 				}
 			}
+		}
+	}
+
+	private boolean isMethodFiltered(M method) {
+		return methodWhitelist != null && !methodWhitelist.contains(method);
+	}
+	
+	private boolean isNodeFiltered(N node) {
+		return isMethodFiltered(solver.icfg.getMethodOf(node));
+	}
+	
+	private void printMethodUnits(Set<N> units, M method, PrintStream pf, UnitFactTracker utf) {
+		for(N methodUnit : units) {
+			Set<D> loc = utf.factsForUnit.get(methodUnit);
+			String unitText = escapeLabelString(printer.printNode(methodUnit, method));
+			pf.print(utf.getUnitLabel(methodUnit) + " [shape=record,label=\""+ unitText + " ");
+			for(D hl : loc) {
+				pf.print("| <" + utf.getFactLabel(methodUnit, hl) + "> " + escapeLabelString(printer.printFact(hl)));
+			}
+			pf.println("\"];");
 		}
 	}
 	
@@ -158,15 +215,7 @@ public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 				Set<N> intraProc = kv.getValue();
 				pf.println("subgraph cluster" + methodCounter + " {");
 				methodCounter++;
-				for(N methodUnit : intraProc) {
-					Set<D> loc = utf.factsForUnit.get(methodUnit);
-					String unitText = escapeLabelString(printer.printNode(methodUnit, kv.getKey()));
-					pf.print(utf.getUnitLabel(methodUnit) + " [shape=record,label=\""+ unitText + " ");
-					for(D hl : loc) {
-						pf.print("| <" + utf.getFactLabel(methodUnit, hl) + "> " + escapeLabelString(printer.printFact(hl)));
-					}
-					pf.println("\"];");
-				}
+				printMethodUnits(intraProc, kv.getKey(), pf, utf);
 				for(N methodUnit : intraProc) {
 					Map<N, Map<D, Set<D>>> flows = solver.computedIntraPEdges.row(methodUnit);
 					for(Map.Entry<N, Map<D, Set<D>>> kv2 : flows.entrySet()) {
@@ -183,7 +232,17 @@ public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 				pf.println("label=\"" + escapeLabelString(printer.printMethod(kv.getKey())) + "\";");
 				pf.println("}");
 			}
+			for(Map.Entry<M, Set<N>> kv : utf.stubMethods.entrySet()) {
+				pf.println("subgraph cluster" + methodCounter++ + " {");
+				printMethodUnits(kv.getValue(), kv.getKey(), pf, utf);
+				pf.println("label=\"" + escapeLabelString("[STUB] " + printer.printMethod(kv.getKey())) + "\";");
+				pf.println("graph[style=dotted];");
+				pf.println("}");
+			}
 			for(Cell<N, N, Map<D, Set<D>>> c : solver.computedInterPEdges.cellSet()) {
+				if(isNodeFiltered(c.getRowKey()) && isNodeFiltered(c.getColumnKey())) {
+					continue;
+				}
 				for(Map.Entry<D, Set<D>> kv : c.getValue().entrySet()) {
 					for(D dFact : kv.getValue()) {
 						pf.print(utf.getEdgePoint(c.getRowKey(), kv.getKey()));
