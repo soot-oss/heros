@@ -746,10 +746,14 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		}
 	}
 	
+	protected V joinValueAt(N unit, D fact, V curr, V newVal) {
+		return valueLattice.join(curr, newVal);
+	}
+	
 	private void propagateValue(N nHashN, D nHashD, V v) {
 		synchronized (val) {
 			V valNHash = val(nHashN, nHashD);
-			V vPrime = valueLattice.join(valNHash,v);
+			V vPrime = joinValueAt(nHashN, nHashD, valNHash,v);
 			if(!vPrime.equals(valNHash)) {
 				setVal(nHashN, nHashD, vPrime);
 				scheduleValueProcessing(new ValuePropagationTask(new Pair<N,D>(nHashN,nHashD)));
