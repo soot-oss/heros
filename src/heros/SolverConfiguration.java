@@ -11,7 +11,6 @@
  ******************************************************************************/
 package heros;
 
-import heros.solver.FlowFunctionDotExport;
 import heros.solver.IDESolver;
 
 /**
