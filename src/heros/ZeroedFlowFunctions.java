@@ -24,20 +24,20 @@ public class ZeroedFlowFunctions<N, D, M> implements FlowFunctions<N, D, M> {
 		this.zeroValue = zeroValue;
 	}
 
-	public FlowFunction<D> getNormalFlowFunction(N curr, N succ) {
-		return new ZeroedFlowFunction(delegate.getNormalFlowFunction(curr, succ));
+	public FlowFunction<D> getNormalFlowFunction(D d1, N curr, N succ) {
+		return new ZeroedFlowFunction(delegate.getNormalFlowFunction(d1, curr, succ));
 	}
 
-	public FlowFunction<D> getCallFlowFunction(N callStmt, M destinationMethod) {
-		return new ZeroedFlowFunction(delegate.getCallFlowFunction(callStmt, destinationMethod));
+	public FlowFunction<D> getCallFlowFunction(D d1,N callStmt, M destinationMethod) {
+		return new ZeroedFlowFunction(delegate.getCallFlowFunction(d1,callStmt, destinationMethod));
 	}
 
-	public FlowFunction<D> getReturnFlowFunction(N callSite, M calleeMethod, N exitStmt, N returnSite) {
-		return new ZeroedFlowFunction(delegate.getReturnFlowFunction(callSite, calleeMethod, exitStmt, returnSite));
+	public FlowFunction<D> getReturnFlowFunction(D callerD1, D calleeD1, N callSite, D callerCallSiteFact, M calleeMethod, N exitStmt, N returnSite) {
+		return new ZeroedFlowFunction(delegate.getReturnFlowFunction(callerD1,calleeD1,callSite, callerCallSiteFact, calleeMethod, exitStmt, returnSite));
 	}
 
-	public FlowFunction<D> getCallToReturnFlowFunction(N callSite, N returnSite) {
-		return new ZeroedFlowFunction(delegate.getCallToReturnFlowFunction(callSite, returnSite));
+	public FlowFunction<D> getCallToReturnFlowFunction(D d1,N callSite, N returnSite, boolean hasCallees) {
+		return new ZeroedFlowFunction(delegate.getCallToReturnFlowFunction(d1,callSite, returnSite,hasCallees));
 	}
 	
 	protected class ZeroedFlowFunction implements FlowFunction<D> {

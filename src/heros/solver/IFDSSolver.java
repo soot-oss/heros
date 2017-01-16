@@ -42,7 +42,7 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 
 	protected static enum BinaryDomain { TOP,BOTTOM } 
 	
-	private final static EdgeFunction<BinaryDomain> ALL_BOTTOM = new AllBottom<BinaryDomain>(BOTTOM);
+	protected final static EdgeFunction<BinaryDomain> ALL_BOTTOM = new AllBottom<BinaryDomain>(BOTTOM);
 	
 	/**
 	 * Creates a solver for the given problem. The solver must then be started by calling
@@ -101,6 +101,12 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 			public EdgeFunction<BinaryDomain> allTopFunction() {
 				return new AllTop<BinaryDomain>(TOP);
 			}
+
+		    @Override
+		    public EdgeFunction<BinaryDomain> allBottomFunction() {
+                return new AllBottom<BinaryDomain>(TOP);
+            }
+
 			
 			@Override
 			public boolean followReturnsPastSeeds() {
@@ -124,30 +130,30 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 			
 			class IFDSEdgeFunctions implements EdgeFunctions<N,D,M,BinaryDomain> {
 		
-				public EdgeFunction<BinaryDomain> getNormalEdgeFunction(N src,D srcNode,N tgt,D tgtNode) {
+				public EdgeFunction<BinaryDomain> getNormalEdgeFunction(D d1, N src,D srcNode,N tgt,D tgtNode) {
 					if(srcNode==ifdsProblem.zeroValue()) return ALL_BOTTOM;
 					return EdgeIdentity.v(); 
 				}
 		
-				public EdgeFunction<BinaryDomain> getCallEdgeFunction(N callStmt,D srcNode,M destinationMethod,D destNode) {
+				public EdgeFunction<BinaryDomain> getCallEdgeFunction(D d1,N callStmt,D srcNode,M destinationMethod,D destNode) {
 					if(srcNode==ifdsProblem.zeroValue()) return ALL_BOTTOM;
 					return EdgeIdentity.v(); 
 				}
 		
-				public EdgeFunction<BinaryDomain> getReturnEdgeFunction(N callSite, M calleeMethod,N exitStmt,D exitNode,N returnSite,D retNode) {
+				public EdgeFunction<BinaryDomain> getReturnEdgeFunction(D d1,N callSite, M calleeMethod,N exitStmt,D exitNode,N returnSite,D retNode) {
 					if(exitNode==ifdsProblem.zeroValue()) return ALL_BOTTOM;
 					return EdgeIdentity.v(); 
 				}
 		
-				public EdgeFunction<BinaryDomain> getCallToReturnEdgeFunction(N callStmt,D callNode,N returnSite,D returnSideNode) {
+				public EdgeFunction<BinaryDomain> getCallToReturnEdgeFunction(D d1,N callStmt,D callNode,N returnSite,D returnSideNode) {
 					if(callNode==ifdsProblem.zeroValue()) return ALL_BOTTOM;
 					return EdgeIdentity.v(); 
 				}
 			}
-			
+
 			@Override
 			public boolean recordEdges() {
-				return ifdsProblem.recordEdges();
+				return false;
 			}
 
 			};

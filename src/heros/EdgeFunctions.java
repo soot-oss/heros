@@ -44,7 +44,7 @@ public interface EdgeFunctions<N, D, M, V> {
 	 *            The D-type value with which the target value will be
 	 *            associated.
 	 */
-	public EdgeFunction<V> getNormalEdgeFunction(N curr, D currNode, N succ, D succNode);
+	public EdgeFunction<V> getNormalEdgeFunction(D sourceFact, N curr, D currNode, N succ, D succNode);
 
 	/**
 	 * Returns the function that computes how the V-typed value changes when
@@ -60,7 +60,7 @@ public interface EdgeFunctions<N, D, M, V> {
 	 *            The D-type value with which the target value will be
 	 *            associated at the side of the callee.
 	 */
-	public EdgeFunction<V> getCallEdgeFunction(N callStmt, D srcNode, M destinationMethod, D destNode);
+	public EdgeFunction<V> getCallEdgeFunction(D sourceFact, N callStmt, D srcNode, M destinationMethod, D destNode);
 
 	/**
 	 * Returns the function that computes how the V-typed value changes when
@@ -92,7 +92,7 @@ public interface EdgeFunctions<N, D, M, V> {
 	 *            The D-type value with which the target value will be
 	 *            associated at the returnSite.
 	 */
-	public EdgeFunction<V> getReturnEdgeFunction(N callSite, M calleeMethod, N exitStmt, D exitNode, N returnSite, D retNode);
+	public EdgeFunction<V> getReturnEdgeFunction(D callerD1, N callSite, M calleeMethod, N exitStmt, D exitNode, N returnSite, D retNode);
 
 	/**
 	 * Returns the function that computes how the V-typed value changes when
@@ -109,6 +109,6 @@ public interface EdgeFunctions<N, D, M, V> {
 	 *            The D-type value with which the target value will be
 	 *            associated at the returnSite.
 	 */
-	public EdgeFunction<V> getCallToReturnEdgeFunction(N callSite, D callNode, N returnSite, D returnSideNode);
+	public EdgeFunction<V> getCallToReturnEdgeFunction(D sourceFact, N callSite, D callNode, N returnSite, D returnSideNode);
 
 }

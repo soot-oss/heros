@@ -38,7 +38,7 @@ public interface FlowFunctions<N, D, M> {
 	 *            be used to compute a branched analysis that propagates
 	 *            different values depending on where control0flow branches.
 	 */
-	public FlowFunction<D> getNormalFlowFunction(N curr, N succ);
+	public FlowFunction<D> getNormalFlowFunction(D sourceFact, N curr, N succ);
 
 	/**
 	 * Returns the flow function that computes the flow for a call statement.
@@ -49,7 +49,7 @@ public interface FlowFunctions<N, D, M> {
 	 * @param destinationMethod
 	 *            The concrete target method for which the flow is computed.
 	 */
-	public FlowFunction<D> getCallFlowFunction(N callStmt, M destinationMethod);
+	public FlowFunction<D> getCallFlowFunction(D sourceFact, N callStmt, M destinationMethod);
 
 	/**
 	 * Returns the flow function that computes the flow for a an exit from a
@@ -79,7 +79,7 @@ public interface FlowFunctions<N, D, M> {
 	 *            does not contain a caller for the method that is returned from.
 	 * @return
 	 */
-	public FlowFunction<D> getReturnFlowFunction(N callSite, M calleeMethod, N exitStmt, N returnSite);
+	public FlowFunction<D> getReturnFlowFunction(D callerD1, D calleeD1, N callSite, D callerCallSiteFact, M calleeMethod, N exitStmt, N returnSite);
 
 	/**
 	 * Returns the flow function that computes the flow from a call site to a
@@ -99,6 +99,6 @@ public interface FlowFunctions<N, D, M> {
 	 *            exceptional flow, this may actually be the start of an
 	 *            exception handler.
 	 */
-	public FlowFunction<D> getCallToReturnFlowFunction(N callSite, N returnSite);
+	public FlowFunction<D> getCallToReturnFlowFunction(D sourceFact, N callSite, N returnSite, boolean hasCallees);
 
 }

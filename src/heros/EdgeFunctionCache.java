@@ -36,51 +36,53 @@ public class EdgeFunctionCache<N, D, M, V> implements EdgeFunctions<N, D, M, V> 
 		
 		normalCache = builder.build(new CacheLoader<NDNDKey, EdgeFunction<V>>() {
 			public EdgeFunction<V> load(NDNDKey key) throws Exception {
-				return delegate.getNormalEdgeFunction(key.getN1(), key.getD1(), key.getN2(), key.getD2());
+				return delegate.getNormalEdgeFunction(key.getSourceFact(), key.getN1(), key.getD1(), key.getN2(), key.getD2());
 			}
 		});
 		
 		callCache = builder.build(new CacheLoader<CallKey, EdgeFunction<V>>() {
 			public EdgeFunction<V> load(CallKey key) throws Exception {
-				return delegate.getCallEdgeFunction(key.getCallSite(), key.getD1(), key.getCalleeMethod(), key.getD2());
+				return delegate.getCallEdgeFunction(key.getSourceFact(), key.getCallSite(), key.getD1(), key.getCalleeMethod(), key.getD2());
 			}
 		});
 		
 		returnCache = builder.build(new CacheLoader<ReturnKey, EdgeFunction<V>>() {
 			public EdgeFunction<V> load(ReturnKey key) throws Exception {
-				return delegate.getReturnEdgeFunction(key.getCallSite(), key.getCalleeMethod(), key.getExitStmt(), key.getD1(), key.getReturnSite(), key.getD2());
+				return delegate.getReturnEdgeFunction(key.getSourceFact(), key.getCallSite(), key.getCalleeMethod(), key.getExitStmt(), key.getD1(), key.getReturnSite(), key.getD2());
 			}
 		});
 		
 		callToReturnCache = builder.build(new CacheLoader<NDNDKey, EdgeFunction<V>>() {
 			public EdgeFunction<V> load(NDNDKey key) throws Exception {
-				return delegate.getCallToReturnEdgeFunction(key.getN1(), key.getD1(), key.getN2(), key.getD2());
+				return delegate.getCallToReturnEdgeFunction(key.getSourceFact(), key.getN1(), key.getD1(), key.getN2(), key.getD2());
 			}
 		});
 	}
 
-	public EdgeFunction<V> getNormalEdgeFunction(N curr, D currNode, N succ, D succNode) {
-		return normalCache.getUnchecked(new NDNDKey(curr, currNode, succ, succNode));
+	public EdgeFunction<V> getNormalEdgeFunction(D sourceFact, N curr, D currNode, N succ, D succNode) {
+		return normalCache.getUnchecked(new NDNDKey(sourceFact, curr, currNode, succ, succNode));
 	}
 
-	public EdgeFunction<V> getCallEdgeFunction(N callStmt, D srcNode, M destinationMethod, D destNode) {
-		return callCache.getUnchecked(new CallKey(callStmt, srcNode, destinationMethod, destNode));
+	public EdgeFunction<V> getCallEdgeFunction(D sourceFact, N callStmt, D srcNode, M destinationMethod, D destNode) {
+		return callCache.getUnchecked(new CallKey(sourceFact, callStmt, srcNode, destinationMethod, destNode));
 	}
 
-	public EdgeFunction<V> getReturnEdgeFunction(N callSite, M calleeMethod, N exitStmt, D exitNode, N returnSite, D retNode) {
-		return returnCache.getUnchecked(new ReturnKey(callSite, calleeMethod, exitStmt, exitNode, returnSite, retNode));
+	public EdgeFunction<V> getReturnEdgeFunction(D sourceFact, N callSite, M calleeMethod, N exitStmt, D exitNode, N returnSite, D retNode) {
+		return returnCache.getUnchecked(new ReturnKey(sourceFact, callSite, calleeMethod, exitStmt, exitNode, returnSite, retNode));
 	}
 
-	public EdgeFunction<V> getCallToReturnEdgeFunction(N callSite, D callNode, N returnSite, D returnSideNode) {
-		return callToReturnCache.getUnchecked(new NDNDKey(callSite, callNode, returnSite, returnSideNode));
+	public EdgeFunction<V> getCallToReturnEdgeFunction(D sourceFact, N callSite, D callNode, N returnSite, D returnSideNode) {
+		return callToReturnCache.getUnchecked(new NDNDKey(sourceFact, callSite, callNode, returnSite, returnSideNode));
 	}
 
 
 	private class NDNDKey {
 		private final N n1, n2;
 		private final D d1, d2;
+		private final D sourceFact;
 
-		public NDNDKey(N n1, D d1, N n2, D d2) {
+		public NDNDKey(D sourceFact, N n1, D d1, N n2, D d2) {
+			this.sourceFact = sourceFact;
 			this.n1 = n1;
 			this.n2 = n2;
 			this.d1 = d1;
@@ -103,6 +105,9 @@ public class EdgeFunctionCache<N, D, M, V> implements EdgeFunctions<N, D, M, V> 
 			return d2;
 		}
 
+		public D getSourceFact() {
+			return sourceFact;
+		}
 		public int hashCode() {
 			final int prime = 31;
 			int result = 1;
@@ -110,6 +115,7 @@ public class EdgeFunctionCache<N, D, M, V> implements EdgeFunctions<N, D, M, V> 
 			result = prime * result + ((d2 == null) ? 0 : d2.hashCode());
 			result = prime * result + ((n1 == null) ? 0 : n1.hashCode());
 			result = prime * result + ((n2 == null) ? 0 : n2.hashCode());
+			result = prime * result + ((sourceFact == null) ? 0 : sourceFact.hashCode());
 			return result;
 		}
 
@@ -142,6 +148,11 @@ public class EdgeFunctionCache<N, D, M, V> implements EdgeFunctions<N, D, M, V> 
 					return false;
 			} else if (!n2.equals(other.n2))
 				return false;
+			if (sourceFact == null) {
+				if (other.sourceFact != null)
+					return false;
+			} else if (!sourceFact.equals(other.sourceFact))
+				return false;
 			return true;
 		}
 	}
@@ -150,12 +161,14 @@ public class EdgeFunctionCache<N, D, M, V> implements EdgeFunctions<N, D, M, V> 
 		private final N callSite;
 		private final M calleeMethod;
 		private final D d1, d2;
+		private final D sourcefact;
 
-		public CallKey(N callSite, D d1, M calleeMethod, D d2) {
+		public CallKey(D sourceFact, N callSite, D d1, M calleeMethod, D d2) {
 			this.callSite = callSite;
 			this.calleeMethod = calleeMethod;
 			this.d1 = d1;
 			this.d2 = d2;
+			this.sourcefact = sourceFact;
 		}
 
 		public N getCallSite() {
@@ -166,6 +179,9 @@ public class EdgeFunctionCache<N, D, M, V> implements EdgeFunctions<N, D, M, V> 
 			return d1;
 		}
 
+		public D getSourceFact() {
+			return sourcefact;
+		}
 		public M getCalleeMethod() {
 			return calleeMethod;
 		}
@@ -181,6 +197,7 @@ public class EdgeFunctionCache<N, D, M, V> implements EdgeFunctions<N, D, M, V> 
 			result = prime * result + ((d2 == null) ? 0 : d2.hashCode());
 			result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
 			result = prime * result + ((calleeMethod == null) ? 0 : calleeMethod.hashCode());
+			result = prime * result + ((sourcefact == null) ? 0 : sourcefact.hashCode());
 			return result;
 		}
 
@@ -213,6 +230,11 @@ public class EdgeFunctionCache<N, D, M, V> implements EdgeFunctions<N, D, M, V> 
 					return false;
 			} else if (!calleeMethod.equals(other.calleeMethod))
 				return false;
+			if (sourcefact == null) {
+				if (other.sourcefact != null)
+					return false;
+			} else if (!sourcefact.equals(other.sourcefact))
+				return false;
 			return true;
 		}
 	}
@@ -222,8 +244,8 @@ public class EdgeFunctionCache<N, D, M, V> implements EdgeFunctions<N, D, M, V> 
 		
 		private final N exitStmt, returnSite;
 
-		public ReturnKey(N callSite, M calleeMethod, N exitStmt, D exitNode, N returnSite, D retNode) {
-			super(callSite, exitNode, calleeMethod, retNode);
+		public ReturnKey(D sourceFact, N callSite, M calleeMethod, N exitStmt, D exitNode, N returnSite, D retNode) {
+			super(sourceFact, callSite, exitNode, calleeMethod, retNode);
 			this.exitStmt = exitStmt;
 			this.returnSite = returnSite;
 		}

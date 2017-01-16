@@ -23,33 +23,33 @@ public class ProfiledFlowFunctions<N, D, M> implements FlowFunctions<N, D, M> {
 		this.delegate = delegate;
 	}
 
-	public FlowFunction<D> getNormalFlowFunction(N curr, N succ) {
+	public FlowFunction<D> getNormalFlowFunction(D sourceFact, N curr, N succ) {
 		long before = System.currentTimeMillis();
-		FlowFunction<D> ret = delegate.getNormalFlowFunction(curr, succ);
+		FlowFunction<D> ret = delegate.getNormalFlowFunction(sourceFact, curr, succ);
 		long duration = System.currentTimeMillis() - before;
 		durationNormal += duration;
 		return ret;
 	}
 
-	public FlowFunction<D> getCallFlowFunction(N callStmt, M destinationMethod) {
+	public FlowFunction<D> getCallFlowFunction(D sourceFact, N callStmt, M destinationMethod) {
 		long before = System.currentTimeMillis();
-		FlowFunction<D> res = delegate.getCallFlowFunction(callStmt, destinationMethod);
+		FlowFunction<D> res = delegate.getCallFlowFunction(sourceFact, callStmt, destinationMethod);
 		long duration = System.currentTimeMillis() - before;
 		durationCall += duration;
 		return res;
 	}
 
-	public FlowFunction<D> getReturnFlowFunction(N callSite, M calleeMethod, N exitStmt, N returnSite) {
+	public FlowFunction<D> getReturnFlowFunction(D callerD1,D calleeD1, N callSite,  D callerCallSiteFact, M calleeMethod, N exitStmt, N returnSite) {
 		long before = System.currentTimeMillis();
-		FlowFunction<D> res = delegate.getReturnFlowFunction(callSite, calleeMethod, exitStmt, returnSite);
+		FlowFunction<D> res = delegate.getReturnFlowFunction(callerD1,calleeD1, callSite, callerCallSiteFact, calleeMethod, exitStmt, returnSite);
 		long duration = System.currentTimeMillis() - before;
 		durationReturn += duration;
 		return res;
 	}
 
-	public FlowFunction<D> getCallToReturnFlowFunction(N callSite, N returnSite) {
+	public FlowFunction<D> getCallToReturnFlowFunction(D sourceFact, N callSite, N returnSite, boolean hasCallee) {
 		long before = System.currentTimeMillis();
-		FlowFunction<D> res = delegate.getCallToReturnFlowFunction(callSite, returnSite);
+		FlowFunction<D> res = delegate.getCallToReturnFlowFunction(sourceFact, callSite, returnSite, hasCallee);
 		long duration = System.currentTimeMillis() - before;
 		durationCallReturn += duration;
 		return res;
