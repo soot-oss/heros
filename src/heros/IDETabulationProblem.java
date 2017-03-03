@@ -10,6 +10,8 @@
  ******************************************************************************/
 package heros;
 
+import heros.solver.IDEDebugger;
+
 /**
  * Defines an IDE tabulation problem as presented in the Sagiv, Reps, Horwitz 1996 
  * (SRH96) paper. An IDE tabulation problem extends an {@link IFDSTabulationProblem}
@@ -44,5 +46,7 @@ public interface IDETabulationProblem<N,D,M,V,I extends InterproceduralCFG<N,M>>
 	 */	
 	EdgeFunction<V> allTopFunction();
 
-  EdgeFunction<V> allBottomFunction(); 
+  EdgeFunction<V> allBottomFunction();
+
+  IDEDebugger<N,D,M,V,I> getDebugger(); 
 }

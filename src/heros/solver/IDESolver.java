@@ -154,6 +154,8 @@ public class IDESolver<N, D, M, V, I extends InterproceduralCFG<N, M>> {
   @DontSynchronize("readOnly")
   protected final boolean computeValues;
 
+  private IDEDebugger<N, D, M, V, I> debugger;
+
 
   /**
    * Creates a solver for the given problem, which caches flow functions and edge functions. The
@@ -211,6 +213,7 @@ public class IDESolver<N, D, M, V, I extends InterproceduralCFG<N, M>> {
     this.followReturnsPastSeeds = tabulationProblem.followReturnsPastSeeds();
     this.numThreads = Math.max(1, tabulationProblem.numThreads());
     this.computeValues = tabulationProblem.computeValues();
+    this.debugger = tabulationProblem.getDebugger();
   }
 
 
@@ -311,7 +314,7 @@ public void solve() {
         for (D d3 : res) {
           // create initial self-loop
           propagate(d3, sP, d3, EdgeIdentity.<V>v(), n, false); // line 15
-
+          debugger.callFlow(n, d2, sP, d3);
           // register the fact that <sp,d3> has an incoming edge from <n,d2>
           Set<Cell<N, D, EdgeFunction<V>>> endSumm;
           synchronized (incoming) {
@@ -348,6 +351,7 @@ public void solve() {
                     fCalleeSummary, f5, fPrime);
                 D d5_restoredCtx = restoreContextOnReturnedFact(d2, d5);
                 propagate(d1, retSiteN, d5_restoredCtx, f.composeWith(fPrime), n, false);
+                debugger.returnFlow(eP, d4, retSiteN, d5_restoredCtx);
               }
             }
           }
@@ -364,6 +368,7 @@ public void solve() {
         EdgeFunction<V> edgeFnE =
             edgeFunctions.getCallToReturnEdgeFunction(d1, n, d2, returnSiteN, d3);
         propagate(d1, returnSiteN, d3, f.composeWith(edgeFnE), n, false);
+        debugger.callToReturn(n, d2, returnSiteN, d3);
       }
     }
   }
@@ -406,6 +411,7 @@ public void solve() {
     EdgeFunction<V> f = jumpFunction(edge);
     M methodThatNeedsSummary = icfg.getMethodOf(n);
 
+    debugger.addSummary(methodThatNeedsSummary, edge);
     final D d1 = edge.factAtSource();
     final D d2 = edge.factAtTarget();
 
@@ -459,6 +465,7 @@ public void solve() {
                 if (!f3.equalTo(allTop)) {
                   D d3 = valAndFunc.getKey();
                   D d5_restoredCtx = restoreContextOnReturnedFact(d4, d5);
+                  debugger.returnFlow(n, d2, retSiteC, d5_restoredCtx);
                   propagate(d3, retSiteC, d5_restoredCtx, f3.composeWith(fPrime), c, false);
                 }
               }
@@ -487,6 +494,7 @@ public void solve() {
             EdgeFunction<V> f5 = edgeFunctions.getReturnEdgeFunction(zeroValue, c,
                 icfg.getMethodOf(n), n, d2, retSiteC, d5);
             propagateUnbalancedReturnFlow(retSiteC, d5, f.composeWith(f5), c);
+            debugger.returnFlow(n, d2, retSiteC, d5);
             // register for value processing (2nd IDE phase)
             unbalancedRetSites.add(retSiteC);
           }
@@ -564,6 +572,7 @@ public void solve() {
         EdgeFunction<V> fprime =
             f.composeWith(edgeFunctions.getNormalEdgeFunction(d1, n, d2, m, d3));
         propagate(d1, m, d3, fprime, null, false);
+        debugger.normalFlow(n, d2, m, d3);
       }
     }
   }
@@ -744,6 +753,7 @@ public void solve() {
       else
         val.put(nHashN, nHashD, l);
     }
+    debugger.setValue(nHashN, nHashD, l);
     logger.debug("VALUE: {} {} {} {}", icfg.getMethodOf(nHashN), nHashN, nHashD, l);
   }
 
@@ -802,6 +812,7 @@ public void solve() {
       }
       set.add(new Pair<D, D>(d2, d1));
     }
+    System.out.println(incoming);
   }
 
   /**

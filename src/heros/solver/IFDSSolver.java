@@ -156,6 +156,48 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 				return false;
 			}
 
+			@Override
+			public IDEDebugger<N, D, M, BinaryDomain, I> getDebugger() {
+				return new IDEDebugger<N, D, M, IFDSSolver.BinaryDomain, I>() {
+
+					@Override
+					public void addSummary(M methodToSummary, PathEdge<N, D> summary) {
+						// TODO Auto-generated method stub
+						
+					}
+
+					@Override
+					public void normalFlow(N start, D startFact, N target, D targetFact) {
+						// TODO Auto-generated method stub
+						
+					}
+
+					@Override
+					public void callFlow(N start, D startFact, N target, D targetFact) {
+						// TODO Auto-generated method stub
+						
+					}
+
+					@Override
+					public void callToReturn(N start, D startFact, N target, D targetFact) {
+						// TODO Auto-generated method stub
+						
+					}
+
+					@Override
+					public void returnFlow(N start, D startFact, N target, D targetFact) {
+						// TODO Auto-generated method stub
+						
+					}
+
+					@Override
+					public void setValue(N start, D startFact, BinaryDomain value) {
+						// TODO Auto-generated method stub
+						
+					}
+				};
+			}
+
 			};
 	}
 	
