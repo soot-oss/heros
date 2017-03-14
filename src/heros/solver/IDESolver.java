@@ -15,6 +15,7 @@ import heros.DontSynchronize;
 import heros.EdgeFunction;
 import heros.EdgeFunctionCache;
 import heros.EdgeFunctions;
+import heros.Flow;
 import heros.FlowFunction;
 import heros.FlowFunctionCache;
 import heros.FlowFunctions;
@@ -156,6 +157,8 @@ public class IDESolver<N, D, M, V, I extends InterproceduralCFG<N, M>> {
 
   private IDEDebugger<N, D, M, V, I> debugger;
 
+  private Flow<N,D> flows;
+
 
   /**
    * Creates a solver for the given problem, which caches flow functions and edge functions. The
@@ -208,6 +211,7 @@ public class IDESolver<N, D, M, V, I extends InterproceduralCFG<N, M>> {
     this.unbalancedRetSites = Collections.newSetFromMap(new ConcurrentHashMap<N, Boolean>());
     this.valueLattice = tabulationProblem.joinLattice();
     this.allTop = tabulationProblem.allTopFunction();
+    this.flows = tabulationProblem.flowWrapper();
     this.allBottom = tabulationProblem.allBottomFunction();
     this.jumpFn = new JumpFunctions<N, D, V>(allTop);
     this.followReturnsPastSeeds = tabulationProblem.followReturnsPastSeeds();
@@ -350,7 +354,10 @@ public void solve() {
                 logger.debug("COMPOSE {} with {} and then the result with {} is {}", f4,
                     fCalleeSummary, f5, fPrime);
                 D d5_restoredCtx = restoreContextOnReturnedFact(d2, d5);
-                propagate(d1, retSiteN, d5_restoredCtx, f.composeWith(fPrime), n, false);
+                if(!fPrime.equalTo(EdgeIdentity.<V>v()))
+                	flows.nonIdentityReturn(n,d5_restoredCtx);
+                EdgeFunction<V> edgefunc = f.composeWith(fPrime);
+                propagate(d1, retSiteN, d5_restoredCtx,edgefunc , n, false);
                 debugger.returnFlow(eP, d4, retSiteN, d5_restoredCtx);
               }
             }
@@ -367,6 +374,9 @@ public void solve() {
       for (D d3 : computeCallToReturnFlowFunction(callToReturnFlowFunction, d1, d2)) {
         EdgeFunction<V> edgeFnE =
             edgeFunctions.getCallToReturnEdgeFunction(d1, n, d2, returnSiteN, d3);
+
+        if(!edgeFnE.equalTo(EdgeIdentity.<V>v()))
+        	flows.nonIdentityReturn(n,d3);
         propagate(d1, returnSiteN, d3, f.composeWith(edgeFnE), n, false);
         debugger.callToReturn(n, d2, returnSiteN, d3);
       }
@@ -456,6 +466,8 @@ public void solve() {
                 icfg.getMethodOf(n), n, d2, retSiteC, d5);
             EdgeFunction<V> fPrime = f4.composeWith(f).composeWith(f5);
 
+            if(!fPrime.equalTo(EdgeIdentity.<V>v()))
+            	flows.nonIdentityReturn(c,d5);
             // for each jump function coming into the call, propagate to return site using the
             // composed function
             synchronized (jumpFn) { // some other thread might change jumpFn on the way
@@ -466,7 +478,8 @@ public void solve() {
                   D d3 = valAndFunc.getKey();
                   D d5_restoredCtx = restoreContextOnReturnedFact(d4, d5);
                   debugger.returnFlow(n, d2, retSiteC, d5_restoredCtx);
-                  propagate(d3, retSiteC, d5_restoredCtx, f3.composeWith(fPrime), c, false);
+                  EdgeFunction<V> edgefunc = f3.composeWith(fPrime);
+                  propagate(d3, retSiteC, d5_restoredCtx, edgefunc, c, false);
                 }
               }
             }
@@ -607,7 +620,6 @@ public void solve() {
   protected void propagate(D sourceVal, N target, D targetVal, EdgeFunction<V> f,
       /* deliberately exposed to clients */ N relatedCallSite,
       /* deliberately exposed to clients */ boolean isUnbalancedReturn) {
-
     EdgeFunction<V> jumpFnE;
     EdgeFunction<V> fPrime;
     boolean newFunction;
@@ -789,7 +801,7 @@ public void solve() {
         f);
   }
 
-  protected Map<N, Set<Pair<D, D>>> incoming(D d1, N sP) {
+  public Map<N, Set<Pair<D, D>>> incoming(D d1, N sP) {
     synchronized (incoming) {
       Map<N, Set<Pair<D, D>>> map = incoming.get(sP, d1);
       if (map == null)
@@ -812,7 +824,6 @@ public void solve() {
       }
       set.add(new Pair<D, D>(d2, d1));
     }
-    System.out.println(incoming);
   }
 
   /**
@@ -871,6 +882,9 @@ public void solve() {
 
     public PathEdgeProcessingTask(PathEdge<N, D> edge) {
       this.edge = edge;
+  	if(edge.factAtTarget().toString().equals("")){
+		System.out.println(edge);
+	}
     }
 
     public void run() {

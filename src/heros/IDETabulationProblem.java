@@ -48,5 +48,7 @@ public interface IDETabulationProblem<N,D,M,V,I extends InterproceduralCFG<N,M>>
 
   EdgeFunction<V> allBottomFunction();
 
-  IDEDebugger<N,D,M,V,I> getDebugger(); 
+  IDEDebugger<N,D,M,V,I> getDebugger();
+
+  Flow<N,D> flowWrapper(); 
 }

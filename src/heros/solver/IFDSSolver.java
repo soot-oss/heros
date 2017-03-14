@@ -14,6 +14,7 @@ import static heros.solver.IFDSSolver.BinaryDomain.BOTTOM;
 import static heros.solver.IFDSSolver.BinaryDomain.TOP;
 import heros.EdgeFunction;
 import heros.EdgeFunctions;
+import heros.Flow;
 import heros.FlowFunctions;
 import heros.IDETabulationProblem;
 import heros.IFDSTabulationProblem;
@@ -196,6 +197,12 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 						
 					}
 				};
+			}
+
+			@Override
+			public Flow<N,D> flowWrapper() {
+				// TODO Auto-generated method stub
+				return null;
 			}
 
 			};
