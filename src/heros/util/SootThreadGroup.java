@@ -2,7 +2,7 @@ package heros.util;
 
 public class SootThreadGroup extends ThreadGroup {
 
-	private Thread startThread;
+	private final Thread startThread;
 
 	public SootThreadGroup() {
 		super("Soot Threadgroup");
