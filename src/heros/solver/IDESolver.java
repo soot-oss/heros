@@ -757,7 +757,7 @@ public void solve() {
       return l;
   }
 
-  private void setVal(N nHashN, D nHashD, V l) {
+  protected void setVal(N nHashN, D nHashD, V l) {
     // TOP is the implicit default value which we do not need to store.
     synchronized (val) {
       if (l == valueLattice.topElement()) // do not store top values
@@ -882,9 +882,6 @@ public void solve() {
 
     public PathEdgeProcessingTask(PathEdge<N, D> edge) {
       this.edge = edge;
-  	if(edge.factAtTarget().toString().equals("")){
-		System.out.println(edge);
-	}
     }
 
     public void run() {
