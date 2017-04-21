@@ -200,7 +200,7 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 			}
 
 			@Override
-			public Flow<N,D> flowWrapper() {
+			public Flow<N,D, BinaryDomain> flowWrapper() {
 				// TODO Auto-generated method stub
 				return null;
 			}

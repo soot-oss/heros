@@ -11,6 +11,28 @@
 package heros.solver;
 
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Predicate;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Table;
+import com.google.common.collect.Table.Cell;
+
 import heros.DontSynchronize;
 import heros.EdgeFunction;
 import heros.EdgeFunctionCache;
@@ -25,30 +47,6 @@ import heros.JoinLattice;
 import heros.SynchronizedBy;
 import heros.ZeroedFlowFunctions;
 import heros.edgefunc.EdgeIdentity;
-
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-
-import javax.management.RuntimeErrorException;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Predicate;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Table;
-import com.google.common.collect.Table.Cell;
 
 
 /**
@@ -157,7 +155,7 @@ public class IDESolver<N, D, M, V, I extends InterproceduralCFG<N, M>> {
 
   private IDEDebugger<N, D, M, V, I> debugger;
 
-  private Flow<N,D> flows;
+  private Flow<N,D,V> flows;
 
 
   /**
@@ -354,9 +352,9 @@ public void solve() {
                 logger.debug("COMPOSE {} with {} and then the result with {} is {}", f4,
                     fCalleeSummary, f5, fPrime);
                 D d5_restoredCtx = restoreContextOnReturnedFact(d2, d5);
-                if(!fPrime.equalTo(EdgeIdentity.<V>v()))
-                	flows.nonIdentityReturn(n,d5_restoredCtx);
                 EdgeFunction<V> edgefunc = f.composeWith(fPrime);
+                if(!fPrime.equalTo(EdgeIdentity.<V>v()))
+                	flows.nonIdentityReturnFlow(eP, d2, n, d5_restoredCtx, retSiteN, d1,edgefunc);
                 propagate(d1, retSiteN, d5_restoredCtx,edgefunc , n, false);
                 debugger.returnFlow(eP, d4, retSiteN, d5_restoredCtx);
               }
@@ -376,7 +374,7 @@ public void solve() {
             edgeFunctions.getCallToReturnEdgeFunction(d1, n, d2, returnSiteN, d3);
 
         if(!edgeFnE.equalTo(EdgeIdentity.<V>v()))
-        	flows.nonIdentityReturn(n,d3);
+        	flows.nonIdentityCallToReturnFlow(d2, n, d3, returnSiteN, d1,f.composeWith(edgeFnE));
         propagate(d1, returnSiteN, d3, f.composeWith(edgeFnE), n, false);
         debugger.callToReturn(n, d2, returnSiteN, d3);
       }
@@ -466,8 +464,6 @@ public void solve() {
                 icfg.getMethodOf(n), n, d2, retSiteC, d5);
             EdgeFunction<V> fPrime = f4.composeWith(f).composeWith(f5);
 
-            if(!fPrime.equalTo(EdgeIdentity.<V>v()))
-            	flows.nonIdentityReturn(c,d5);
             // for each jump function coming into the call, propagate to return site using the
             // composed function
             synchronized (jumpFn) { // some other thread might change jumpFn on the way
@@ -479,6 +475,8 @@ public void solve() {
                   D d5_restoredCtx = restoreContextOnReturnedFact(d4, d5);
                   debugger.returnFlow(n, d2, retSiteC, d5_restoredCtx);
                   EdgeFunction<V> edgefunc = f3.composeWith(fPrime);
+                  if(!fPrime.equalTo(EdgeIdentity.<V>v()))
+                     flows.nonIdentityReturnFlow(n,d2, c, d5, retSiteC, d3,edgefunc);
                   propagate(d3, retSiteC, d5_restoredCtx, edgefunc, c, false);
                 }
               }

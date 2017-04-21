@@ -10,6 +10,7 @@
  ******************************************************************************/
 package heros;
 
-public interface Flow<N,D> {
-	public void nonIdentityReturn(N callSite, D returnedFact);
+public interface Flow<N,D, V> {
+	public void nonIdentityCallToReturnFlow(D d2, N callSite, D d3, N returnSite, D d1, EdgeFunction<V> func);
+	public void nonIdentityReturnFlow(N exitStmt,D d2, N callSite, D d3, N returnSite, D d1, EdgeFunction<V> func);
 }

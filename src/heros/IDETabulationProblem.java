@@ -50,5 +50,5 @@ public interface IDETabulationProblem<N,D,M,V,I extends InterproceduralCFG<N,M>>
 
   IDEDebugger<N,D,M,V,I> getDebugger();
 
-  Flow<N,D> flowWrapper(); 
+  Flow<N,D,V> flowWrapper(); 
 }
