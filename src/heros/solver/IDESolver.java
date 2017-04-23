@@ -76,7 +76,7 @@ public class IDESolver<N, D, M, V, I extends InterproceduralCFG<N, M>> {
   // enable with -Dorg.slf4j.simpleLogger.defaultLogLevel=trace
   public static final boolean DEBUG = logger.isDebugEnabled();
 
-  protected LinkedList<Runnable> worklist = new LinkedList<Runnable>();
+  protected final Scheduler worklist;
 
   @DontSynchronize("only used by single thread")
   protected int numThreads;
@@ -117,9 +117,6 @@ public class IDESolver<N, D, M, V, I extends InterproceduralCFG<N, M>> {
   @DontSynchronize("stateless")
   protected final EdgeFunction<V> allTop;
   
-  @DontSynchronize("stateless")
-  protected final EdgeFunction<V> allBottom;
-
   @SynchronizedBy("consistent lock on field")
   protected final Table<N, D, V> val = HashBasedTable.create();
 
@@ -156,7 +153,7 @@ public class IDESolver<N, D, M, V, I extends InterproceduralCFG<N, M>> {
   private IDEDebugger<N, D, M, V, I> debugger;
 
   private Flow<N,D,V> flows;
-
+  private final IPropagationController<N,D> propagationController;
 
   /**
    * Creates a solver for the given problem, which caches flow functions and edge functions. The
@@ -210,12 +207,17 @@ public class IDESolver<N, D, M, V, I extends InterproceduralCFG<N, M>> {
     this.valueLattice = tabulationProblem.joinLattice();
     this.allTop = tabulationProblem.allTopFunction();
     this.flows = tabulationProblem.flowWrapper();
-    this.allBottom = tabulationProblem.allBottomFunction();
     this.jumpFn = new JumpFunctions<N, D, V>(allTop);
     this.followReturnsPastSeeds = tabulationProblem.followReturnsPastSeeds();
     this.numThreads = Math.max(1, tabulationProblem.numThreads());
     this.computeValues = tabulationProblem.computeValues();
     this.debugger = tabulationProblem.getDebugger();
+    if(tabulationProblem.getScheduler() == null)
+    	this.worklist = new Scheduler();
+    else
+    	this.worklist = tabulationProblem.getScheduler();
+    this.propagationController = tabulationProblem.propagationController();
+    
   }
 
 
@@ -239,10 +241,7 @@ public class IDESolver<N, D, M, V, I extends InterproceduralCFG<N, M>> {
    * Runs execution, re-throwing exceptions that might be thrown during its execution.
    */
   public void runExecutorAndAwaitCompletion() {
-    while (!worklist.isEmpty()) {
-      Runnable pop = worklist.pop();
-      pop.run();
-    }
+	  worklist.awaitExecution();
   }
 
   /**
@@ -418,7 +417,6 @@ public void solve() {
     final N n = edge.getTarget(); // an exit node; line 21...
     EdgeFunction<V> f = jumpFunction(edge);
     M methodThatNeedsSummary = icfg.getMethodOf(n);
-
     debugger.addSummary(methodThatNeedsSummary, edge);
     final D d1 = edge.factAtSource();
     final D d2 = edge.factAtTarget();
@@ -618,6 +616,8 @@ public void solve() {
   protected void propagate(D sourceVal, N target, D targetVal, EdgeFunction<V> f,
       /* deliberately exposed to clients */ N relatedCallSite,
       /* deliberately exposed to clients */ boolean isUnbalancedReturn) {
+	  if(!propagationController.continuePropagate(sourceVal, target, targetVal))
+		  return;
     EdgeFunction<V> jumpFnE;
     EdgeFunction<V> fPrime;
     boolean newFunction;
@@ -631,8 +631,6 @@ public void solve() {
         jumpFn.addFunction(sourceVal, target, targetVal, fPrime);
       }
     }
-
-    
     if (newFunction) {
       PathEdge<N, D> edge = new PathEdge<N, D>(sourceVal, target, targetVal);
       scheduleEdgeProcessing(edge);
@@ -755,7 +753,7 @@ public void solve() {
       return l;
   }
 
-  protected void setVal(N nHashN, D nHashD, V l) {
+  public void setVal(N nHashN, D nHashD, V l) {
     // TOP is the implicit default value which we do not need to store.
     synchronized (val) {
       if (l == valueLattice.topElement()) // do not store top values
@@ -875,8 +873,8 @@ public void solve() {
     }
   }
 
-  private class PathEdgeProcessingTask implements Runnable {
-    private final PathEdge<N, D> edge;
+  public class PathEdgeProcessingTask implements Runnable {
+    public final PathEdge<N, D> edge;
 
     public PathEdgeProcessingTask(PathEdge<N, D> edge) {
       this.edge = edge;

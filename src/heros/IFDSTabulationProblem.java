@@ -11,6 +11,7 @@
 package heros;
 
 import heros.solver.IFDSSolver;
+import heros.solver.IPropagationController;
 
 import java.util.Map;
 import java.util.Set;
@@ -62,4 +63,5 @@ public interface IFDSTabulationProblem<N,D,M, I extends InterproceduralCFG<N,M>>
 	 */
 	D zeroValue();
 
+	IPropagationController<N, D> propagationController();
 }
