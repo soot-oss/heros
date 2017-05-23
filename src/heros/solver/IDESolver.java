@@ -831,6 +831,10 @@ public void solve() {
     return val.get(stmt, value);
   }
 
+  public HashBasedTable<N, D, V> results(){
+	  return HashBasedTable.create(val);
+  }
+  
   /**
    * Returns the resulting environment for the given statement. The artificial zero value is
    * automatically stripped. TOP values are never returned.
