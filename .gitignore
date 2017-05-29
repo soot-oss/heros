@@ -10,3 +10,6 @@ heros-trunk.jar
 /reports
 /debug
 /target/
+.classpath
+.project
+.settings/
