@@ -30,6 +30,7 @@ import com.google.common.base.Predicate;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 
@@ -101,6 +102,8 @@ public class IDESolver<N, D, M, V, I extends InterproceduralCFG<N, M>> {
   // if followReturnPastSeeds is enabled
   @SynchronizedBy("use of ConcurrentHashMap")
   protected final Set<N> unbalancedRetSites;
+  
+  protected final Set<M> visitedMethods = Sets.newHashSet();
 
   @DontSynchronize("stateless")
   protected final FlowFunctions<N, D, M> flowFunctions;
@@ -634,6 +637,7 @@ public void solve() {
     if (newFunction) {
       PathEdge<N, D> edge = new PathEdge<N, D>(sourceVal, target, targetVal);
       scheduleEdgeProcessing(edge);
+      visitedMethods.add( icfg.getMethodOf(target));
       if (targetVal != zeroValue) {
         logger.trace("{} - EDGE: <{},{}> -> <{},{}> - {}", getDebugName(), icfg.getMethodOf(target),
             sourceVal, target, targetVal, fPrime);
@@ -864,6 +868,10 @@ public void solve() {
    */
   protected String getDebugName() {
     return "";
+  }
+  
+  public Set<M> getVisitedMethods() {
+	return visitedMethods;
   }
 
   public void printStats() {
