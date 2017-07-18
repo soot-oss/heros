@@ -1,3 +1,5 @@
+[![Build Status](http://soot-build.cs.uni-paderborn.de/jenkins/buildStatus/icon?job=soot/heros-build)](http://soot-build.cs.uni-paderborn.de/jenkins/job/soot/job/heros-build/)
+
 ![Logo](logo/heros-logo.png)
 Heros IFDS/IDE Solver
 =====================
@@ -50,7 +52,31 @@ Under what License can I use Heros?
 -----------------------------------
 Heros is released under LGPL - see [LICENSE.txt][7] for details.
 
-How can I obtain Heros?
+Including Heros in your Project
+-----------------------------------
+A Heros "release" is currently built for each commit to the `develop` branch. You can include Heros as 
+a dependency via Maven, Gradle, SBT, etc using the following coordinates:
+
+
+```.xml
+<dependencies>
+  <dependency>
+    <groupId>heros</groupId>
+    <artifactId>heros</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </dependency>
+</dependencies>
+<repositories>
+  <repository>
+    <id>soot-snapshot</id>
+    <name>soot snapshots</name>
+    <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
+  </repository>
+</repositories>	
+
+```
+
+How do I obtain the nightly build?
 ------------------------
 
 Pre-compiled versions of Heros are available on our [nightly build server](http://soot-build.cs.uni-paderborn.de/nightly/heros/). "heros-trunk.jar" is a complete build containing sallall required libraries. "herosclasses-trunk.jar" only contains the Heros classes and lets you provide the required libraries on your own.
