@@ -29,9 +29,9 @@ public class Transfer<D> implements FlowFunction<D> {
 	} 
 
 	public Set<D> computeTargets(D source) {
-		if(source==fromValue) {
+		if(source.equals(fromValue)) {
 			return twoElementSet(source, toValue);
-		} else if(source==toValue) {
+		} else if(source.equals(toValue)) {
 			return Collections.emptySet();
 		} else {
 			return Collections.singleton(source);

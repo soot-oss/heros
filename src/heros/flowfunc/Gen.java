@@ -35,10 +35,11 @@ public class Gen<D> implements FlowFunction<D> {
 	} 
 
 	public Set<D> computeTargets(D source) {
-		if(source==zeroValue) {
+		if(source.equals(zeroValue)) {
 			return twoElementSet(source, genValue);
-		} else
+		} else {
 			return singleton(source);
+                }
 	}
 	
 }
