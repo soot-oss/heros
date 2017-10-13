@@ -836,7 +836,12 @@ public void solve() {
   }
 
   public HashBasedTable<N, D, V> results(){
-	  return HashBasedTable.create(val);
+	  HashBasedTable<N, D, V> res = HashBasedTable.create();
+	  for(Cell<N,D,V> cell : val.cellSet()){
+		  if(!cell.getColumnKey().equals(zeroValue))
+			  res.put(cell.getRowKey(), cell.getColumnKey(), cell.getValue());
+	  }
+	  return res;
   }
   
   /**
