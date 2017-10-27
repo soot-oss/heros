@@ -181,8 +181,10 @@ public class FlowFunctionDotExport<N,D,M,I extends InterproceduralCFG<N, M>> {
 			Set<D> loc = utf.factsForUnit.get(methodUnit);
 			String unitText = escapeLabelString(printer.printNode(methodUnit, method));
 			pf.print(utf.getUnitLabel(methodUnit) + " [shape=record,label=\""+ unitText + " ");
-			for(D hl : loc) {
-				pf.print("| <" + utf.getFactLabel(methodUnit, hl) + "> " + escapeLabelString(printer.printFact(hl)));
+			if(loc != null){//NOTE: if the '0' fact is removed for some reason this will be null
+				for(D hl : loc) {
+					pf.print("| <" + utf.getFactLabel(methodUnit, hl) + "> " + escapeLabelString(printer.printFact(hl)));
+				}
 			}
 			pf.println("\"];");
 		}
