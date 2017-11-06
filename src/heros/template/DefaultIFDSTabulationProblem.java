@@ -46,7 +46,7 @@ public abstract class DefaultIFDSTabulationProblem<N,D,M, I extends Interprocedu
 	}
 
 	@Override
-	public final I interproceduralCFG() {
+	public I interproceduralCFG() {
 		return icfg;
 	}
 
@@ -57,5 +57,29 @@ public abstract class DefaultIFDSTabulationProblem<N,D,M, I extends Interprocedu
 		}
 		return zeroValue;
 	}
+	
+	@Override
+	public boolean followReturnsPastSeeds() {
+		return false;
+	}
 
+	@Override
+	public boolean autoAddZero() {
+		return true;
+	}
+	
+	@Override
+	public int numThreads() {
+		return Runtime.getRuntime().availableProcessors();
+	}
+	
+	@Override
+	public boolean computeValues() {
+		return true;
+	}
+	
+	@Override
+	public boolean recordEdges() {
+		return false;
+	}
 }

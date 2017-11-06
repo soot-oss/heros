@@ -19,12 +19,12 @@ import heros.InterproceduralCFG;
  *
  * @param <N> The type of nodes in the interprocedural control-flow graph. Typically {@link Unit}.
  * @param <D> The type of data-flow facts to be computed by the tabulation problem.
- * @param <M> The type of objects used to represent methods. Typically {@link SootMethod}.
  */
-public class PathEdge<N,D,M> {
+public class PathEdge<N,D> {
 
 	protected final N target;
 	protected final D dSource, dTarget;
+	protected final int hashCode;
 
 	/**
 	 * @param dSource The fact at the source.
@@ -36,6 +36,13 @@ public class PathEdge<N,D,M> {
 		this.target = target;
 		this.dSource = dSource;
 		this.dTarget = dTarget;
+		
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((dSource == null) ? 0 : dSource.hashCode());
+		result = prime * result + ((dTarget == null) ? 0 : dTarget.hashCode());
+		result = prime * result + ((target == null) ? 0 : target.hashCode());
+		this.hashCode = result;
 	}
 	
 	public N getTarget() {
@@ -52,12 +59,7 @@ public class PathEdge<N,D,M> {
 
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((dSource == null) ? 0 : dSource.hashCode());
-		result = prime * result + ((dTarget == null) ? 0 : dTarget.hashCode());
-		result = prime * result + ((target == null) ? 0 : target.hashCode());
-		return result;
+		return hashCode;
 	}
 
 	@Override

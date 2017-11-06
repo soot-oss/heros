@@ -12,7 +12,6 @@ package heros.solver;
 
 import static heros.solver.IFDSSolver.BinaryDomain.BOTTOM;
 import static heros.solver.IFDSSolver.BinaryDomain.TOP;
-
 import heros.EdgeFunction;
 import heros.EdgeFunctions;
 import heros.FlowFunctions;
@@ -24,9 +23,8 @@ import heros.edgefunc.AllBottom;
 import heros.edgefunc.AllTop;
 import heros.edgefunc.EdgeIdentity;
 
+import java.util.Map;
 import java.util.Set;
-
-
 
 /**
  * A solver for an {@link IFDSTabulationProblem}. This solver in effect uses the {@link IDESolver}
@@ -42,7 +40,7 @@ import java.util.Set;
  */
 public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESolver<N,D,M,IFDSSolver.BinaryDomain,I> {
 
-	static enum BinaryDomain { TOP,BOTTOM } 
+	protected static enum BinaryDomain { TOP,BOTTOM } 
 	
 	private final static EdgeFunction<BinaryDomain> ALL_BOTTOM = new AllBottom<BinaryDomain>(BOTTOM);
 	
@@ -51,7 +49,12 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 	 * {@link #solve()}.
 	 */
 	public IFDSSolver(final IFDSTabulationProblem<N,D,M,I> ifdsProblem) {
-		super(new IDETabulationProblem<N,D,M,BinaryDomain,I>() {
+		super(createIDETabulationProblem(ifdsProblem));
+	}
+
+	static <N, D, M, I extends InterproceduralCFG<N, M>> IDETabulationProblem<N, D, M, BinaryDomain, I> createIDETabulationProblem(
+			final IFDSTabulationProblem<N, D, M, I> ifdsProblem) {
+		return new IDETabulationProblem<N,D,M,BinaryDomain,I>() {
 
 			public FlowFunctions<N,D,M> flowFunctions() {
 				return ifdsProblem.flowFunctions();
@@ -61,7 +64,7 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 				return ifdsProblem.interproceduralCFG();
 			}
 
-			public Set<N> initialSeeds() {
+			public Map<N,Set<D>> initialSeeds() {
 				return ifdsProblem.initialSeeds();
 			}
 
@@ -99,6 +102,26 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 				return new AllTop<BinaryDomain>(TOP);
 			}
 			
+			@Override
+			public boolean followReturnsPastSeeds() {
+				return ifdsProblem.followReturnsPastSeeds();
+			}
+			
+			@Override
+			public boolean autoAddZero() {
+				return ifdsProblem.autoAddZero();
+			}
+			
+			@Override
+			public int numThreads() {
+				return ifdsProblem.numThreads();
+			}
+			
+			@Override
+			public boolean computeValues() {
+				return ifdsProblem.computeValues();
+			}
+			
 			class IFDSEdgeFunctions implements EdgeFunctions<N,D,M,BinaryDomain> {
 		
 				public EdgeFunction<BinaryDomain> getNormalEdgeFunction(N src,D srcNode,N tgt,D tgtNode) {
@@ -121,8 +144,13 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 					return EdgeIdentity.v(); 
 				}
 			}
+			
+			@Override
+			public boolean recordEdges() {
+				return ifdsProblem.recordEdges();
+			}
 
-			});
+			};
 	}
 	
 	/**

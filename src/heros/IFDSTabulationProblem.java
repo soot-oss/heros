@@ -12,6 +12,7 @@ package heros;
 
 import heros.solver.IFDSSolver;
 
+import java.util.Map;
 import java.util.Set;
 
 
@@ -25,7 +26,7 @@ import java.util.Set;
  * @param <M> The type of objects used to represent methods. Typically {@link SootMethod}.
  * @param <I> The type of inter-procedural control-flow graph being used.
  */
-public interface IFDSTabulationProblem<N,D,M, I extends InterproceduralCFG<N,M>> {
+public interface IFDSTabulationProblem<N,D,M, I extends InterproceduralCFG<N,M>> extends SolverConfiguration {
 
 	/**
 	 * Returns a set of flow functions. Those functions are used to compute data-flow facts
@@ -45,9 +46,9 @@ public interface IFDSTabulationProblem<N,D,M, I extends InterproceduralCFG<N,M>>
 	I interproceduralCFG();
 	
 	/**
-	 * Returns initial seeds to be used for the analysis. (a set of statements)
+	 * Returns initial seeds to be used for the analysis. This is a mapping of statements to initial analysis facts.
 	 */
-	Set<N> initialSeeds();
+	Map<N,Set<D>> initialSeeds();
 	
 	/**
 	 * This must be a data-flow fact of type {@link D}, but must <i>not</i>
@@ -60,4 +61,5 @@ public interface IFDSTabulationProblem<N,D,M, I extends InterproceduralCFG<N,M>>
 	 * interface should therefore cache the return value! 
 	 */
 	D zeroValue();
+
 }

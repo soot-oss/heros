@@ -12,8 +12,9 @@ package heros.flowfunc;
 
 import heros.FlowFunction;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
-
 
 import com.google.common.collect.Sets;
 
@@ -25,7 +26,7 @@ public class Compose<D> implements FlowFunction<D> {
 	
 	private final FlowFunction<D>[] funcs;
 
-	public Compose(FlowFunction<D>... funcs){
+	private Compose(FlowFunction<D>... funcs){
 		this.funcs = funcs;
 	} 
 
@@ -39,6 +40,19 @@ public class Compose<D> implements FlowFunction<D> {
 			curr = next;
 		}
 		return curr;
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public static <D> FlowFunction<D> compose(FlowFunction<D>... funcs) {
+		List<FlowFunction<D>> list = new ArrayList<FlowFunction<D>>();
+		for (FlowFunction<D> f : funcs) {
+			if(f!=Identity.v()) {
+				list.add(f);
+			}
+		}
+		if(list.size()==1) return list.get(0);
+		else if(list.isEmpty()) return Identity.v();
+		return new Compose(list.toArray(new FlowFunction[list.size()]));
 	}
 	
 }

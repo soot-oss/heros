@@ -1,3 +1,6 @@
+[![Build Status](http://soot-build.cs.uni-paderborn.de/jenkins/buildStatus/icon?job=soot/heros-build)](http://soot-build.cs.uni-paderborn.de/jenkins/job/soot/job/heros-build/)
+
+![Logo](logo/heros-logo.png)
 Heros IFDS/IDE Solver
 =====================
 Heros is a generic implementation of an IFDS/IDE Solver that can be plugged into existing, Java-based program analysis frameworks. A reference connector exists for the [Soot][1] framework.
@@ -48,6 +51,35 @@ Contributions are more than welcome! It is easiest to fork the project on Github
 Under what License can I use Heros?
 -----------------------------------
 Heros is released under LGPL - see [LICENSE.txt][7] for details.
+
+Including Heros in your Project
+-----------------------------------
+A Heros "release" is currently built for each commit to the `develop` branch. You can include Heros as 
+a dependency via Maven, Gradle, SBT, etc using the following coordinates:
+
+
+```.xml
+<dependencies>
+  <dependency>
+    <groupId>heros</groupId>
+    <artifactId>heros</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </dependency>
+</dependencies>
+<repositories>
+  <repository>
+    <id>soot-snapshot</id>
+    <name>soot snapshots</name>
+    <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
+  </repository>
+</repositories>	
+
+```
+
+How do I obtain the nightly build?
+------------------------
+
+Pre-compiled versions of Heros are available on our [nightly build server](http://soot-build.cs.uni-paderborn.de/nightly/heros/). "heros-trunk.jar" is a complete build containing sallall required libraries. "herosclasses-trunk.jar" only contains the Heros classes and lets you provide the required libraries on your own.
 
 [1]: http://www.sable.mcgill.ca/soot/
 [2]: http://bodden.de/

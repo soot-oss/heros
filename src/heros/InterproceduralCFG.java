@@ -10,6 +10,7 @@
  ******************************************************************************/
 package heros;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -27,6 +28,8 @@ public interface InterproceduralCFG<N,M>  {
 	 */
 	public M getMethodOf(N n);
 
+	public List<N> getPredsOf(N u);
+	
 	/**
 	 * Returns the successor nodes.
 	 */
@@ -35,12 +38,12 @@ public interface InterproceduralCFG<N,M>  {
 	/**
 	 * Returns all callee methods for a given call.
 	 */
-	public Set<M> getCalleesOfCallAt(N n);
+	public Collection<M> getCalleesOfCallAt(N n);
 
 	/**
 	 * Returns all caller statements/nodes of a given method.
 	 */
-	public Set<N> getCallersOf(M m);
+	public Collection<N> getCallersOf(M m);
 
 	/**
 	 * Returns all call sites within a given method.
@@ -51,7 +54,7 @@ public interface InterproceduralCFG<N,M>  {
 	 * Returns all start points of a given method. There may be
 	 * more than one start point in case of a backward analysis.
 	 */
-	public Set<N> getStartPointsOf(M m);
+	public Collection<N> getStartPointsOf(M m);
 
 	/**
 	 * Returns all statements to which a call could return.
@@ -59,7 +62,7 @@ public interface InterproceduralCFG<N,M>  {
 	 * We, however, use as return site the successor statements, of which
 	 * there can be many in case of exceptional flow.
 	 */
-	public List<N> getReturnSitesOfCallAt(N n);
+	public Collection<N> getReturnSitesOfCallAt(N n);
 
 	/**
 	 * Returns <code>true</code> if the given statement is a call site.
