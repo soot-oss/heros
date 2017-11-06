@@ -63,7 +63,7 @@ a dependency via Maven, Gradle, SBT, etc using the following coordinates:
   <dependency>
     <groupId>heros</groupId>
     <artifactId>heros</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
   </dependency>
 </dependencies>
 <repositories>
@@ -79,7 +79,7 @@ a dependency via Maven, Gradle, SBT, etc using the following coordinates:
 How do I obtain the nightly build?
 ------------------------
 
-Pre-compiled versions of Heros are available on our [nightly build server](http://soot-build.cs.uni-paderborn.de/nightly/heros/). "heros-trunk.jar" is a complete build containing sallall required libraries. "herosclasses-trunk.jar" only contains the Heros classes and lets you provide the required libraries on your own.
+Pre-compiled versions of Heros are available on our [nightly build server](https://soot-build.cs.uni-paderborn.de/public/origin/develop/soot/heros-build/build/). "heros-trunk.jar" is a complete build containing all required libraries. "herosclasses-trunk.jar" only contains the Heros classes and lets you provide the required libraries on your own.
 
 [1]: http://www.sable.mcgill.ca/soot/
 [2]: http://bodden.de/
