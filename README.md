@@ -63,14 +63,14 @@ a dependency via Maven, Gradle, SBT, etc using the following coordinates:
   <dependency>
     <groupId>heros</groupId>
     <artifactId>heros</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
   </dependency>
 </dependencies>
 <repositories>
   <repository>
-    <id>soot-snapshot</id>
-    <name>soot snapshots</name>
-    <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
+    <id>soot-release</id>
+    <name>soot releases</name>
+    <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release/</url>
   </repository>
 </repositories>	
 
@@ -79,7 +79,7 @@ a dependency via Maven, Gradle, SBT, etc using the following coordinates:
 How do I obtain the nightly build?
 ------------------------
 
-Pre-compiled versions of Heros are available on our [nightly build server](http://soot-build.cs.uni-paderborn.de/nightly/heros/). "heros-trunk.jar" is a complete build containing sallall required libraries. "herosclasses-trunk.jar" only contains the Heros classes and lets you provide the required libraries on your own.
+Pre-compiled versions of Heros are available on our [nightly build server](https://soot-build.cs.uni-paderborn.de/public/origin/master/soot/heros-master/). "heros-trunk.jar" is a complete build containing sallall required libraries. "herosclasses-trunk.jar" only contains the Heros classes and lets you provide the required libraries on your own.
 
 [1]: http://www.sable.mcgill.ca/soot/
 [2]: http://bodden.de/
