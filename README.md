@@ -1,4 +1,4 @@
-[![Build Status](http://soot-build.cs.uni-paderborn.de/jenkins/buildStatus/icon?job=soot/heros-build)](http://soot-build.cs.uni-paderborn.de/jenkins/job/soot/job/heros-build/)
+[![Build Status](http://soot-build.cs.uni-paderborn.de/jenkins/buildStatus/icon?job=soot/heros-master)](http://soot-build.cs.uni-paderborn.de/jenkins/job/soot/job/heros-master/)
 
 ![Logo](logo/heros-logo.png)
 Heros IFDS/IDE Solver
