@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>heros</groupId>
   <artifactId>heros</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
 
 
   <properties>
@@ -57,7 +57,7 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>18.0</version>
+      <version>19.0</version>
     </dependency>
 
     <dependency>
