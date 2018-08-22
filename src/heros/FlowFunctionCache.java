@@ -230,5 +230,12 @@ public class FlowFunctionCache<N, D, M> implements FlowFunctions<N, D, M> {
                 normalCache.stats(), callCache.stats(),returnCache.stats(),callToReturnCache.stats());
 	}
 	
+	public void invalidate() {
+		callCache.invalidateAll();
+		callToReturnCache.invalidateAll();
+		normalCache.invalidateAll();
+		returnCache.invalidateAll();
+		
+	}
 
 }
