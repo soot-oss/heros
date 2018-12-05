@@ -68,7 +68,7 @@ a dependency via Maven, Gradle, SBT, etc using the following coordinates:
   <dependency>
     <groupId>heros</groupId>
     <artifactId>heros</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.1.0-SNAPSHOT</version>
   </dependency>
 </dependencies>
 <repositories>
