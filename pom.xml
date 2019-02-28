@@ -5,7 +5,9 @@
     <artifactId>heros</artifactId>
     <version>1.1.0-SNAPSHOT</version>
     <name>Heros IFDS/IDE Solver</name>
-    <description>Heros is a generic implementation of an IFDS/IDE Solver that can be plugged into existing, Java-based program analysis frameworks. A reference connector exists for the Soot framework.</description>
+    <description>Heros is a generic implementation of an IFDS/IDE Solver that can be plugged into existing, Java-based
+        program analysis frameworks. A reference connector exists for the Soot framework.
+    </description>
     <url>https://github.com/Sable/heros</url>
     <organization>
         <name>Secure Software Engineering Group - University of Paderborn</name>
@@ -135,6 +137,13 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <profiles>
         <profile>
