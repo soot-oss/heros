@@ -79,7 +79,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
     protected Table<N,N,Map<D,Set<D>>> computedInterPEdges = HashBasedTable.create();
 
     //enable with -Dorg.slf4j.simpleLogger.defaultLogLevel=trace
-    public static final boolean DEBUG = logger.isDebugEnabled();
+    public static boolean DEBUG = logger.isDebugEnabled();
 
 	protected CountingThreadPoolExecutor executor;
 	
