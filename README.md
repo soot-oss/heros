@@ -71,14 +71,6 @@ a dependency via Maven, Gradle, SBT, etc using the following coordinates:
     <version>1.1.0</version>
   </dependency>
 </dependencies>
-<repositories>
-  <repository>
-    <id>soot-release</id>
-    <name>soot releases</name>
-    <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release/</url>
-  </repository>
-</repositories>	
-
 ```
 
 How do I obtain the nightly build?
