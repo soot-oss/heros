@@ -12,16 +12,26 @@ package heros;
 
 /**
  * This class defines a lattice in terms of its top and bottom elements
- * and a join operation. 
+ * and a meet operation. This is meant to be a complete lattice, with a unique top and bottom element. 
  *
  * @param <V> The domain type for this lattice.
  */
-public interface JoinLattice<V> {
+public interface MeetLattice<V> {
 	
+	/**
+	 * Returns the unique top element of this lattice.
+	 */
 	V topElement();
 	
+	/**
+	 * Returns the unique bottom element of this lattice.
+	 */
 	V bottomElement();
 	
-	V join(V left, V right);
+	/**
+	 * Computes the meet of left and right. Note that <pre>meet(top,x) = meet(x,top) = x</pre> and
+	 * <pre>meet(bottom,x) = meet(x,bottom) = bottom</pre>. 
+	 */
+	V meet(V left, V right);
 
 }

@@ -23,7 +23,7 @@ import heros.FlowFunctionCache;
 import heros.FlowFunctions;
 import heros.IDETabulationProblem;
 import heros.InterproceduralCFG;
-import heros.JoinLattice;
+import heros.MeetLattice;
 import heros.SynchronizedBy;
 import heros.ZeroedFlowFunctions;
 import heros.edgefunc.EdgeIdentity;
@@ -117,7 +117,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	protected final Map<N,Set<D>> initialSeeds;
 
 	@DontSynchronize("stateless")
-	protected final JoinLattice<V> valueLattice;
+	protected final MeetLattice<V> valueLattice;
 	
 	@DontSynchronize("stateless")
 	protected final EdgeFunction<V> allTop;
@@ -199,7 +199,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		this.edgeFunctions = edgeFunctions;
 		this.initialSeeds = tabulationProblem.initialSeeds();
 		this.unbalancedRetSites = Collections.newSetFromMap(new ConcurrentHashMap<N, Boolean>());
-		this.valueLattice = tabulationProblem.joinLattice();
+		this.valueLattice = tabulationProblem.meetLattice();
 		this.allTop = tabulationProblem.allTopFunction();
 		this.jumpFn = new JumpFunctions<N,D,V>(allTop);
 		this.followReturnsPastSeeds = tabulationProblem.followReturnsPastSeeds();
@@ -640,7 +640,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		synchronized (jumpFn) {
 			jumpFnE = jumpFn.reverseLookup(target, targetVal).get(sourceVal);
 			if(jumpFnE==null) jumpFnE = allTop; //JumpFn is initialized to all-top (see line [2] in SRH96 paper)
-			fPrime = jumpFnE.joinWith(f);
+			fPrime = jumpFnE.meetWith(f);
 			newFunction = !fPrime.equalTo(jumpFnE);
 			if(newFunction) {
 				jumpFn.addFunction(sourceVal, target, targetVal, fPrime);
@@ -746,14 +746,14 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		}
 	}
 	
-	protected V joinValueAt(N unit, D fact, V curr, V newVal) {
-		return valueLattice.join(curr, newVal);
+	protected V meetValueAt(N unit, D fact, V curr, V newVal) {
+		return valueLattice.meet(curr, newVal);
 	}
 	
 	private void propagateValue(N nHashN, D nHashD, V v) {
 		synchronized (val) {
 			V valNHash = val(nHashN, nHashD);
-			V vPrime = joinValueAt(nHashN, nHashD, valNHash,v);
+			V vPrime = meetValueAt(nHashN, nHashD, valNHash,v);
 			if(!vPrime.equals(valNHash)) {
 				setVal(nHashN, nHashD, vPrime);
 				scheduleValueProcessing(new ValuePropagationTask(new Pair<N,D>(nHashN,nHashD)));
@@ -946,7 +946,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 						D d = sourceValTargetValAndFunction.getColumnKey();
 						EdgeFunction<V> fPrime = sourceValTargetValAndFunction.getValue();
 						synchronized (val) {
-							setVal(n,d,valueLattice.join(val(n,d),fPrime.computeTarget(val(sP,dPrime))));
+							setVal(n,d,valueLattice.meet(val(n,d),fPrime.computeTarget(val(sP,dPrime))));
 						}
 						flowFunctionApplicationCount++;
 					}

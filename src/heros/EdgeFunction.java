@@ -36,12 +36,12 @@ public interface EdgeFunction<V> {
 	EdgeFunction<V> composeWith(EdgeFunction<V> secondFunction);
 	
 	/**
-	 * Returns a function that represents that (element-wise) join
+	 * Returns a function that represents that (element-wise) meet
 	 * of this function with otherFunction. Naturally, this is a
 	 * symmetric operation.
-	 * @see JoinLattice#join(Object, Object)
+	 * @see MeetLattice#meet(Object, Object)
 	 */
-	EdgeFunction<V> joinWith(EdgeFunction<V> otherFunction);
+	EdgeFunction<V> meetWith(EdgeFunction<V> otherFunction);
 	
 	/**
 	 * Returns true is this function represents exactly the same 

@@ -29,7 +29,7 @@ public class AllTop<V> implements EdgeFunction<V> {
 		return this;
 	}
 
-	public EdgeFunction<V> joinWith(EdgeFunction<V> otherFunction) {
+	public EdgeFunction<V> meetWith(EdgeFunction<V> otherFunction) {
 		return otherFunction;
 	}
 
