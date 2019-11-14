@@ -18,7 +18,7 @@ import heros.FlowFunctions;
 import heros.IDETabulationProblem;
 import heros.IFDSTabulationProblem;
 import heros.InterproceduralCFG;
-import heros.JoinLattice;
+import heros.MeetLattice;
 import heros.edgefunc.AllBottom;
 import heros.edgefunc.AllTop;
 import heros.edgefunc.EdgeIdentity;
@@ -76,8 +76,8 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 				return new IFDSEdgeFunctions();
 			}
 
-			public JoinLattice<BinaryDomain> joinLattice() {
-				return new JoinLattice<BinaryDomain>() {
+			public MeetLattice<BinaryDomain> meetLattice() {
+				return new MeetLattice<BinaryDomain>() {
 
 					public BinaryDomain topElement() {
 						return BinaryDomain.TOP;
@@ -87,7 +87,7 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> extends IDESol
 						return BinaryDomain.BOTTOM;
 					}
 
-					public BinaryDomain join(BinaryDomain left, BinaryDomain right) {
+					public BinaryDomain meet(BinaryDomain left, BinaryDomain right) {
 						if(left==TOP && right==TOP) {
 							return TOP;
 						} else {

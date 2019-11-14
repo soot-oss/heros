@@ -14,7 +14,7 @@ import heros.EdgeFunction;
 import heros.EdgeFunctions;
 import heros.IDETabulationProblem;
 import heros.InterproceduralCFG;
-import heros.JoinLattice;
+import heros.MeetLattice;
 
 /**
  * This is a template for {@link IDETabulationProblem}s that automatically caches values
@@ -31,7 +31,7 @@ public abstract class DefaultIDETabulationProblem<N,D,M,V,I extends Interprocedu
     extends DefaultIFDSTabulationProblem<N,D,M,I> implements IDETabulationProblem<N,D,M,V,I>{
 
 	private final EdgeFunction<V> allTopFunction;
-	private final JoinLattice<V> joinLattice;
+	private final MeetLattice<V> joinLattice;
 	private final EdgeFunctions<N,D,M,V> edgeFunctions;
 	
 	public DefaultIDETabulationProblem(I icfg) {
@@ -43,7 +43,7 @@ public abstract class DefaultIDETabulationProblem<N,D,M,V,I extends Interprocedu
 
 	protected abstract EdgeFunction<V> createAllTopFunction();
 
-	protected abstract JoinLattice<V> createJoinLattice();
+	protected abstract MeetLattice<V> createJoinLattice();
 
 	protected abstract EdgeFunctions<N,D,M,V> createEdgeFunctionsFactory();
 	
@@ -53,7 +53,7 @@ public abstract class DefaultIDETabulationProblem<N,D,M,V,I extends Interprocedu
 	}
 	
 	@Override
-	public final JoinLattice<V> joinLattice() {
+	public final MeetLattice<V> meetLattice() {
 		return joinLattice;
 	}
 	

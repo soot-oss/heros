@@ -17,8 +17,8 @@ package heros;
  * of type D maps at any program point to a value of type V. The functions describe how
  * values are transformed when moving from one statement to another.
  * 
- * The problem further defines a {@link JoinLattice}, which describes how values of
- * type V are joined (merged) when multiple values are possible.
+ * The problem further defines a {@link MeetLattice}, which describes how values of
+ * type V are merged (via a meet operation) when multiple values are possible.
  *
  * @param <N> The type of nodes in the interprocedural control-flow graph. Typically {@link Unit}.
  * @param <D> The type of data-flow facts to be computed by the tabulation problem.
@@ -35,9 +35,9 @@ public interface IDETabulationProblem<N,D,M,V,I extends InterproceduralCFG<N,M>>
 	EdgeFunctions<N,D,M,V> edgeFunctions();
 	
 	/**
-	 * Returns the lattice describing how values of type V need to be joined.
+	 * Returns the lattice describing how to compute the meet of two V values.
 	 */
-	JoinLattice<V> joinLattice();
+	MeetLattice<V> meetLattice();
 
 	/**
 	 * Returns a function mapping everything to top.

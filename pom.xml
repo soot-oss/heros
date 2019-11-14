@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>de.upb.cs.swt</groupId>
     <artifactId>heros</artifactId>
-  <version>1.1.0</version>
+  <version>1.2.0</version>
     <name>Heros IFDS/IDE Solver</name>
     <description>Heros is a generic implementation of an IFDS/IDE Solver that can be plugged into existing, Java-based
         program analysis frameworks. A reference connector exists for the Soot framework.

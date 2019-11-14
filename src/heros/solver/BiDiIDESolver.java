@@ -17,7 +17,7 @@ import heros.FlowFunctions;
 import heros.IDETabulationProblem;
 import heros.IFDSTabulationProblem;
 import heros.InterproceduralCFG;
-import heros.JoinLattice;
+import heros.MeetLattice;
 import heros.solver.IFDSSolver.BinaryDomain;
 
 import java.util.Collections;
@@ -479,8 +479,8 @@ public class BiDiIDESolver<N, D, M, V, I extends InterproceduralCFG<N, M>> {
 		}
 
 		@Override
-		public JoinLattice<V> joinLattice() {
-			return delegate.joinLattice();
+		public MeetLattice<V> meetLattice() {
+			return delegate.meetLattice();
 		}
 
 		@Override

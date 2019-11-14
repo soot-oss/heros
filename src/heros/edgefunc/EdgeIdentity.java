@@ -31,7 +31,7 @@ public class EdgeIdentity<V> implements EdgeFunction<V> {
 		return secondFunction;
 	}
 
-	public EdgeFunction<V> joinWith(EdgeFunction<V> otherFunction) {
+	public EdgeFunction<V> meetWith(EdgeFunction<V> otherFunction) {
 		if(otherFunction == this || otherFunction.equalTo(this)) return this;
 		if(otherFunction instanceof AllBottom) {
 			return otherFunction;
@@ -39,8 +39,8 @@ public class EdgeIdentity<V> implements EdgeFunction<V> {
 		if(otherFunction instanceof AllTop) {
 			return this;
 		}
-		//do not know how to join; hence ask other function to decide on this
-		return otherFunction.joinWith(this);
+		//do not know how to meet; hence ask other function to decide on this
+		return otherFunction.meetWith(this);
 	}
 	
 	public boolean equalTo(EdgeFunction<V> other) {

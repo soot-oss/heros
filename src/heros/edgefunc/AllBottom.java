@@ -31,7 +31,7 @@ public class AllBottom<V> implements EdgeFunction<V> {
 		return secondFunction;
 	}
 
-	public EdgeFunction<V> joinWith(EdgeFunction<V> otherFunction) {
+	public EdgeFunction<V> meetWith(EdgeFunction<V> otherFunction) {
 		if(otherFunction == this || otherFunction.equalTo(this)) return this;
 		if(otherFunction instanceof AllTop) {
 			return this;
