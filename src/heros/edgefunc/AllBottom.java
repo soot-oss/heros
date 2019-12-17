@@ -11,8 +11,18 @@
 package heros.edgefunc;
 
 import heros.EdgeFunction;
+import heros.solver.IFDSSolver;
 
 
+/**
+ * This class implements an edge function that maps every input to the stated bottom element. This class is normally useful only
+ * in the context of an {@link IFDSSolver}, which uses AllBottom to model reachability. Consequently, this class should normally not be useful
+ * in the context of custom IDE problems.
+ * 
+ * @author Eric Bodden
+ *
+ * @param <V>
+ */
 public class AllBottom<V> implements EdgeFunction<V> {
 	
 	private final V bottomElement;
