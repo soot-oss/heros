@@ -860,7 +860,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 	 * Factory method for this solver's thread-pool executor.
 	 */
 	protected CountingThreadPoolExecutor getExecutor() {
-		return new CountingThreadPoolExecutor(1, this.numThreads, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+		return new CountingThreadPoolExecutor(this.numThreads, Integer.MAX_VALUE, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 	}
 	
 	/**
