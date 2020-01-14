@@ -37,13 +37,13 @@ public abstract class DefaultIDETabulationProblem<N,D,M,V,I extends Interprocedu
 	public DefaultIDETabulationProblem(I icfg) {
 		super(icfg);
 		this.allTopFunction = createAllTopFunction();
-		this.joinLattice = createJoinLattice();
+		this.joinLattice = createMeetLattice();
 		this.edgeFunctions = createEdgeFunctionsFactory();
 	}
 
 	protected abstract EdgeFunction<V> createAllTopFunction();
 
-	protected abstract MeetLattice<V> createJoinLattice();
+	protected abstract MeetLattice<V> createMeetLattice();
 
 	protected abstract EdgeFunctions<N,D,M,V> createEdgeFunctionsFactory();
 	
