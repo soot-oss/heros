@@ -36,6 +36,8 @@ public class AllBottom<V> implements EdgeFunction<V> {
 	}
 
 	public EdgeFunction<V> composeWith(EdgeFunction<V> secondFunction) {
+		//note: this only makes sense within IFDS, see here:
+		//https://github.com/Sable/heros/issues/37
 		if (secondFunction instanceof EdgeIdentity)
 			return this;
 		return secondFunction;

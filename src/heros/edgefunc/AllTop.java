@@ -11,8 +11,17 @@
 package heros.edgefunc;
 
 import heros.EdgeFunction;
+import heros.solver.IFDSSolver;
 
 
+/**
+ * This is an internal class implementing an edge function for use in {@link IFDSSolver}.
+ * This edge function sets everything to the top value.
+ * 
+ * @author Eric Bodden
+ *
+ * @param <V>
+ */
 public class AllTop<V> implements EdgeFunction<V> {
 	
 	private final V topElement; 
