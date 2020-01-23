@@ -30,12 +30,11 @@ import heros.edgefunc.EdgeIdentity;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -56,7 +55,7 @@ import com.google.common.collect.Table.Cell;
  * queried by using {@link #resultAt(Object, Object)} and {@link #resultsAt(Object)}.
  * 
  * Note that this solver and its data structures internally use mostly {@link java.util.LinkedHashSet}s
- * instead of normal {@link HashSet}s to fix the iteration order as much as possible. This
+ * instead of normal HashSet to fix the iteration order as much as possible. This
  * is to produce, as much as possible, reproducible benchmarking results. We have found
  * that the iteration order can matter a lot in terms of speed.
  *
@@ -198,7 +197,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		this.flowFunctions = flowFunctions;
 		this.edgeFunctions = edgeFunctions;
 		this.initialSeeds = tabulationProblem.initialSeeds();
-		this.unbalancedRetSites = Collections.newSetFromMap(new ConcurrentHashMap<N, Boolean>());
+		this.unbalancedRetSites = Collections.synchronizedSet(new LinkedHashSet<N>());
 		this.valueLattice = tabulationProblem.meetLattice();
 		this.allTop = tabulationProblem.allTopFunction();
 		this.jumpFn = new JumpFunctions<N,D,V>(allTop);
@@ -320,10 +319,10 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		synchronized (tgtMap) {
 			Map<D,Set<D>> map = tgtMap.get(sourceNode, sinkStmt);
 			if(map == null) {
-				map = new HashMap<D, Set<D>>();
+				map = new LinkedHashMap<D, Set<D>>();
 				tgtMap.put(sourceNode, sinkStmt, map);
 			}
-			map.put(sourceVal, new HashSet<D>(destVals));
+			map.put(sourceVal, new LinkedHashSet<D>(destVals));
 		}
 	}
 	
@@ -368,7 +367,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 						//line 15.1 of Naeem/Lhotak/Rodriguez
 						addIncoming(sP,d3,n,d2);
 						//line 15.2, copy to avoid concurrent modification exceptions by other threads
-						endSumm = new HashSet<Table.Cell<N,D,EdgeFunction<V>>>(endSummary(sP, d3));
+						endSumm = new LinkedHashSet<Table.Cell<N,D,EdgeFunction<V>>>(endSummary(sP, d3));
 					}
 					
 					//still line 15.2 of Naeem/Lhotak/Rodriguez
@@ -459,7 +458,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		
 		//for each of the method's start points, determine incoming calls
 		Collection<N> startPointsOf = icfg.getStartPointsOf(methodThatNeedsSummary);
-		Map<N,Set<D>> inc = new HashMap<N,Set<D>>();
+		Map<N,Set<D>> inc = new LinkedHashMap<N,Set<D>>();
 		for(N sP: startPointsOf) {
 			//line 21.1 of Naeem/Lhotak/Rodriguez
 			
@@ -468,7 +467,7 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 				addEndSummary(sP, d1, n, d2, f);
 				//copy to avoid concurrent modification exceptions by other threads
 				for (Entry<N, Set<D>> entry : incoming(d1, sP).entrySet())
-					inc.put(entry.getKey(), new HashSet<D>(entry.getValue()));
+					inc.put(entry.getKey(), new LinkedHashSet<D>(entry.getValue()));
 			}
 		}
 		
@@ -664,11 +663,11 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		//Phase II(i)
         logger.debug("Computing the final values for the edge functions");
         //add caller seeds to initial seeds in an unbalanced problem
-        Map<N, Set<D>> allSeeds = new HashMap<N, Set<D>>(initialSeeds);
+        Map<N, Set<D>> allSeeds = new LinkedHashMap<N, Set<D>>(initialSeeds);
         for(N unbalancedRetSite: unbalancedRetSites) {
         	Set<D> seeds = allSeeds.get(unbalancedRetSite);
         	if(seeds==null) {
-        		seeds = new HashSet<D>();
+        		seeds = new LinkedHashSet<D>();
         		allSeeds.put(unbalancedRetSite, seeds);
         	}
         	seeds.add(zeroValue);
@@ -819,12 +818,12 @@ public class IDESolver<N,D,M,V,I extends InterproceduralCFG<N, M>> {
 		synchronized (incoming) {
 			Map<N, Set<D>> summaries = incoming.get(sP, d3);
 			if(summaries==null) {
-				summaries = new HashMap<N, Set<D>>();
+				summaries = new LinkedHashMap<N, Set<D>>();
 				incoming.put(sP, d3, summaries);
 			}
 			Set<D> set = summaries.get(n);
 			if(set==null) {
-				set = new HashSet<D>();
+				set = new LinkedHashSet<D>();
 				summaries.put(n,set);
 			}
 			set.add(d2);

@@ -16,7 +16,6 @@ import heros.SynchronizedBy;
 import heros.ThreadSafe;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -51,7 +50,7 @@ public class JumpFunctions<N,D,L> {
 	//target value and associated function; the triple is implemented by a table
 	//we exclude empty default functions 
 	@SynchronizedBy("consistent lock on this")
-	protected Map<N,Table<D,D,EdgeFunction<L>>> nonEmptyLookupByTargetNode = new HashMap<N,Table<D,D,EdgeFunction<L>>>();
+	protected Map<N,Table<D,D,EdgeFunction<L>>> nonEmptyLookupByTargetNode = new LinkedHashMap<N,Table<D,D,EdgeFunction<L>>>();
 
 	@DontSynchronize("immutable")	
 	private final EdgeFunction<L> allTop;
