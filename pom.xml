@@ -126,13 +126,13 @@
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.12</version>
-            <scope>build,test</scope>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
-            <version>1.9.5</version>
-            <scope>build,test</scope>
+            <artifactId>mockito-core</artifactId>
+			<version>3.2.4</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

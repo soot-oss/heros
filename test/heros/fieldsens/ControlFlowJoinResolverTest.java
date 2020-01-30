@@ -114,8 +114,7 @@ public class ControlFlowJoinResolverTest {
 	}
 	
 	
-	private class ResolverArgumentMatcher extends
-			ArgumentMatcher<ReturnSiteResolver<String, TestFact, Statement, TestMethod>> {
+	private class ResolverArgumentMatcher implements ArgumentMatcher<ControlFlowJoinResolver<String, TestFact, Statement, TestMethod>> {
 
 		private AccessPath<String> accPath;
 
@@ -124,8 +123,7 @@ public class ControlFlowJoinResolverTest {
 		}
 
 		@Override
-		public boolean matches(Object argument) {
-			ControlFlowJoinResolver resolver = (ControlFlowJoinResolver) argument;
+		public boolean matches(ControlFlowJoinResolver<String, TestFact, Statement, TestMethod> resolver) {
 			return resolver.isInterestGiven() && resolver.resolvedAccessPath.equals(accPath) && resolver.getJoinStmt().equals(joinStmt);
 		}
 	}

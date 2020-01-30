@@ -288,8 +288,7 @@ public class ReturnSiteResolverTest {
 		verify(callback, never()).canBeResolvedEmpty();
 	}
 	
-	private class ReturnSiteResolverArgumentMatcher extends
-			ArgumentMatcher<ReturnSiteResolver<String, TestFact, Statement, TestMethod>> {
+	private class ReturnSiteResolverArgumentMatcher implements ArgumentMatcher<ReturnSiteResolver<String, TestFact, Statement, TestMethod>> {
 
 		private AccessPath<String> accPath;
 
@@ -298,8 +297,7 @@ public class ReturnSiteResolverTest {
 		}
 
 		@Override
-		public boolean matches(Object argument) {
-			ReturnSiteResolver resolver = (ReturnSiteResolver) argument;
+		public boolean matches(ReturnSiteResolver<String, TestFact, Statement, TestMethod> resolver) {
 			return resolver.isInterestGiven() && resolver.resolvedAccessPath.equals(accPath) && resolver.getReturnSite().equals(returnSite);
 		}
 	}
