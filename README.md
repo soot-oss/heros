@@ -59,33 +59,34 @@ Heros is released under LGPL - see [LICENSE.txt][7] for details.
 
 Including Heros in your Project
 -----------------------------------
-A Heros "release" is currently built for each commit to the `develop` branch. You can include Heros as 
+A Heros "release" is currently built for each commit to the `master` branch. You can include Heros as 
 a dependency via Maven, Gradle, SBT, etc using the following coordinates:
 
 
 ```.xml
 <dependencies>
   <dependency>
-    <groupId>heros</groupId>
+    <groupId>de.upb.cs.swt</groupId>
     <artifactId>heros</artifactId>
-    <version>1.2.0-SNAPSHOT</version>
+    <version>1.2.1</version>
   </dependency>
 </dependencies>
-<repositories>
-  <repository>
-      <id>sonatype-snapshots</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-      <releases>
-          <enabled>false</enabled>
-      </releases>
-  </repository>
-</repositories> 
 ```
 
 How do I obtain the nightly build?
 ------------------------
 
-Pre-compiled versions of the develop branch are available on our [nightly build server](https://soot-build.cs.uni-paderborn.de/public/origin/master/soot/heros-master/). "heros-trunk.jar" is a complete build containing sallall required libraries. "herosclasses-trunk.jar" only contains the Heros classes and lets you provide the required libraries on your own.
+You can also obtain older builds of the `master` branch. A complete listing of builds can be found on [Maven Central](https://repo1.maven.org/maven2/de/upb/cs/swt/heros/).
+
+# How do I obtain Heros without Maven?
+**We recommend using Heros with Maven**
+
+You can obtain the latest release build of heros [directly](https://repo1.maven.org/maven2/de/upb/cs/swt/heros/).
+
+The `heros-<RELEASE>-jar-with-dependencies.jar` file is an all-in-one file that also contains all the required libraries. 
+
+The `heros-<RELEASE>.jar`  file contains only Soot, allowing you to manually pick dependencies as you need them. If you do not want to bother with dependencies, we recommend using the former.
+
 
 [1]: http://www.sable.mcgill.ca/soot/
 [2]: http://bodden.de/
