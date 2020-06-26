@@ -1,4 +1,4 @@
-[![Build Status](http://soot-build.cs.uni-paderborn.de/jenkins/buildStatus/icon?job=soot/heros-master)](http://soot-build.cs.uni-paderborn.de/jenkins/job/soot/job/heros-master/)
+[![Build Status](http://soot-build.cs.uni-paderborn.de/jenkins/buildStatus/icon?job=soot/heros-build)](http://soot-build.cs.uni-paderborn.de/jenkins/job/soot/job/heros-build/)
 
 ![Logo](logo/heros-logo.png)
 Heros IFDS/IDE Solver
@@ -68,20 +68,29 @@ a dependency via Maven, Gradle, SBT, etc using the following coordinates:
   <dependency>
     <groupId>de.upb.cs.swt</groupId>
     <artifactId>heros</artifactId>
-    <version>1.2.1</version>
+    <version>1.2.2-SNAPSHOT</version>
   </dependency>
 </dependencies>
+<repositories>
+  <repository>
+      <id>sonatype-snapshots</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+      <releases>
+          <enabled>false</enabled>
+      </releases>
+  </repository>
+</repositories>	
 ```
 
 How do I obtain the nightly build?
 ------------------------
 
-You can also obtain older builds of the `master` branch. A complete listing of builds can be found on [Maven Central](https://repo1.maven.org/maven2/de/upb/cs/swt/heros/).
+You can also obtain older builds of the `develop` branch. A complete listing of builds can be found on [Sonatype's SNAPSHOT repository](https://oss.sonatype.org/content/repositories/snapshots/de/upb/cs/swt/heros/).
 
 # How do I obtain Heros without Maven?
 **We recommend using Heros with Maven**
 
-You can obtain the latest release build of heros [directly](https://repo1.maven.org/maven2/de/upb/cs/swt/heros/).
+You can obtain the latest snapshot build of heros [directly](https://oss.sonatype.org/content/repositories/snapshots/de/upb/cs/swt/heros/).
 
 The `heros-<RELEASE>-jar-with-dependencies.jar` file is an all-in-one file that also contains all the required libraries. 
 
