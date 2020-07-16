@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>de.upb.cs.swt</groupId>
     <artifactId>heros</artifactId>
-    <version>1.2.2-SNAPSHOT</version>
+    <version>1.2.3-SNAPSHOT</version>
     <name>Heros IFDS/IDE Solver</name>
     <description>Heros is a generic implementation of an IFDS/IDE Solver that can be plugged into existing, Java-based
         program analysis frameworks. A reference connector exists for the Soot framework.
@@ -120,7 +120,7 @@
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest-core</artifactId>
             <version>1.3</version>
-            <scope>build,test</scope>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
