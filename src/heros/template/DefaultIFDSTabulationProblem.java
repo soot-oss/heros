@@ -34,7 +34,9 @@ public abstract class DefaultIFDSTabulationProblem<N,D,M, I extends Interprocedu
 	}
 	
 	protected abstract FlowFunctions<N, D, M> createFlowFunctionsFactory();
-
+	
+	/** A factory method to create and return the ZERO value. Meant to be overwritten by subclasses.
+	    Clients should call zeroValue() instead to access the singleton zero value. */
 	protected abstract D createZeroValue();
 
 	@Override

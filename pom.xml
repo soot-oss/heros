@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>de.upb.cs.swt</groupId>
     <artifactId>heros</artifactId>
-    <version>1.2.2</version>
+    <version>1.2.3</version>
     <name>Heros IFDS/IDE Solver</name>
     <description>Heros is a generic implementation of an IFDS/IDE Solver that can be plugged into existing, Java-based
         program analysis frameworks. A reference connector exists for the Soot framework.
@@ -125,7 +125,7 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.12</version>
+            <version>4.13.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -137,10 +137,10 @@
     </dependencies>
 
     <distributionManagement>
-        <repository>
+        <snapshotRepository>
             <id>ossrh</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
-        </repository>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
     </distributionManagement>
 
     <profiles>
