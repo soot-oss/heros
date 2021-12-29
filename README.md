@@ -1,4 +1,4 @@
-[![Build Status](http://soot-build.cs.uni-paderborn.de/jenkins/buildStatus/icon?job=soot/heros-build)](http://soot-build.cs.uni-paderborn.de/jenkins/job/soot/job/heros-build/)
+[![Build Status](https://github.com/Sable/heros/workflows/Heros%20CI/badge.svg?branch=develop)](https://github.com/Sable/heros/actions)
 
 ![Logo](logo/heros-logo.png)
 Heros IFDS/IDE Solver
@@ -68,7 +68,7 @@ a dependency via Maven, Gradle, SBT, etc using the following coordinates:
   <dependency>
     <groupId>de.upb.cs.swt</groupId>
     <artifactId>heros</artifactId>
-    <version>1.2.2-SNAPSHOT</version>
+    <version>1.2.3-SNAPSHOT</version>
   </dependency>
 </dependencies>
 <repositories>

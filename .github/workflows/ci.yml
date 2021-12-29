@@ -1,0 +1,45 @@
+# This workflow will build a Java project with Maven
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
+
+name: Heros CI
+on:
+  push:
+  pull_request:
+
+jobs:
+
+  BuildAndTest:
+    name: Build and Test with java
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Use Java 8
+      uses: actions/setup-java@v1
+      with:
+        java-version: '8'
+    - name: Build and test Java 8
+      run: |
+        mvn -B clean test 
+
+  DeployArtifacts:
+    name: Deploy artifacts to Maven Central
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop'
+    needs: [BuildAndTest]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Use Java 8
+        uses: actions/setup-java@v1
+        with:
+          java-version: '8'
+      - name: Deploy artifacts
+        uses: samuelmeuli/action-maven-publish@v1
+        with:
+          gpg_private_key: ${{ secrets.gpg_private_key }}
+          gpg_passphrase: ${{ secrets.gpg_passphrase }}
+          nexus_username: ${{ secrets.nexus_username }}
+          nexus_password: ${{ secrets.nexus_password }}
+          maven_args: "-DskipTests"
+      
