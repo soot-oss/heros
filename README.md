@@ -3,7 +3,7 @@
 ![Logo](logo/heros-logo.png)
 Heros IFDS/IDE Solver
 =====================
-Heros is a generic implementation of an IFDS/IDE Solver that can be plugged into existing, Java-based program analysis frameworks. A reference connector exists for the [Soot][1] framework.
+Heros is a generic implementation of an IFDS/IDE Solver that can be plugged into existing, Java-based program analysis frameworks. A reference connector exists for the [Soot][1] and [SootUp][9] frameworks.
 
 Heros...
 * supports solving both IFDS and IDE problems,
@@ -97,7 +97,7 @@ The `heros-<RELEASE>-jar-with-dependencies.jar` file is an all-in-one file that 
 The `heros-<RELEASE>.jar`  file contains only Soot, allowing you to manually pick dependencies as you need them. If you do not want to bother with dependencies, we recommend using the former.
 
 
-[1]: http://www.sable.mcgill.ca/soot/
+[1]: https://soot-oss.github.io/soot/
 [2]: http://bodden.de/
 [3]: http://dx.doi.org/10.1145/199448.199462
 [4]: http://dx.doi.org/10.1016/0304-3975(96)00072-2
@@ -105,3 +105,4 @@ The `heros-<RELEASE>.jar`  file contains only Soot, allowing you to manually pic
 [6]: http://dx.doi.org/10.1007/978-3-642-11970-5_8
 [7]: https://github.com/Sable/heros/blob/master/LICENSE.txt
 [8]: https://github.com/Sable/soot/blob/master/src/soot/jimple/toolkits/ide/icfg/JimpleBasedInterproceduralCFG.java
+[9]: https://soot-oss.github.io/SootUp/
