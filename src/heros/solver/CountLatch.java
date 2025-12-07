@@ -112,4 +112,12 @@ public class CountLatch {
 		return sync.getCount() == 0;
 	}
 
+	/**
+	 * Returns the current count.
+	 * @return The count
+	 */
+	public int getCount() {
+		return sync.getCount();
+	}
+
 }
