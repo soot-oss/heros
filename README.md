@@ -66,35 +66,17 @@ a dependency via Maven, Gradle, SBT, etc using the following coordinates:
 ```.xml
 <dependencies>
   <dependency>
-    <groupId>de.upb.cs.swt</groupId>
+    <groupId>org.soot-oss</groupId>
     <artifactId>heros</artifactId>
-    <version>1.2.3-SNAPSHOT</version>
+    <version>1.2.4</version>
   </dependency>
 </dependencies>
-<repositories>
-  <repository>
-      <id>sonatype-snapshots</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-      <releases>
-          <enabled>false</enabled>
-      </releases>
-  </repository>
-</repositories>	
 ```
 
 How do I obtain the nightly build?
 ------------------------
 
-You can also obtain older builds of the `develop` branch. A complete listing of builds can be found on [Sonatype's SNAPSHOT repository](https://oss.sonatype.org/content/repositories/snapshots/de/upb/cs/swt/heros/).
-
-# How do I obtain Heros without Maven?
-**We recommend using Heros with Maven**
-
-You can obtain the latest snapshot build of heros [directly](https://oss.sonatype.org/content/repositories/snapshots/de/upb/cs/swt/heros/).
-
-The `heros-<RELEASE>-jar-with-dependencies.jar` file is an all-in-one file that also contains all the required libraries. 
-
-The `heros-<RELEASE>.jar`  file contains only Soot, allowing you to manually pick dependencies as you need them. If you do not want to bother with dependencies, we recommend using the former.
+You can also obtain older builds of the `develop` branch.
 
 
 [1]: https://soot-oss.github.io/soot/
