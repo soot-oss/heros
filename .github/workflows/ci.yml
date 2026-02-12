@@ -34,12 +34,14 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: '8'
-      - name: Deploy artifacts
-        uses: samuelmeuli/action-maven-publish@v1
-        with:
-          gpg_private_key: ${{ secrets.gpg_private_key }}
-          gpg_passphrase: ${{ secrets.gpg_passphrase }}
-          nexus_username: ${{ secrets.MAVEN_USERNAME }}
-          nexus_password: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
-          maven_args: "-DskipTests"
-      
+          server-id: central                              # must match the serverId configured for the nexus-staging-maven-plugin
+          server-username: MAVEN_USERNAME                 # Env var that holds the central publisher user name
+          server-password: MAVEN_CENTRAL_TOKEN            # Env var that holds the central publisher user token
+          gpg-private-key: ${{ secrets.gpg_private_key }} # Substituted with the value stored in the referenced secret
+          gpg-passphrase: gpg_passphrase            # Env var that holds the key's passphrase
+      - name: Deploy Heros
+        run: mvn -B -U clean deploy -P deploy -Dcheckstyle.failOnViolation=true
+        env:
+          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+          MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.gpg_passphrase }}
