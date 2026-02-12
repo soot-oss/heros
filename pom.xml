@@ -1,17 +1,17 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>de.upb.cs.swt</groupId>
+    <groupId>org.soot-oss</groupId>
     <artifactId>heros</artifactId>
-    <version>1.2.4-SNAPSHOT</version>
+    <version>1.2.4</version>
     <name>Heros IFDS/IDE Solver</name>
     <description>Heros is a generic implementation of an IFDS/IDE Solver that can be plugged into existing, Java-based
         program analysis frameworks. A reference connector exists for the Soot framework.
     </description>
     <url>https://github.com/Sable/heros</url>
     <organization>
-        <name>Secure Software Engineering Group - University of Paderborn</name>
-        <url>https://www.hni.uni-paderborn.de/en/software-engineering/</url>
+        <name>Soot OSS</name>
+        <url>https://soot-oss.org/</url>
     </organization>
     <licenses>
         <license>
@@ -23,9 +23,9 @@
     <developers>
         <developer>
             <name>Manuel Benz</name>
-            <email>manuel.benz@upb.de</email>
-            <organization>University of Paderborn</organization>
-            <organizationUrl>https://www.hni.uni-paderborn.de/en/software-engineering/</organizationUrl>
+            <email>manuel.benz@codeshield.de</email>
+            <organization>CodeShield GmbH</organization>
+            <organizationUrl>https://codeshield.de/</organizationUrl>
         </developer>
         <developer>
             <name>Eric Bodden</name>
@@ -41,9 +41,9 @@
         </developer>
     </developers>
     <scm>
-        <connection>scm:git:git@github.com:Sable/heros.git</connection>
-        <developerConnection>scm:git:git@github.com:Sable/heros.git</developerConnection>
-        <url>https://github.com/Sable/heros/tree/master</url>
+        <connection>scm:git:git@github.com:soot-oss/heros.git</connection>
+        <developerConnection>scm:git:git@github.com:soot-oss/heros.git</developerConnection>
+        <url>https://github.com/soot-oss/heros/tree/master</url>
     </scm>
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -104,7 +104,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>[24.1.1,)</version>
+            <version>[33.5.0,)</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
